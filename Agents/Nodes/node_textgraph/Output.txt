@@ -1,0 +1,63 @@
+# Nodes (word -> id)
+0: this
+1: is
+2: a
+3: sample
+4: text
+5: to
+6: test
+7: the
+8: graph
+9: node
+10: dogs
+11: are
+12: running
+13: quickly
+14: bu
+15: bir
+16: örnek
+17: metindir
+18: kediler
+19: hızlıca
+20: koşuyorlar
+
+# Edges (word1, word2) : weight
+a -- is : 1
+a -- sample : 1
+a -- text : 1
+a -- this : 1
+are -- dogs : 1
+are -- node : 1
+are -- quickly : 1
+are -- running : 1
+bir -- bu : 1
+bir -- metindir : 1
+bir -- quickly : 1
+bir -- örnek : 1
+bu -- quickly : 1
+bu -- running : 1
+bu -- örnek : 1
+dogs -- graph : 1
+dogs -- node : 1
+dogs -- running : 1
+graph -- node : 1
+graph -- test : 1
+graph -- the : 1
+hızlıca -- kediler : 1
+hızlıca -- koşuyorlar : 1
+hızlıca -- metindir : 1
+is -- sample : 1
+is -- this : 1
+kediler -- koşuyorlar : 1
+kediler -- metindir : 1
+kediler -- örnek : 1
+metindir -- örnek : 1
+node -- the : 1
+quickly -- running : 1
+sample -- text : 1
+sample -- to : 1
+test -- text : 1
+test -- the : 1
+test -- to : 1
+text -- to : 1
+the -- to : 1

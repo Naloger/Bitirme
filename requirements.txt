@@ -1,0 +1,14 @@
+langgraph
+langchain
+fastmcp
+textual
+langdetect
+nltk
+spacy
+stanza
+pydantic
+typing_extensions
+# Optional (models, install separately if needed):
+# python -m spacy download en_core_web_sm
+# python -m spacy download tr_core_news_sm
+

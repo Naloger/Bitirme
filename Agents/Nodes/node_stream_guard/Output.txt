@@ -1,0 +1,11 @@
+provider=ollama
+model=qwen3.5:0.8b
+loop_restarts=0
+
+[assistant_output]
+Ollama request failed: <urlopen error [WinError 10061] Hedef makine etkin olarak reddettiğinden bağlantı kurulamadı>
+
+Make sure Ollama is running:
+  ollama serve
+
+[thinking_output]

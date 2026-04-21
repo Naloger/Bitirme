@@ -1,0 +1,17 @@
+{
+  "provider": "ollama",
+  "ollama": {
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen3.5:0.8b",
+    "temperature": 0.2,
+    "num_ctx": 4096,
+    "timeout_seconds": 120
+  },
+  "loop_guard": {
+    "max_loops": 2,
+    "max_repeated_chunk": 5,
+    "repetition_window": 24,
+    "thinking_feedback_chars": 1200
+  }
+}
+

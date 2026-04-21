@@ -1,0 +1,1 @@
+This is a sample text to test the graph node. Dogs are running quickly. Bu bir örnek metindir. Kediler hızlıca koşuyorlar.
