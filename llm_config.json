@@ -2,16 +2,21 @@
   "provider": "ollama",
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
-    "model": "qwen3.5:0.8b",
+    "model": "nemetron-4b-16k:latest",
     "temperature": 0.2,
     "num_ctx": 4096,
-    "timeout_seconds": 120
+    "timeout_seconds": 120,
+    "top_p": null,
+    "repeat_penalty": null
   },
   "loop_guard": {
     "max_loops": 2,
     "max_repeated_chunk": 5,
     "repetition_window": 24,
-    "thinking_feedback_chars": 1200
+    "thinking_feedback_chars": 1200,
+    "pre_content_chunk_limit": 200
   }
 }
+
+
 

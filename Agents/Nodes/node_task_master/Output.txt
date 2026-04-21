@@ -1,0 +1,105 @@
+provider=ollama
+model=nemetron-4b-16k:latest
+validation_error_count=0
+
+[ctt_output]
+{
+  "root_tasks": [
+    {
+      "task_id": "t1",
+      "title": "Fetch homepage",
+      "task_description": "Retrieve the homepage of the e-commerce website."
+    },
+    {
+      "task_id": "t2",
+      "title": "Navigate to products page",
+      "task_description": "Navigate from homepage to the products page."
+    },
+    {
+      "task_id": "t3",
+      "title": "Parse product listings (iterative)",
+      "task_description": "Extract product name, price, description iteratively across multiple pages.",
+      "optional": true,
+      "iterative": true,
+      "children": [
+        {
+          "task_id": "t3a",
+          "title": "Extract name",
+          "task_description": "Extract product name."
+        },
+        {
+          "task_id": "t3b",
+          "title": "Extract price",
+          "task_description": "Extract product price."
+        },
+        {
+          "task_id": "t3c",
+          "title": "Extract description",
+          "task_description": "Extract product description."
+        }
+      ],
+      "operator": "sequence"
+    },
+    {
+      "task_id": "t4",
+      "title": "Save results to JSON",
+      "task_description": "Save parsed product data to a JSON file."
+    },
+    {
+      "task_id": "t5",
+      "title": "Generate summary report",
+      "task_description": "Create a summary report from the saved data."
+    }
+  ]
+}
+
+[raw_response]
+{
+  "root_tasks": [
+    {
+      "task_id": "t1",
+      "title": "Fetch homepage",
+      "task_description": "Retrieve the homepage of the e-commerce website."
+    },
+    {
+      "task_id": "t2",
+      "title": "Navigate to products page",
+      "task_description": "Navigate from homepage to the products page."
+    },
+    {
+      "task_id": "t3",
+      "title": "Parse product listings (iterative)",
+      "task_description": "Extract product name, price, description iteratively across multiple pages.",
+      "optional": true,
+      "iterative": true,
+      "operator": "sequence",
+      "children": [
+        {
+          "task_id": "t3a",
+          "title": "Extract name",
+          "task_description": "Extract product name."
+        },
+        {
+          "task_id": "t3b",
+          "title": "Extract price",
+          "task_description": "Extract product price."
+        },
+        {
+          "task_id": "t3c",
+          "title": "Extract description",
+          "task_description": "Extract product description."
+        }
+      ]
+    },
+    {
+      "task_id": "t4",
+      "title": "Save results to JSON",
+      "task_description": "Save parsed product data to a JSON file."
+    },
+    {
+      "task_id": "t5",
+      "title": "Generate summary report",
+      "task_description": "Create a summary report from the saved data."
+    }
+  ]
+}

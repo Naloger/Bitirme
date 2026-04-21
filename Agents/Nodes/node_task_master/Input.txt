@@ -1,0 +1,1 @@
+Create a web scraper application that extracts product information from an e-commerce website. The scraper should: 1) fetch the homepage, 2) navigate to the products page, 3) parse product listings (with subtasks to extract name, price, and description), 4) save results to a JSON file, 5) generate a summary report. The parsing step should be iterative for multiple pages.

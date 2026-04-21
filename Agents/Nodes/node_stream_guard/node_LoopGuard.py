@@ -197,21 +197,21 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
             "loop_restarts": 0,
         }
 
-    ollama_cfg = cfg.raw.get("ollama", {})
-    loop_cfg = cfg.raw.get("loop_guard", {})
+    ollama_cfg = cfg.raw["ollama"]
+    loop_cfg = cfg.raw["loop_guard"]
 
-    model = state.model or str(ollama_cfg.get("model", "qwen3.5:0.8b"))
-    base_url = str(ollama_cfg.get("base_url", "http://127.0.0.1:11434"))
-    timeout_seconds = int(ollama_cfg.get("timeout_seconds", 120))
-    temperature = float(ollama_cfg.get("temperature", 0.2))
-    num_ctx = int(ollama_cfg.get("num_ctx", 4096))
-    top_p = ollama_cfg.get("top_p")
-    repeat_penalty = ollama_cfg.get("repeat_penalty")
+    model = state.model or ollama_cfg["model"]
+    base_url = ollama_cfg["base_url"]
+    timeout_seconds = int(ollama_cfg["timeout_seconds"])
+    temperature = float(ollama_cfg["temperature"])
+    num_ctx = int(ollama_cfg["num_ctx"])
+    top_p = ollama_cfg["top_p"]
+    repeat_penalty = ollama_cfg["repeat_penalty"]
 
-    max_loops = int(loop_cfg.get("max_loops", 2))
-    repeated_limit = int(loop_cfg.get("max_repeated_chunk", 5))
-    repetition_window = int(loop_cfg.get("repetition_window", 24))
-    pre_content_chunk_limit = int(loop_cfg.get("pre_content_chunk_limit", 220))
+    max_loops = int(loop_cfg["max_loops"])
+    repeated_limit = int(loop_cfg["max_repeated_chunk"])
+    repetition_window = int(loop_cfg["repetition_window"])
+    pre_content_chunk_limit = int(loop_cfg["pre_content_chunk_limit"])
 
     input_prompt = state.input_text
 
