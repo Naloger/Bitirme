@@ -8,8 +8,64 @@ It enables precise specification of task relationships, dependencies, and execut
 
 A CTT tree consists of tasks arranged hierarchically. Each task is an atomic unit of work with:
 - Required metadata: unique ID, title, and description
-- Optional properties: status, operator, flags (optional/iterative), and child tasks
+- Optional properties: status, flags (optional/iterative), and child tasks
 - Operators define HOW child tasks relate to each other
+
+## TWO WAYS TO STRUCTURE CHILDREN
+
+### METHOD 1: FLAT CHILDREN (Simple, Legacy)
+For simple sequential or single-operator structures, use flat list:
+
+  {
+    "task_id": "t2",
+    "title": "Process Payment",
+    "task_description": "Handle payment processing with multiple methods",
+    "operator": "choice",
+    "children": [
+      { "task_id": "t2a", "title": "Credit Card", ... },
+      { "task_id": "t2b", "title": "PayPal", ... },
+      { "task_id": "t2c", "title": "Bank Transfer", ... }
+    ]
+  }
+
+### METHOD 2: EXPRESSION TREE (Recommended, W3C CTT Standard)
+For complex workflows where operators sit BETWEEN children (like math expressions), use binary operator nodes:
+
+  {
+    "task_id": "checkout",
+    "title": "Checkout Process",
+    "task_description": "Complete purchase with payment and confirmation",
+    "children_tree": [
+      {
+        "operator": "sequence",
+        "left": {
+          "task_id": "get_details",
+          "title": "Get Customer Details",
+          "task_description": "..."
+        },
+        "right": {
+          "operator": "choice",
+          "left": {
+            "task_id": "cc_pay",
+            "title": "Process Credit Card",
+            "task_description": "..."
+          },
+          "right": {
+            "task_id": "paypal_pay",
+            "title": "Process PayPal",
+            "task_description": "..."
+          }
+        }
+      }
+    ]
+  }
+
+VISUAL REPRESENTATION:
+Get_Details >> (Process_Card [] Process_PayPal)
+
+In the expression tree above:
+- operator "sequence" (>>) sits BETWEEN Get_Details (left) and the choice branch (right)
+- operator "choice" ([]) sits BETWEEN the two payment methods
 
 ## TASK STRUCTURE
 
@@ -23,7 +79,7 @@ LEAF TASK (0-1 children):
     "iterative": false
   }
 
-BRANCH TASK (2+ children with OPERATOR):
+BRANCH TASK - FLAT STYLE (2+ children with single OPERATOR):
   {
     "task_id": "t2",
     "title": "Process Payment",
@@ -31,8 +87,21 @@ BRANCH TASK (2+ children with OPERATOR):
     "operator": "choice",
     "children": [
       { "task_id": "t2a", "title": "Credit Card", ... },
-      { "task_id": "t2b", "title": "PayPal", ... },
-      { "task_id": "t2c", "title": "Bank Transfer", ... }
+      { "task_id": "t2b", "title": "PayPal", ... }
+    ]
+  }
+
+BRANCH TASK - EXPRESSION TREE STYLE (binary operators):
+  {
+    "task_id": "workflow",
+    "title": "Complex Workflow",
+    "task_description": "Multi-step process with mixed operators",
+    "children_tree": [
+      {
+        "operator": "sequence",
+        "left": { ... task or operator node ... },
+        "right": { ... task or operator node ... }
+      }
     ]
   }
 
@@ -67,21 +136,26 @@ BRANCH TASK (2+ children with OPERATOR):
 
 ## EXECUTION RULES
 
-RULE 1: Operator Placement
-- Only tasks with 2+ children GET an operator
-- Leaf nodes (0-1 children) MUST NOT have operator field
-- If a task has 1 child, omit the operator entirely
+RULE 1: Choose Your Structure
+- For simple, single-operator workflows → use "children" + "operator"
+- For complex workflows with mixed operators → use "children_tree" with binary operator nodes
+- DO NOT mix "children" and "children_tree" in the same task
 
-RULE 2: Default Behavior
-- If 2+ children exist but no operator specified → default to SEQUENCE
+RULE 2: Operator Placement
+- In flat style: only tasks with 2+ children GET an operator
+- In expression tree: operators sit between left and right children
+- Leaf nodes (0 children) MUST NOT have operator field
+
+RULE 3: Default Behavior
+- If 2+ children exist in flat style but no operator → default to SEQUENCE
 - Sequential execution is safest, most predictable
 
-RULE 3: Iteration vs Operator
+RULE 4: Iteration vs Operator
 - Do NOT use operator='*' for repetition
 - Use iterative=true flag instead
 - Example: Unit tests run iteratively over multiple modules
 
-RULE 4: Optional & Iterative
+RULE 5: Optional & Iterative
 - optional=true: task CAN be skipped
 - iterative=true: task REPEATS for multiple items/pages/modules
 - Independent flags, can combine
@@ -96,61 +170,72 @@ RULE 4: Optional & Iterative
 
 ## PRACTICAL EXAMPLES
 
-EXAMPLE 1: Web Scraper (Sequential)
+EXAMPLE 1: Simple Flat Structure (Web Scraper)
   root_tasks: [
-    {
-      task_id: "fetch",
-      title: "Fetch Homepage",
-      children: [] (leaf - no operator)
-    },
     {
       task_id: "parse",
       title: "Parse Products",
-      iterative: true (repeat for each page),
+      task_description: "Extract product info from page",
+      iterative: true,
+      operator: "sequence",
       children: [
         { task_id: "name", title: "Extract Name" },
         { task_id: "price", title: "Extract Price" },
         { task_id: "desc", title: "Extract Description" }
-      ],
-      operator: "sequence" (extract in order)
-    },
-    { task_id: "save", title: "Save Results" }
+      ]
+    }
   ]
 
-EXAMPLE 2: Test Framework (Mixed Operators)
-  {
-    task_id: "test",
-    title: "Run Tests",
-    operator: "sequence",
-    children: [
-      {
-        task_id: "suite",
-        title: "Execute Test Suites",
-        operator: "interleaving" (run all in parallel),
-        children: [
-          { task_id: "unit", title: "Unit Tests", iterative: true },
-          { task_id: "integration", title: "Integration Tests" },
-          { task_id: "perf", title: "Performance Tests" }
-        ]
-      },
-      {
-        task_id: "handle",
-        title: "Handle Results",
-        operator: "choice" (pick ONE),
-        children: [
-          { task_id: "pass", title: "All Passed" },
-          { task_id: "retry", title: "Auto-Retry" },
-          { task_id: "report", title: "Generate Report" }
-        ]
-      }
-    ]
-  }
+EXAMPLE 2: Expression Tree (Complex Workflow)
+  root_tasks: [
+    {
+      task_id: "checkout",
+      title: "E-Commerce Checkout",
+      task_description: "Complete purchase workflow",
+      children_tree: [
+        {
+          "operator": "sequence",
+          "left": {
+            "task_id": "cart",
+            "title": "Review Cart",
+            "task_description": "User reviews items"
+          },
+          "right": {
+            "operator": "sequence",
+            "left": {
+              "task_id": "shipping",
+              "title": "Enter Shipping Address",
+              "task_description": "Get delivery info"
+            },
+            "right": {
+              "operator": "choice",
+              "left": {
+                "task_id": "cc",
+                "title": "Credit Card Payment",
+                "task_description": "Process credit card"
+              },
+              "right": {
+                "task_id": "paypal",
+                "title": "PayPal Payment",
+                "task_description": "Process via PayPal"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+
+Visualization:
+Review_Cart >> (Enter_Shipping >> (Credit_Card [] PayPal))
 
 ## VALIDATION CHECKLIST
 
 When creating CTT:
 ☑ Every task has: task_id (unique), title, task_description
-☑ Only branch nodes (2+ children) have operator field
+☑ Use EITHER "children" (flat) OR "children_tree" (expression tree), not both
+☑ In flat style: only branch nodes (2+ children) have operator field
+☑ In expression tree: operator nodes have "operator", "left", "right" fields
 ☑ All operator values in [sequence, choice, interleaving, disabling]
 ☑ No null, None, or empty string values
 ☑ Child task_ids are unique within tree
@@ -163,8 +248,8 @@ When creating CTT:
 Return ONLY valid JSON:
 {
   "root_tasks": [
-    { task definition },
-    { task definition },
+    { task or operator definition },
+    { task or operator definition },
     ...
   ]
 }

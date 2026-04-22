@@ -3,110 +3,188 @@ model=gemma4-e2b-128k:latest
 validation_error_count=1
 
 [ctt_output]
-CTT parse error: 'task_description'
+CTT parse error: Expecting property name enclosed in double quotes: line 146 column 9 (char 6637)
 
 [raw_response]
 {
   "root_tasks": [
     {
-      "task_id": "setup_env",
-      "title": "Initialize Test Environment",
-      "task_description": "Setup database, deploy test server, install dependencies",
-      "status": "pending",
-      "optional": false
-    },
-    {
-      "task_id": "run_tests",
-      "title": "Execute Test Suites",
-      "operator": "sequence",
-      "children": [
+      "task_id": "colony_design",
+      "title": "Mars Colony Design Proposal (100 People)",
+      "task_description": "Comprehensive plan addressing resource management, socio-economics, crisis mitigation, and physical layout.",
+      "children_tree": [
         {
-          "task_id": "run_suites",
-          "title": "Run Test Suites (Parallel)",
+          "operator": "sequence",
+          "left": {
+            "task_id": "resource_management",
+            "title": "Pillar 1: Resource Management & Physics",
+            "task_description": "Life support, recycling, and energy calculations.",
+            "children_tree": [
+              {
+                "operator": "sequence",
+                "left": {
+                  "task_id": "life_support",
+                  "title": "Life Support Systems (LSS)",
+                  "task_description": "Oxygen and Water Recycling Logic",
+                  "children_tree": [
+                    {
+                      "operator": "sequence",
+                      "left": {
+                        "task_id": "o2_production",
+                        "title": "Oxygen Production",
+                        "task_description": "Logic for O2 generation from CO2 (Sabatier/Electrolysis)",
+                        "details": "O2_req = (P_total * (1 - R_loss)) / (Mass_CO2 * C_conversion)"
+                      },
+                      "right": {
+                        "task_id": "water_recycling",
+                        "title": "Water Recycling",
+                        "task_description": "Closed-loop water system logic.",
+                        "details": "H2O_recycled = (W_input - W_waste) + Condensate_capture. Target > 98% closure."
+                      }
+                    }
+                  ]
+                },
+                "right": {
+                  "task_id": "energy_requirements",
+                  "title": "Energy Requirements & Mix",
+                  "task_description": "Power calculation based on habitat needs.",
+                  "details": "Habitat_Load = 150 kW (LSS, Habitat, ISRU). Power_Mix = (P_solar * 0.4) + (P_nuclear * 0.6). Target: 450 kW total operational power."
+                }
+              }
+            ]
+          },
+          "right": {
+            "task_id": "socio_economics",
+            "title": "Pillar 2: Socio-Economic Structure",
+            "task_description": "Governance, economy, and anti-hoarding mechanism.",
+            "children_tree": [
+              {
+                "operator": "sequence",
+                "left": {
+                  "task_id": "governance",
+                  "title": "Governance Model",
+                  "task_description": "Decentralized meritocracy.",
+                  "details": "Consensus-based system with elected technical councils (Engineers, Biologists, Planners)."
+                },
+                "right": {
+                  "task_id": "credit_system",
+                  "title": "Reputation/Credit System (Anti-Hoarding)",
+                  "task_description": "Non-monetary reward system.",
+                  "details": "Credit_Score = (Labor_Contribution * Skill_Factor) + (Resource_Efficiency_Bonus). Rewards are access priority, not physical goods."
+                }
+              }
+            ]
+          }
+        },
+        {
           "operator": "interleaving",
+          "left": {
+            "task_id": "crisis_simulation",
+            "title": "Pillar 3: Crisis Simulation & Mitigation",
+            "task_description": "Identifying and mitigating high-probability failure points.",
+            "children_tree": [
+              {
+                "operator": "sequence",
+                "left": {
+                  "task_id": "failure_point_1",
+                  "title": "Failure Point 1: Radiation Leak",
+                  "task_description": "Mitigation Strategy",
+                  "children_tree": [
+                    {
+                      "operator": "choice",
+                      "left": {
+                        "task_id": "mitigation_t1",
+                        "title": "Tier 1 (Immediate) Mitigation",
+                        "details": "Activate emergency radiation shielding protocols; isolate affected zone."
+                      },
+                      "right": {
+                        "task_id": "mitigation_t2",
+                        "title": "Tier 2 (Long-term) Mitigation",
+                        "details": "Deploy autonomous subsurface shielding; establish secondary, shielded habitat zones."
+                      }
+                    }
+                  ]
+                },
+                "right": {
+                  "task_id": "failure_point_2",
+                  "title": "Failure Point 2: Psychological Breakdown",
+                  "task_description": "Mitigation Strategy",
+                  "children_tree": [
+                    {
+                      "operator": "choice",
+                      "left": {
+                        "task_id": "mitigation_t1",
+                        "title": "Tier 1 (Immediate) Mitigation",
+                        "details": "Mandatory psychological rotation; immediate access to remote communication/recreation."
+                      },
+                      "right": {
+                        "task_id": "mitigation_t2",
+                        "title": "Tier 2 (Long-term) Mitigation",
+                        "details": "Establish dedicated psychological support teams; implement virtual reality/nature immersion protocols."
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "operator": "sequence",
+                "left": {
+                  "task_id": "failure_point_3",
+                  "title": "Failure Point 3: Supply Chain Delay (Earth)",
+                  "task_description": "Mitigation Strategy",
+                  "children_tree": [
+                    {
+                      "operator": "choice",
+                      "left": {
+                        "task_id": "mitigation_t1",
+                        "title": "Tier 1 (Immediate) Mitigation",
+                        "details": "Activate 5-year stored reserves; initiate immediate local manufacturing protocols."
+                      },
+                      "right": {
+                        "task_id": "mitigation_t2",
+                        "title": "Tier 2 (Long-term) Mitigation",
+                        "details": "Establish fully autonomous, multi-source manufacturing facilities (3D printing); develop closed-loop Martian agriculture."
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+        },
+        {
+          "task_id": "visual_layout",
+          "title": "Pillar 4: Visual Layout (Zoning)",
+          "task_description": "Habitat zoning and atmospheric requirements.",
           "children": [
             {
-              "task_id": "unit_tests",
-              "title": "Run Unit Tests",
-              "iterative": true
+              "task_id": "zone_habitat",
+              "title": "Habitation & Residential Zone",
+              "task_description": "Living quarters and social areas.",
+              "operator": "sequence",
+              "children": [
+                { "task_id": "habitat_details", "title": "Details", "details": "Pressurized, internal atmosphere maintained at 101 kPa (Earth-normal)."}
+              ]
             },
             {
-              "task_id": "integration_tests",
-              "title": "Run Integration Tests"
+              "task_id": "zone_isru",
+              "title": "ISRU & Manufacturing Zone",
+              "task_description": "Resource extraction, processing, and 3D printing.",
+              "operator": "sequence",
+              "children": [
+                { "task_id": "isru_details", "title": "Details", "details": "Surface operations; requires high thermal shielding."}
+              ]
             },
             {
-              "task_id": "perf_tests",
-              "title": "Run Performance Tests"
+              "task_id": "zone_storage",
+              "title": "Resource & Waste Storage",
+              "task_description": "Water, air, and waste recycling infrastructure.",
+              "operator": "sequence",
+              "children": [
+                { "task_id": "storage_details", "title": "Details", "details": "Deep subsurface storage for critical reserves; high-pressure containment."}
+              ]
             }
           ]
-        }
-      ]
-    },
-    {
-      "task_id": "handle_failures",
-      "title": "Handle Test Failures",
-      "operator": "choice",
-      "children": [
-        {
-          "task_id": "report_notify",
-          "title": "Generate Report and Notify Team"
-        },
-        {
-          "task_id": "auto_retry",
-          "title": "Auto-Retry Failed Tests"
-        },
-        {
-          "task_id": "skip_tests",
-          "title": "Skip Tests and Continue"
-        }
-      ]
-    },
-    {
-      "task_id": "security_scan",
-      "title": "Optional Security Scanning",
-      "operator": "disabling",
-      "children": [
-        {
-          "task_id": "scan_vulnerabilities",
-          "title": "Perform Security Scan"
-        }
-      ]
-    },
-    {
-      "task_id": "generate_reports",
-      "title": "Generate Comprehensive Reports",
-      "operator": "sequence",
-      "children": [
-        {
-          "task_id": "coverage_analysis",
-          "title": "Analyze Coverage Metrics"
-        },
-        {
-          "task_id": "performance_metrics",
-          "title": "Calculate Performance Metrics"
-        },
-        {
-          "task_id": "security_audit",
-          "title": "Generate Security Audit Report"
-        }
-      ]
-    },
-    {
-      "task_id": "cleanup_archive",
-      "title": "Cleanup and Archive Results",
-      "operator": "interleaving",
-      "children": [
-        {
-          "task_id": "backup_data",
-          "title": "Backup Data"
-        },
-        {
-          "task_id": "clear_temp",
-          "title": "Clear Temporary Files"
-        },
-        {
-          "task_id": "generate_summary",
-          "title": "Generate Summary Report"
         }
       ]
     }

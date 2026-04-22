@@ -1,1 +1,29 @@
-Design an advanced automated testing framework. The workflow includes: 1) Initialize test environment (setup database optionally, deploy test server, install dependencies); 2) Run test suites in parallel (unit tests iteratively for each module, integration tests, performance tests); 3) Handle test failures (either generate a report and notify team, auto-retry failed tests, or skip and continue); 4) Optional security scanning that can interrupt if vulnerabilities found; 5) Generate comprehensive reports (coverage analysis, performance metrics, security audit); 6) Cleanup and archive results in parallel (backup data, clear temporary files, generate summary).
+The Objective: Design a sustainable, closed-loop colony on Mars for 100 people.
+
+Your Role: Act as a Lead Systems Engineer and Urban Planner. You must provide a comprehensive proposal that addresses the following four pillars:
+
+1. Resource Management & Physics
+Explain the life support systems. Use specific formulas or logic for oxygen production and water recycling.
+
+Constraint: You must calculate the approximate energy requirements in kilowatts (kW) assuming a mix of solar and nuclear power.
+
+2. Socio-Economic Structure
+Define the governance model and internal economy.
+
+Constraint: How do you prevent resource hoarding? Describe a "Reputation" or "Credit" system that rewards labor without traditional currency.
+
+3. Crisis Simulation
+Identify three high-probability "Failure Points" (e.g., radiation leak, psychological breakdown, supply chain delay from Earth).
+
+Constraint: For each failure point, provide a Tier 1 (Immediate) and Tier 2 (Long-term) mitigation strategy.
+
+4. Visual Layout (Text-Based)
+Create a Markdown table representing the "Zoning" of the habitat. Include:
+
+Zone Name
+
+Primary Function
+
+Risk Level (1-10)
+
+Atmospheric Pressure Requirements

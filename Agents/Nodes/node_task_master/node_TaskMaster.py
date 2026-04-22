@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, Field
 from langgraph.graph import END, START, StateGraph
 
-from Lib.CTT import CttTask, CttTreeState, validate_ctt_tree
+from Lib.CTT import CttTask, CttOperatorNode, CttTreeState, validate_ctt_tree
 from llm_config import ConfigError, load_llm_config
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -74,16 +73,33 @@ def _extract_content(response_obj: dict[str, Any]) -> str:
     return str(response_obj.get("response", "") or "")
 
 
-def _extract_json_text(text: str) -> str:
-    """Extract JSON object from text, handling code fences."""
-    match = re.search(r"```(?:json)?\s*({.*})\s*```", text, re.DOTALL | re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end > start:
-        return text[start:end + 1].strip()
-    return text.strip()
+def _load_strict_json_object(text: str) -> dict[str, Any]:
+    """Load a strict JSON object; reject fenced/prose/mixed output."""
+    raw = text.strip()
+    if not raw:
+        raise ValueError("LLM output is empty.")
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            "LLM output must be raw valid JSON object only (no markdown/code fences/prose). "
+            f"{exc}"
+        ) from exc
+
+    if not isinstance(parsed, dict):
+        raise ValueError("CTT payload root must be a JSON object.")
+    return parsed
+
+
+def _require_non_empty_str(obj: dict[str, Any], key: str, context: str) -> str:
+    """Require a non-empty string field in a strict parse context."""
+    if key not in obj:
+        raise ValueError(f"{context}: missing required field '{key}'.")
+    value = obj[key]
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{context}: field '{key}' must be a non-empty string.")
+    return value.strip()
 
 
 def _normalize_operator(value: Any) -> str | None:
@@ -115,53 +131,117 @@ def _error_result(message: str, model: str = "", raw_response_text: str = "") ->
     return error_output
 
 
-def _coerce_task(obj: dict[str, Any]) -> CttTask:
+def _coerce_operator_node(obj: dict[str, Any]) -> CttOperatorNode | None:
+    """Try to coerce raw dict into CttOperatorNode (Expression Tree)."""
+    if not isinstance(obj, dict) or "operator" not in obj:
+        return None
+    
+    operator = _normalize_operator(obj.get("operator"))
+    if not operator:
+        return None
+    
+    left_raw = obj.get("left")
+    right_raw = obj.get("right")
+    
+    if not left_raw or not right_raw:
+        return None
+    
+    # Recursively coerce left and right children
+    left = _coerce_node(left_raw)
+    right = _coerce_node(right_raw)
+    
+    if not left or not right:
+        return None
+    
+    res = {
+        "operator": operator,
+        "left": left,
+        "right": right,
+    }
+    return cast(CttOperatorNode, cast(object, res))
+
+
+def _coerce_node(obj: Any) -> CttTask | CttOperatorNode | None:
+    """Coerce raw object into either CttTask or CttOperatorNode."""
+    if not isinstance(obj, dict):
+        return None
+    
+    # Try operator node first
+    if "operator" in obj:
+        op_node = _coerce_operator_node(obj)
+        if op_node:
+            return op_node
+    
+    # Otherwise try task
+    if "task_id" in obj and "title" in obj and "task_description" in obj:
+        return _coerce_task(obj)
+    
+    return None
+
+
+def _coerce_task(obj: dict[str, Any], context: str = "task") -> CttTask:
     """Coerce raw task dict into validated CttTask."""
     task: CttTask = {
-        "task_id": str(obj["task_id"]),
-        "title": str(obj["title"]),
-        "task_description": str(obj["task_description"]),
+        "task_id": _require_non_empty_str(obj, "task_id", context),
+        "title": _require_non_empty_str(obj, "title", context),
+        "task_description": _require_non_empty_str(obj, "task_description", context),
     }
 
     if "status" in obj:
-        task["status"] = str(obj["status"])  # type: ignore[assignment]
+        status = obj["status"]
+        if not isinstance(status, str) or not status.strip():
+            raise ValueError(f"{context}: field 'status' must be a non-empty string.")
+        task["status"] = status.strip()  # type: ignore[assignment]
     if "optional" in obj:
-        task["optional"] = bool(obj["optional"])
+        if not isinstance(obj["optional"], bool):
+            raise ValueError(f"{context}: field 'optional' must be boolean.")
+        task["optional"] = obj["optional"]
     if "iterative" in obj:
-        task["iterative"] = bool(obj["iterative"])
-    elif _is_iteration_marker(obj.get("operator")):
-        task["iterative"] = True
+        if not isinstance(obj["iterative"], bool):
+            raise ValueError(f"{context}: field 'iterative' must be boolean.")
+        task["iterative"] = obj["iterative"]
 
-    children_raw = obj.get("children")
-    if children_raw and isinstance(children_raw, list):
-        children = [_coerce_task(c) for c in children_raw if isinstance(c, dict)]
-        if children:
-            task["children"] = children
-            if len(children) >= 2:
-                # Normalize operator from raw data
-                raw_operator = obj.get("operator")
-                operator = _normalize_operator(raw_operator)
+    # Support both old-style flat children and new-style expression tree
+    
+    # # Old-style: children as flat list with operator field
+    # children_raw = obj.get("children")
+    # if children_raw and isinstance(children_raw, list):
+    #     children = [_coerce_task(c) for c in children_raw if isinstance(c, dict)]
+    #     if children:
+    #         task["children"] = children
+    
+    # New-style: children_tree as expression tree
+    children_tree_raw = obj.get("children_tree")
+    if children_tree_raw is not None:
+        if not isinstance(children_tree_raw, list) or not children_tree_raw:
+            raise ValueError(f"{context}: 'children_tree' must be a non-empty list when provided.")
 
-                # Default to sequence if no valid operator provided for 2+ children
-                if operator is None:
-                    operator = "sequence"
+        children_tree: list[CttTask | CttOperatorNode] = []
+        for idx, node_raw in enumerate(children_tree_raw):
+            coerced = _coerce_node(node_raw)
+            if not coerced:
+                raise ValueError(f"{context}: invalid children_tree node at index {idx}.")
+            children_tree.append(coerced)
+        task["children_tree"] = children_tree
 
-                task["operator"] = operator  # type: ignore[assignment]
 
     return task
 
 
 def _parse_ctt_payload(text: str) -> tuple[CttTreeState, list[str]]:
     """Parse and validate CTT JSON payload."""
-    payload = json.loads(_extract_json_text(text))
-    if not isinstance(payload, dict):
-        raise ValueError("CTT payload root must be an object.")
+    payload = _load_strict_json_object(text)
 
     root_tasks_raw = payload.get("root_tasks")
-    if not isinstance(root_tasks_raw, list):
+    if not isinstance(root_tasks_raw, list) or not root_tasks_raw:
         raise ValueError("CTT payload must contain 'root_tasks' list.")
 
-    root_tasks: list[CttTask] = [_coerce_task(item) for item in root_tasks_raw if isinstance(item, dict)]
+    root_tasks: list[CttTask] = []
+    for idx, item in enumerate(root_tasks_raw):
+        if not isinstance(item, dict):
+            raise ValueError(f"root_tasks[{idx}] must be an object.")
+        root_tasks.append(_coerce_task(item, context=f"root_tasks[{idx}]"))
+
     ctt_state: CttTreeState = {"root_tasks": root_tasks}
     errors = validate_ctt_tree(root_tasks)
     return ctt_state, errors
