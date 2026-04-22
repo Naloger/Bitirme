@@ -2,10 +2,10 @@
   "provider": "ollama",
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
-    "model": "nemetron-4b-16k:latest",
+    "model": "gemma4-e2b-128k:latest",
     "temperature": 0.2,
-    "num_ctx": 4096,
-    "timeout_seconds": 120,
+    "num_ctx": 125000,
+    "timeout_seconds": 300,
     "top_p": null,
     "repeat_penalty": null
   },

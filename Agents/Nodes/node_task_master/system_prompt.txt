@@ -1,0 +1,177 @@
+CONCURRENT TASK TREES (CTT) - REFERENCE GUIDE
+============================================
+
+CTT is a formal model for representing complex workflows with concurrent, sequential, and choice-based task execution.
+It enables precise specification of task relationships, dependencies, and execution semantics.
+
+## CORE CONCEPTS
+
+A CTT tree consists of tasks arranged hierarchically. Each task is an atomic unit of work with:
+- Required metadata: unique ID, title, and description
+- Optional properties: status, operator, flags (optional/iterative), and child tasks
+- Operators define HOW child tasks relate to each other
+
+## TASK STRUCTURE
+
+LEAF TASK (0-1 children):
+  {
+    "task_id": "t1",
+    "title": "Authenticate User",
+    "task_description": "Validate user credentials against database",
+    "status": "pending",
+    "optional": false,
+    "iterative": false
+  }
+
+BRANCH TASK (2+ children with OPERATOR):
+  {
+    "task_id": "t2",
+    "title": "Process Payment",
+    "task_description": "Handle payment processing with multiple methods",
+    "operator": "choice",
+    "children": [
+      { "task_id": "t2a", "title": "Credit Card", ... },
+      { "task_id": "t2b", "title": "PayPal", ... },
+      { "task_id": "t2c", "title": "Bank Transfer", ... }
+    ]
+  }
+
+## OPERATORS - EXECUTION SEMANTICS
+
+1. SEQUENCE (>>, enabling, sequential, pipeline)
+   - Execute ALL children in STRICT ORDER, one after another
+   - Child N cannot start until Child N-1 completes
+   - Use when: tasks have dependencies or order matters
+   - Example: Fetch Data → Process → Save (must happen in order)
+   - Default when 2+ children and no operator specified
+
+2. CHOICE ([], alternative, one-of)
+   - Execute EXACTLY ONE of the children
+   - Mutually exclusive branches
+   - Use when: alternative paths, decision points, error handling
+   - Example: Handle Error → (Generate Report) OR (Auto-Retry) OR (Skip)
+   - Only one branch executes
+
+3. INTERLEAVING (|, |||, parallel, concurrent)
+   - Execute ALL children SIMULTANEOUSLY (in parallel)
+   - Order-independent execution
+   - Use when: tasks are independent, can run concurrently
+   - Example: Run (Unit Tests) AND (Integration Tests) AND (Security Scan) together
+   - All must complete before parent finishes
+
+4. DISABLING ([>, interruption, interrupt, override)
+   - A task CAN INTERRUPT and override other tasks
+   - Used for exception handling, critical events
+   - Use when: one task takes priority over others
+   - Example: Security Scan finds critical vulnerability → stops other tasks
+
+## EXECUTION RULES
+
+RULE 1: Operator Placement
+- Only tasks with 2+ children GET an operator
+- Leaf nodes (0-1 children) MUST NOT have operator field
+- If a task has 1 child, omit the operator entirely
+
+RULE 2: Default Behavior
+- If 2+ children exist but no operator specified → default to SEQUENCE
+- Sequential execution is safest, most predictable
+
+RULE 3: Iteration vs Operator
+- Do NOT use operator='*' for repetition
+- Use iterative=true flag instead
+- Example: Unit tests run iteratively over multiple modules
+
+RULE 4: Optional & Iterative
+- optional=true: task CAN be skipped
+- iterative=true: task REPEATS for multiple items/pages/modules
+- Independent flags, can combine
+
+## STATUS VALUES
+
+- pending: not started yet
+- running: currently executing
+- blocked: waiting for dependency
+- done: completed successfully
+- failed: execution failed
+
+## PRACTICAL EXAMPLES
+
+EXAMPLE 1: Web Scraper (Sequential)
+  root_tasks: [
+    {
+      task_id: "fetch",
+      title: "Fetch Homepage",
+      children: [] (leaf - no operator)
+    },
+    {
+      task_id: "parse",
+      title: "Parse Products",
+      iterative: true (repeat for each page),
+      children: [
+        { task_id: "name", title: "Extract Name" },
+        { task_id: "price", title: "Extract Price" },
+        { task_id: "desc", title: "Extract Description" }
+      ],
+      operator: "sequence" (extract in order)
+    },
+    { task_id: "save", title: "Save Results" }
+  ]
+
+EXAMPLE 2: Test Framework (Mixed Operators)
+  {
+    task_id: "test",
+    title: "Run Tests",
+    operator: "sequence",
+    children: [
+      {
+        task_id: "suite",
+        title: "Execute Test Suites",
+        operator: "interleaving" (run all in parallel),
+        children: [
+          { task_id: "unit", title: "Unit Tests", iterative: true },
+          { task_id: "integration", title: "Integration Tests" },
+          { task_id: "perf", title: "Performance Tests" }
+        ]
+      },
+      {
+        task_id: "handle",
+        title: "Handle Results",
+        operator: "choice" (pick ONE),
+        children: [
+          { task_id: "pass", title: "All Passed" },
+          { task_id: "retry", title: "Auto-Retry" },
+          { task_id: "report", title: "Generate Report" }
+        ]
+      }
+    ]
+  }
+
+## VALIDATION CHECKLIST
+
+When creating CTT:
+☑ Every task has: task_id (unique), title, task_description
+☑ Only branch nodes (2+ children) have operator field
+☑ All operator values in [sequence, choice, interleaving, disabling]
+☑ No null, None, or empty string values
+☑ Child task_ids are unique within tree
+☑ iterative=true for repeated tasks, not operator='*'
+☑ optional=true only for truly skippable tasks
+☑ Status values from [pending, running, blocked, done, failed]
+
+## OUTPUT FORMAT
+
+Return ONLY valid JSON:
+{
+  "root_tasks": [
+    { task definition },
+    { task definition },
+    ...
+  ]
+}
+
+- No markdown formatting
+- No prose or explanations
+- No code fences (return raw JSON)
+- Ensure valid JSON syntax
+- Apply all CTT rules above
+

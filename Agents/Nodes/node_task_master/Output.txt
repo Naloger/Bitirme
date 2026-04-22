@@ -1,105 +1,114 @@
 provider=ollama
-model=nemetron-4b-16k:latest
-validation_error_count=0
+model=gemma4-e2b-128k:latest
+validation_error_count=1
 
 [ctt_output]
-{
-  "root_tasks": [
-    {
-      "task_id": "t1",
-      "title": "Fetch homepage",
-      "task_description": "Retrieve the homepage of the e-commerce website."
-    },
-    {
-      "task_id": "t2",
-      "title": "Navigate to products page",
-      "task_description": "Navigate from homepage to the products page."
-    },
-    {
-      "task_id": "t3",
-      "title": "Parse product listings (iterative)",
-      "task_description": "Extract product name, price, description iteratively across multiple pages.",
-      "optional": true,
-      "iterative": true,
-      "children": [
-        {
-          "task_id": "t3a",
-          "title": "Extract name",
-          "task_description": "Extract product name."
-        },
-        {
-          "task_id": "t3b",
-          "title": "Extract price",
-          "task_description": "Extract product price."
-        },
-        {
-          "task_id": "t3c",
-          "title": "Extract description",
-          "task_description": "Extract product description."
-        }
-      ],
-      "operator": "sequence"
-    },
-    {
-      "task_id": "t4",
-      "title": "Save results to JSON",
-      "task_description": "Save parsed product data to a JSON file."
-    },
-    {
-      "task_id": "t5",
-      "title": "Generate summary report",
-      "task_description": "Create a summary report from the saved data."
-    }
-  ]
-}
+CTT parse error: 'task_description'
 
 [raw_response]
 {
   "root_tasks": [
     {
-      "task_id": "t1",
-      "title": "Fetch homepage",
-      "task_description": "Retrieve the homepage of the e-commerce website."
+      "task_id": "setup_env",
+      "title": "Initialize Test Environment",
+      "task_description": "Setup database, deploy test server, install dependencies",
+      "status": "pending",
+      "optional": false
     },
     {
-      "task_id": "t2",
-      "title": "Navigate to products page",
-      "task_description": "Navigate from homepage to the products page."
-    },
-    {
-      "task_id": "t3",
-      "title": "Parse product listings (iterative)",
-      "task_description": "Extract product name, price, description iteratively across multiple pages.",
-      "optional": true,
-      "iterative": true,
+      "task_id": "run_tests",
+      "title": "Execute Test Suites",
       "operator": "sequence",
       "children": [
         {
-          "task_id": "t3a",
-          "title": "Extract name",
-          "task_description": "Extract product name."
-        },
-        {
-          "task_id": "t3b",
-          "title": "Extract price",
-          "task_description": "Extract product price."
-        },
-        {
-          "task_id": "t3c",
-          "title": "Extract description",
-          "task_description": "Extract product description."
+          "task_id": "run_suites",
+          "title": "Run Test Suites (Parallel)",
+          "operator": "interleaving",
+          "children": [
+            {
+              "task_id": "unit_tests",
+              "title": "Run Unit Tests",
+              "iterative": true
+            },
+            {
+              "task_id": "integration_tests",
+              "title": "Run Integration Tests"
+            },
+            {
+              "task_id": "perf_tests",
+              "title": "Run Performance Tests"
+            }
+          ]
         }
       ]
     },
     {
-      "task_id": "t4",
-      "title": "Save results to JSON",
-      "task_description": "Save parsed product data to a JSON file."
+      "task_id": "handle_failures",
+      "title": "Handle Test Failures",
+      "operator": "choice",
+      "children": [
+        {
+          "task_id": "report_notify",
+          "title": "Generate Report and Notify Team"
+        },
+        {
+          "task_id": "auto_retry",
+          "title": "Auto-Retry Failed Tests"
+        },
+        {
+          "task_id": "skip_tests",
+          "title": "Skip Tests and Continue"
+        }
+      ]
     },
     {
-      "task_id": "t5",
-      "title": "Generate summary report",
-      "task_description": "Create a summary report from the saved data."
+      "task_id": "security_scan",
+      "title": "Optional Security Scanning",
+      "operator": "disabling",
+      "children": [
+        {
+          "task_id": "scan_vulnerabilities",
+          "title": "Perform Security Scan"
+        }
+      ]
+    },
+    {
+      "task_id": "generate_reports",
+      "title": "Generate Comprehensive Reports",
+      "operator": "sequence",
+      "children": [
+        {
+          "task_id": "coverage_analysis",
+          "title": "Analyze Coverage Metrics"
+        },
+        {
+          "task_id": "performance_metrics",
+          "title": "Calculate Performance Metrics"
+        },
+        {
+          "task_id": "security_audit",
+          "title": "Generate Security Audit Report"
+        }
+      ]
+    },
+    {
+      "task_id": "cleanup_archive",
+      "title": "Cleanup and Archive Results",
+      "operator": "interleaving",
+      "children": [
+        {
+          "task_id": "backup_data",
+          "title": "Backup Data"
+        },
+        {
+          "task_id": "clear_temp",
+          "title": "Clear Temporary Files"
+        },
+        {
+          "task_id": "generate_summary",
+          "title": "Generate Summary Report"
+        }
+      ]
     }
   ]
 }
