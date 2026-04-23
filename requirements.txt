@@ -1,5 +1,6 @@
 langgraph
 langchain
+langchain-ollama
 fastmcp
 textual>=0.40.0
 langdetect
