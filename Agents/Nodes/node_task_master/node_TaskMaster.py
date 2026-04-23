@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, Field
 from langgraph.graph import END, START, StateGraph
 
-from Lib.CTT import CttTask, CttOperatorNode, CttTreeState, validate_ctt_tree
+from support_lib.CTT import CttTask, CttOperatorNode, CttTreeState, validate_ctt_tree
 from llm_config import ConfigError, load_llm_config
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

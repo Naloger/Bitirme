@@ -7,7 +7,7 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from Lib.CTT import CttTask, CttOperatorNode, CttTreeState, validate_ctt_tree
+from support_lib.CTT import CttTask, CttOperatorNode, CttTreeState, validate_ctt_tree
 
 
 def test_simple_expression_tree():
