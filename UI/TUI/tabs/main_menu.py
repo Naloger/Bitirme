@@ -98,9 +98,10 @@ class MainMenuContainer(Container):
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
         """Switch to the selected tab panel."""
         tab_id = event.tab.id
-        panel_id = self.TAB_TO_PANEL.get(tab_id)
-        if panel_id:
-            self.query_one("#llm-main", ContentSwitcher).current = panel_id
+        if tab_id is not None:
+            panel_id = self.TAB_TO_PANEL.get(tab_id)
+            if panel_id:
+                self.query_one("#llm-main", ContentSwitcher).current = panel_id
 
     def on_mount(self) -> None:
         """Ensure default tab and panel on app start."""

@@ -2,12 +2,11 @@
 
 from pathlib import Path
 import sys
+from Agents.Nodes.node_task_master.node_TaskMaster import _parse_ctt_payload
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-
-from Agents.Nodes.node_task_master.node_TaskMaster import _parse_ctt_payload
 
 
 def test_parse_accepts_raw_valid_json_only():

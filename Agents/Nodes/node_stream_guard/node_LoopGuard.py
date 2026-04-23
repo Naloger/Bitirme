@@ -34,6 +34,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from llm_config import ConfigError, load_llm_config  # noqa: E402
 
+# Module-level flag for debug logging
+_debug_logged = False
+
 
 class StreamGuardState(BaseModel):
     """State for stream guard node processing."""
@@ -102,11 +105,12 @@ def _extract_stream_parts(chunk: Dict[str, object]) -> Tuple[str, str, bool]:
     done = bool(chunk.get("done", False)) if isinstance(chunk, dict) else False
 
     # Debug: log chunk structure on first non-empty chunk.
-    if (content or thinking) and not getattr(_extract_stream_parts, "_debug_logged", False):
+    global _debug_logged
+    if (content or thinking) and not _debug_logged:
         print(f"[DEBUG] First chunk keys: {list(chunk.keys())}", file=sys.stderr)
         if isinstance(message, dict):
             print(f"[DEBUG] Message keys: {list(message.keys())}", file=sys.stderr)
-        _extract_stream_parts._debug_logged = True
+        _debug_logged = True
 
     return content, thinking, done
 

@@ -4,16 +4,15 @@ Downloads non-pip model data after packages are installed in the venv.
 - Downloads NLTK corpora used by the lemmatizer (wordnet, omw, punkt)
 
 Run this using the project's venv python:
-  .\.venv\Scripts\python.exe scripts\install_models.py
+  .\\venv\\Scripts\\python.exe scripts\\install_models.py
 """
 import sys
-import traceback
 
 errors = []
 
 # stanza download
 try:
-    import stanza
+    import stanza  # type: ignore[import-not-found]
     try:
         stanza.download('tr')
         print('stanza: downloaded tr model')
@@ -26,7 +25,7 @@ except Exception as e:
 
 # nltk downloads
 try:
-    import nltk
+    import nltk  # type: ignore[import-not-found]
     for pkg in ('wordnet', 'omw-1.4', 'punkt'):
         try:
             nltk.download(pkg)

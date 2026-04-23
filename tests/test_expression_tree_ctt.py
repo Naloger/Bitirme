@@ -3,11 +3,12 @@
 import json
 from pathlib import Path
 import sys
+from support_lib.CTT import  CttTreeState, validate_ctt_tree
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from support_lib.CTT import CttTask, CttOperatorNode, CttTreeState, validate_ctt_tree
 
 
 def test_simple_expression_tree():

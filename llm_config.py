@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import sys
 from typing import Any, Dict
-
+from urllib import error, parse, request
 
 
 @dataclass
@@ -50,6 +50,14 @@ def default_config_candidates() -> list[Path]:
 
 def default_config_path() -> Path:
     return default_config_candidates()[0]
+
+
+def _resolve_config_path_for_write(config_path: str | Path | None = None) -> Path:
+    """Resolve config output path, preferring an existing runtime candidate."""
+    if config_path:
+        return Path(config_path)
+    candidates = default_config_candidates()
+    return next((candidate for candidate in candidates if candidate.exists()), candidates[0])
 
 
 def load_llm_config(config_path: str | Path | None = None) -> LLMConfig:
@@ -99,4 +107,60 @@ def load_llm_config(config_path: str | Path | None = None) -> LLMConfig:
         raise ConfigError("Config 'ollama.model' is required.")
 
     return LLMConfig(provider=provider, raw=data)
+
+
+def save_llm_config(raw_config: Dict[str, Any], config_path: str | Path | None = None) -> Path:
+    """Validate and save LLM configuration to JSON file."""
+    if not isinstance(raw_config, dict):
+        raise ConfigError("Config root must be a JSON object.")
+
+    provider = str(raw_config.get("provider", "")).strip().lower()
+    if provider != "ollama":
+        raise ConfigError("Only provider='ollama' is supported right now.")
+
+    ollama_cfg = raw_config.get("ollama")
+    if not isinstance(ollama_cfg, dict):
+        raise ConfigError("Config must contain object 'ollama'.")
+    if not str(ollama_cfg.get("model", "")).strip():
+        raise ConfigError("Config 'ollama.model' is required.")
+
+    path = _resolve_config_path_for_write(config_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(raw_config, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def test_ollama_connection(base_url: str, model: str, timeout_seconds: int = 10) -> tuple[bool, str]:
+    """Test local Ollama reachability and whether model exists in /api/tags."""
+    normalized_url = str(base_url).strip().rstrip("/")
+    model_name = str(model).strip()
+    if not normalized_url:
+        return False, "Base URL is required."
+    if not model_name:
+        return False, "Model name is required."
+
+    tags_url = parse.urljoin(normalized_url + "/", "api/tags")
+    try:
+        with request.urlopen(tags_url, timeout=timeout_seconds) as response:
+            payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    except error.URLError as exc:
+        return False, f"Cannot connect to Ollama at {normalized_url}: {exc}"
+    except Exception as exc:
+        return False, f"Failed reading Ollama tags response: {exc}"
+
+    models = payload.get("models", []) if isinstance(payload, dict) else []
+    model_names = {
+        str(item.get("name", "")).strip()
+        for item in models
+        if isinstance(item, dict)
+    }
+    if not model_names:
+        return True, f"Connected to Ollama at {normalized_url}, but no models are installed."
+
+    # Accept exact match or a tag mismatch like "model" vs "model:latest".
+    if model_name in model_names or any(name.split(":", 1)[0] == model_name.split(":", 1)[0] for name in model_names):
+        return True, f"Connected to Ollama and found model '{model_name}'."
+
+    preview = ", ".join(sorted(model_names)[:8])
+    return False, f"Connected to Ollama, but model '{model_name}' is missing. Available: {preview}"
 

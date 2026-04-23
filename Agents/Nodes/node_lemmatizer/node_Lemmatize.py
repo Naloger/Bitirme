@@ -33,19 +33,21 @@ except (ImportError, OSError):
     spacy_en = None
 
 stanza_tr = None
+stanza = None
 try:
     import stanza
     stanza_tr = stanza.Pipeline(
         lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
     )
 except (ImportError, RuntimeError):
-    try:
-        stanza.download("tr")
-        stanza_tr = stanza.Pipeline(
-            lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
-        )
-    except (ImportError, RuntimeError):
-        stanza_tr = None
+    if stanza is not None:
+        try:
+            stanza.download("tr")
+            stanza_tr = stanza.Pipeline(
+                lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
+            )
+        except (ImportError, RuntimeError):
+            stanza_tr = None
 
 WordNetLemmatizer = None
 nltk_available = False
@@ -97,13 +99,17 @@ def _lemmatize_text(text: str) -> list[str]:
         elif sent_lang == "tr" and stanza_tr is not None:
             try:
                 tr_doc = stanza_tr(cleaned_sentence)
-                for sent_obj in tr_doc.sentences:
-                    for word in sent_obj.words:
-                        lemma = str(getattr(word, "lemma", word.text)).lower()
-                        # Remove punctuation from lemma
-                        lemma = lemma.strip().rstrip('.,!?;:\'"—-')
-                        if lemma:
-                            lemma_words.append(lemma)
+                # tr_doc should have sentences attribute after pipeline processing
+                sentences = getattr(tr_doc, "sentences", [])
+                if isinstance(sentences, list):
+                    for sent_obj in sentences:
+                        words = getattr(sent_obj, "words", [])
+                        for word in words:
+                            lemma = str(getattr(word, "lemma", word.text)).lower()
+                            # Remove punctuation from lemma
+                            lemma = lemma.strip().rstrip('.,!?;:\'"—-')
+                            if lemma:
+                                lemma_words.append(lemma)
             except RuntimeError:
                 pass
 

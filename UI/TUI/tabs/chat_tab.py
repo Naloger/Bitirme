@@ -112,6 +112,8 @@ class ChatTab(Container):
     def _initialize_llm(self) -> None:
         """Create a local Ollama chat client from JSON config."""
         chat_log = self.query_one("#chat-messages", RichLog)
+        self._llm = None
+        self._llm_error = None
 
         try:
             from langchain_ollama import ChatOllama
@@ -145,6 +147,12 @@ class ChatTab(Container):
         except Exception as exc:
             self._llm_error = f"Failed to initialize Ollama client: {exc}"
             chat_log.write(f"[bold red]Error:[/bold red] {self._llm_error}\n\n")
+
+    def reload_llm_config(self) -> None:
+        """Reload LLM settings from llm_config.json and reinitialize the client."""
+        chat_log = self.query_one("#chat-messages", RichLog)
+        chat_log.write("[dim]Reloading LLM configuration...[/dim]\n")
+        self._initialize_llm()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""

@@ -5,7 +5,7 @@ from llm_config import load_llm_config, ConfigError
 
 try:
     cfg = load_llm_config()
-    print(f"✓ Config loaded successfully")
+    print("✓ Config loaded successfully")
     print(f"  provider: {cfg.provider}")
     print(f"  model: {cfg.raw['ollama']['model']}")
     print(f"  base_url: {cfg.raw['ollama']['base_url']}")

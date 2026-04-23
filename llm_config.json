@@ -3,7 +3,7 @@
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
     "model": "gemma4-e2b-128k:latest",
-    "temperature": 0.2,
+    "temperature": 0.7,
     "num_ctx": 125000,
     "timeout_seconds": 300,
     "top_p": null,
@@ -17,6 +17,3 @@
     "pre_content_chunk_limit": 200
   }
 }
-
-
-

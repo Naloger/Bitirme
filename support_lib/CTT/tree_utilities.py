@@ -52,11 +52,11 @@ def visualize_expression_tree(node: Any, depth: int = 0, is_right: bool = False)
 
         if left:
             left_lines = visualize_expression_tree(left, depth + 1, is_right=False).split("\n")
-            lines.extend([l for l in left_lines if l])
+            lines.extend([lines for lines in left_lines if lines])
 
         if right:
             right_lines = visualize_expression_tree(right, depth + 1, is_right=True).split("\n")
-            lines.extend([l for l in right_lines if l])
+            lines.extend([lines for lines in right_lines if lines])
     else:
         # It's a task node
         task_id = node.get("task_id", "unknown")

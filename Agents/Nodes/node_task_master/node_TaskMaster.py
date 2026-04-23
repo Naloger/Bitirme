@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-
 from pydantic import BaseModel, Field
 from langgraph.graph import END, START, StateGraph
 
@@ -320,7 +319,7 @@ if __name__ == "__main__":
     if input_path.exists():
         result = task_master_node(TaskMasterState(input_text=input_path.read_text(encoding="utf-8").strip()))
         output = "\n".join([
-            f"provider=ollama",
+            "provider=ollama",
             f"model={result.get('model', '')}",
             f"validation_error_count={len(result.get('validation_errors', []))}",
             "",
