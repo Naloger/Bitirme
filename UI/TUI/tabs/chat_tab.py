@@ -6,6 +6,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.widgets import Button, Input, RichLog
+from langchain_ollama import ChatOllama
 
 
 class ChatTab(Container):
@@ -116,16 +117,6 @@ class ChatTab(Container):
         self._llm_error = None
 
         try:
-            from langchain_ollama import ChatOllama
-        except ImportError:
-            self._llm_error = (
-                "langchain-ollama package is not installed."
-                "Run: pip install langchain-ollama"
-            )
-            chat_log.write(f"[bold red]Error:[/bold red] {self._llm_error}\n\n")
-            return
-
-        try:
             config = load_llm_config()
             ollama_cfg = config.raw.get("ollama", {})
             timeout_seconds = ollama_cfg.get("timeout_seconds", 300)
@@ -139,7 +130,6 @@ class ChatTab(Container):
                 repeat_penalty=ollama_cfg.get("repeat_penalty"),
                 client_kwargs=client_kwargs,
             )
-            self._llm_error = None
             chat_log.write("[green]Connected to local Ollama model.[/green]\n\n")
         except ConfigError as exc:
             self._llm_error = f"Config error: {exc}"
@@ -227,6 +217,7 @@ class ChatTab(Container):
         """Disable input controls while the assistant is generating."""
         self.query_one("#message-input", Input).disabled = busy
         self.query_one("#send-button", Button).disabled = busy
+        self.query_one("#clear-button", Button).disabled = busy
 
     def _clear_chat(self) -> None:
         """Clear all chat messages."""

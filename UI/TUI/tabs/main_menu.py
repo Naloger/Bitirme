@@ -1,7 +1,7 @@
 """Main LLM Menu interface."""
 from textual.app import ComposeResult
 from textual.containers import Container
-from textual.widgets import ContentSwitcher, Static, Tabs, Tab
+from textual.widgets import ContentSwitcher, Static, Tabs, Tab, Footer
 
 from UI.TUI.tabs.chat_tab import ChatTab
 from UI.TUI.tabs.debug_tab import DebugTab
@@ -63,11 +63,15 @@ class MainMenuContainer(Container):
     """
 
 
+
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the LLM Assistant container."""
         # Header
         with Container(id="llm-header"):
             yield Static("[bold cyan]LLM Assistant[/bold cyan]")
+
+        yield Footer()
 
         # Tab navigation
         yield Tabs(
@@ -124,6 +128,4 @@ class MainMenu:
     def compose() -> ComposeResult:
         """Create child widgets for the LLM menu."""
         yield MainMenuContainer()
-
-
 
