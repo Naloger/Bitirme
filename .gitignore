@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-support_lib/
+lib/
 lib64/
 parts/
 sdist/
@@ -141,7 +141,6 @@ local_*.json
 
 # OS
 Thumbs.db
-.DS_Store
 
 # Project specific
 node_modules/
