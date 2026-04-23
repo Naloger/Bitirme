@@ -4,6 +4,7 @@ from textual.containers import Container
 from textual.widgets import ContentSwitcher, Static, Tabs, Tab
 
 from UI.TUI.tabs.chat_tab import ChatTab
+from UI.TUI.tabs.debug_tab import DebugTab
 from UI.TUI.tabs.graph_visualizer import GraphVisualizer
 from UI.TUI.tabs.memory_visualizer import MemoryVisualizer
 from UI.TUI.tabs.configure import Configure
@@ -18,6 +19,7 @@ class MainMenuContainer(Container):
         "tab_graph": "panel_graph",
         "tab_memory": "panel_memory",
         "tab_config": "panel_config",
+        "tab_debug": "panel_debug"
     }
 
     CSS = """
@@ -73,6 +75,7 @@ class MainMenuContainer(Container):
             Tab("Graph", id="tab_graph"),
             Tab("Memory", id="tab_memory"),
             Tab("Configure", id="tab_config"),
+            Tab("Debug", id="tab_debug"),
             id="llm-tabs",
         )
 
@@ -93,6 +96,10 @@ class MainMenuContainer(Container):
             # Configure Tab
             with Container(id="panel_config", classes="tab-panel"):
                 yield Configure()
+
+            # Configure Tab
+            with Container(id="panel_debug", classes="tab-debug"):
+                yield DebugTab()
 
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:

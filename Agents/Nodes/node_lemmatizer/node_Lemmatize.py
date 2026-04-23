@@ -2,7 +2,6 @@ from pathlib import Path
 import re
 from typing import Any, cast
 from typing_extensions import TypedDict
-
 from langgraph.graph import END, START, StateGraph
 
 # Import langdetect exception for specific handling
@@ -81,7 +80,7 @@ def _detect_sentence_language(sentence: str) -> str:
 
 def _lemmatize_text(text: str) -> list[str]:
     # Split by sentence boundaries and common punctuation
-    sentences = re.split(r'\n.!?;:,—-""\'\'"+', text)
+    sentences = re.split(r'[\n.!?;:,—\-"\']+', text)
     lemmatized_lines: list[str] = []
 
     for sentence in sentences:
@@ -99,17 +98,15 @@ def _lemmatize_text(text: str) -> list[str]:
         elif sent_lang == "tr" and stanza_tr is not None:
             try:
                 tr_doc = stanza_tr(cleaned_sentence)
-                # tr_doc should have sentences attribute after pipeline processing
-                sentences = getattr(tr_doc, "sentences", [])
-                if isinstance(sentences, list):
-                    for sent_obj in sentences:
-                        words = getattr(sent_obj, "words", [])
-                        for word in words:
-                            lemma = str(getattr(word, "lemma", word.text)).lower()
-                            # Remove punctuation from lemma
-                            lemma = lemma.strip().rstrip('.,!?;:\'"—-')
-                            if lemma:
-                                lemma_words.append(lemma)
+                for sent_obj in getattr(tr_doc, "sentences", []):
+                    for word in getattr(sent_obj, "words", []):
+                        w_text = str(getattr(word, "text", ""))
+                        w_lemma = str(getattr(word, "lemma", w_text))
+                        lemma = w_lemma.lower()
+                        # Remove punctuation from lemma
+                        lemma = lemma.strip().rstrip('.,!?;:\'"—-')
+                        if lemma:
+                            lemma_words.append(lemma)
             except RuntimeError:
                 pass
 
@@ -177,4 +174,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
