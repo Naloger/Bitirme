@@ -51,11 +51,15 @@ def visualize_expression_tree(node: Any, depth: int = 0, is_right: bool = False)
         right = node.get("right")
 
         if left:
-            left_lines = visualize_expression_tree(left, depth + 1, is_right=False).split("\n")
+            left_lines = visualize_expression_tree(
+                left, depth + 1, is_right=False
+            ).split("\n")
             lines.extend([lines for lines in left_lines if lines])
 
         if right:
-            right_lines = visualize_expression_tree(right, depth + 1, is_right=True).split("\n")
+            right_lines = visualize_expression_tree(
+                right, depth + 1, is_right=True
+            ).split("\n")
             lines.extend([lines for lines in right_lines if lines])
     else:
         # It's a task node
@@ -113,7 +117,9 @@ def linearize_expression_tree(node: Any) -> str:
         return node.get("title", node.get("task_id", "?"))
 
 
-def flatten_expression_tree(node: Any, parent_operator: str = "sequence") -> dict[str, Any]:
+def flatten_expression_tree(
+    node: Any, parent_operator: str = "sequence"
+) -> dict[str, Any]:
     """Convert expression tree back to flat children structure (lossy).
 
     Note: This is lossy - we lose the binary operator placement information.
@@ -147,10 +153,7 @@ def flatten_expression_tree(node: Any, parent_operator: str = "sequence") -> dic
         collect_tasks(node.get("right"))
 
         # Return flattened structure
-        return {
-            "operator": node.get("operator", parent_operator),
-            "children": tasks
-        }
+        return {"operator": node.get("operator", parent_operator), "children": tasks}
     else:
         # It's a task, return as-is
         return node.copy()
@@ -250,21 +253,21 @@ if __name__ == "__main__":
         "left": {
             "task_id": "get_details",
             "title": "Get Details",
-            "task_description": "Get customer details"
+            "task_description": "Get customer details",
         },
         "right": {
             "operator": "choice",
             "left": {
                 "task_id": "cc_pay",
                 "title": "Credit Card",
-                "task_description": "CC payment"
+                "task_description": "CC payment",
             },
             "right": {
                 "task_id": "paypal_pay",
                 "title": "PayPal",
-                "task_description": "PayPal payment"
-            }
-        }
+                "task_description": "PayPal payment",
+            },
+        },
     }
 
     print("=" * 60)
@@ -284,4 +287,3 @@ if __name__ == "__main__":
     print(f"Total operators: {count_operators(example_tree)}")
     print(f"Tree depth: {get_tree_depth(example_tree)}")
     print(f"Operator distribution: {get_operator_distribution(example_tree)}")
-

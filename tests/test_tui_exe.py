@@ -1,4 +1,5 @@
 """Test script to verify the EXE works correctly."""
+
 import subprocess
 import sys
 import time
@@ -13,10 +14,7 @@ print(f"Exists: {os.path.exists(exe_path)}")
 try:
     print("\nStarting application...")
     process = subprocess.Popen(
-        [exe_path],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
+        [exe_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
 
     # Wait a moment for the app to start
@@ -42,4 +40,3 @@ except Exception as e:
     sys.exit(1)
 
 print("\n✓ Test completed successfully!")
-

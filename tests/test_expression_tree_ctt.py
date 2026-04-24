@@ -3,12 +3,11 @@
 import json
 from pathlib import Path
 import sys
-from support_lib.CTT import  CttTreeState, validate_ctt_tree
+from support_lib.CTT import CttTreeState, validate_ctt_tree
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
-
 
 
 def test_simple_expression_tree():
@@ -25,15 +24,15 @@ def test_simple_expression_tree():
                         "left": {
                             "task_id": "task1",
                             "title": "First Task",
-                            "task_description": "Execute first"
+                            "task_description": "Execute first",
                         },
                         "right": {
                             "task_id": "task2",
                             "title": "Second Task",
-                            "task_description": "Execute second"
-                        }
+                            "task_description": "Execute second",
+                        },
                     }
-                ]
+                ],
             }
         ]
     }
@@ -57,23 +56,23 @@ def test_complex_nested_expression_tree():
                         "left": {
                             "task_id": "get_details",
                             "title": "Get Customer Details",
-                            "task_description": "Collect customer information"
+                            "task_description": "Collect customer information",
                         },
                         "right": {
                             "operator": "choice",
                             "left": {
                                 "task_id": "cc_pay",
                                 "title": "Process Credit Card",
-                                "task_description": "Charge credit card"
+                                "task_description": "Charge credit card",
                             },
                             "right": {
                                 "task_id": "paypal_pay",
                                 "title": "Process PayPal",
-                                "task_description": "Use PayPal payment"
-                            }
-                        }
+                                "task_description": "Use PayPal payment",
+                            },
+                        },
                     }
-                ]
+                ],
             }
         ]
     }
@@ -98,31 +97,31 @@ def test_deeply_nested_expression_tree():
                         "left": {
                             "task_id": "step1",
                             "title": "Step 1",
-                            "task_description": "First sequential step"
+                            "task_description": "First sequential step",
                         },
                         "right": {
                             "operator": "sequence",
                             "left": {
                                 "task_id": "step2",
                                 "title": "Step 2",
-                                "task_description": "Second sequential step"
+                                "task_description": "Second sequential step",
                             },
                             "right": {
                                 "operator": "interleaving",
                                 "left": {
                                     "task_id": "parallel1",
                                     "title": "Parallel Task 1",
-                                    "task_description": "Run in parallel"
+                                    "task_description": "Run in parallel",
                                 },
                                 "right": {
                                     "task_id": "parallel2",
                                     "title": "Parallel Task 2",
-                                    "task_description": "Run in parallel"
-                                }
-                            }
-                        }
+                                    "task_description": "Run in parallel",
+                                },
+                            },
+                        },
                     }
-                ]
+                ],
             }
         ]
     }
@@ -147,15 +146,15 @@ def test_json_serialization_expression_tree():
                         "left": {
                             "task_id": "option_a",
                             "title": "Option A",
-                            "task_description": "First choice"
+                            "task_description": "First choice",
                         },
                         "right": {
                             "task_id": "option_b",
                             "title": "Option B",
-                            "task_description": "Second choice"
-                        }
+                            "task_description": "Second choice",
+                        },
                     }
-                ]
+                ],
             }
         ]
     }
@@ -185,9 +184,9 @@ def test_mixed_flat_and_expression_tree():
                     {
                         "task_id": "old_style_child",
                         "title": "Old Style Child",
-                        "task_description": "Using flat children array"
+                        "task_description": "Using flat children array",
                     }
-                ]
+                ],
             },
             {
                 "task_id": "tree_style",
@@ -200,16 +199,16 @@ def test_mixed_flat_and_expression_tree():
                         "left": {
                             "task_id": "left_task",
                             "title": "Left Task",
-                            "task_description": "Left side of operator"
+                            "task_description": "Left side of operator",
                         },
                         "right": {
                             "task_id": "right_task",
                             "title": "Right Task",
-                            "task_description": "Right side of operator"
-                        }
+                            "task_description": "Right side of operator",
+                        },
                     }
-                ]
-            }
+                ],
+            },
         ]
     }
 
@@ -226,16 +225,8 @@ def test_operator_aliases_in_expression_tree():
     # Test with operator alias ">>"
     node_dict = {
         "operator": ">>",  # Using alias instead of "sequence"
-        "left": {
-            "task_id": "a",
-            "title": "A",
-            "task_description": "Task A"
-        },
-        "right": {
-            "task_id": "b",
-            "title": "B",
-            "task_description": "Task B"
-        }
+        "left": {"task_id": "a", "title": "A", "task_description": "Task A"},
+        "right": {"task_id": "b", "title": "B", "task_description": "Task B"},
     }
 
     coerced = _coerce_node(node_dict)
@@ -256,4 +247,3 @@ if __name__ == "__main__":
     test_operator_aliases_in_expression_tree()
 
     print("\n[OK] All expression tree tests passed!")
-

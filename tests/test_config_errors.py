@@ -16,7 +16,7 @@ except ConfigError as e:
 
 # Test 2: Broken JSON
 print("\nTest 2: Broken JSON syntax")
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
     f.write('{ "invalid": json }')  # Missing quotes
     broken_path = f.name
 
@@ -30,8 +30,8 @@ finally:
 
 # Test 3: Empty file
 print("\nTest 3: Empty config file")
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-    f.write('')
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+    f.write("")
     empty_path = f.name
 
 try:
@@ -44,7 +44,7 @@ finally:
 
 # Test 4: Missing required fields
 print("\nTest 4: Missing 'provider' field")
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
     json.dump({"ollama": {"model": "test"}}, f)
     incomplete_path = f.name
 
@@ -58,7 +58,7 @@ finally:
 
 # Test 5: Missing model field
 print("\nTest 5: Missing 'model' field in ollama config")
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
     json.dump({"provider": "ollama", "ollama": {}}, f)
     no_model_path = f.name
 
@@ -71,4 +71,3 @@ finally:
     Path(no_model_path).unlink()
 
 print("\n✓ All error handling tests passed!")
-

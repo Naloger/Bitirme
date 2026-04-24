@@ -13,4 +13,3 @@ except ConfigError as e:
     print(f"✗ ConfigError: {e}")
 except Exception as e:
     print(f"✗ Error: {e}")
-

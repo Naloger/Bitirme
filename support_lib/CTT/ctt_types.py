@@ -13,13 +13,13 @@ TaskStatus: TypeAlias = Literal[
 ]
 
 CttOperator: TypeAlias = Literal[
-    "sequence",            # >>
-    "choice",              # []
-    "interleaving",        # |||
+    "sequence",  # >>
+    "choice",  # []
+    "interleaving",  # |||
     "order_independence",  # |=|
-    "suspend_resume",      # |>
-    "disabling",           # [>
-    "synchronization",     # |[]|
+    "suspend_resume",  # |>
+    "disabling",  # [>
+    "synchronization",  # |[]|
 ]
 
 
@@ -38,6 +38,7 @@ class CttTask(TypedDict):
 
 class CttOperatorNode(TypedDict):
     """Expression Tree node representing a temporal operator between child tasks."""
+
     operator: Required[CttOperator]
     left: Required[Union["CttTask", "CttOperatorNode"]]
     right: Required[Union["CttTask", "CttOperatorNode"]]
@@ -99,6 +100,7 @@ def validate_ctt_tree(root_tasks: List[CttTask]) -> List[str]:
         walk_task(root, path="root")
 
     return errors
+
 
 __all__ = [
     "TaskStatus",

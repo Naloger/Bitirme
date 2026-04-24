@@ -94,4 +94,3 @@ def test_parse_rejects_invalid_children_tree_nodes():
         assert False, "Expected ValueError for invalid children_tree node"
     except ValueError as exc:
         assert "invalid children_tree node" in str(exc)
-

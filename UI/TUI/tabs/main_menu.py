@@ -1,4 +1,5 @@
 """Main LLM Menu interface."""
+
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import ContentSwitcher, Static, Tabs, Tab, Footer
@@ -10,7 +11,6 @@ from UI.TUI.tabs.memory_visualizer import MemoryVisualizer
 from UI.TUI.tabs.configure import Configure
 
 
-
 class MainMenuContainer(Container):
     """Container for LLM Assistant content with tabbed interface."""
 
@@ -19,7 +19,7 @@ class MainMenuContainer(Container):
         "tab_graph": "panel_graph",
         "tab_memory": "panel_memory",
         "tab_config": "panel_config",
-        "tab_debug": "panel_debug"
+        "tab_debug": "panel_debug",
     }
 
     CSS = """
@@ -62,9 +62,6 @@ class MainMenuContainer(Container):
     
     """
 
-
-
-
     def compose(self) -> ComposeResult:
         """Create child widgets for the LLM Assistant container."""
         # Header
@@ -105,7 +102,6 @@ class MainMenuContainer(Container):
             with Container(id="panel_debug", classes="tab-debug"):
                 yield DebugTab()
 
-
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
         """Switch to the selected tab panel."""
         tab_id = event.tab.id
@@ -120,7 +116,6 @@ class MainMenuContainer(Container):
         self.query_one("#llm-main", ContentSwitcher).current = "panel_chat"
 
 
-
 class MainMenu:
     """LLM Menu interface manager."""
 
@@ -128,4 +123,3 @@ class MainMenu:
     def compose() -> ComposeResult:
         """Create child widgets for the LLM menu."""
         yield MainMenuContainer()
-

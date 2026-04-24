@@ -3,6 +3,7 @@
 Currently supports only Ollama provider, but keeps a provider field so
 additional backends can be added without changing node interfaces.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -57,7 +58,9 @@ def _resolve_config_path_for_write(config_path: str | Path | None = None) -> Pat
     if config_path:
         return Path(config_path)
     candidates = default_config_candidates()
-    return next((candidate for candidate in candidates if candidate.exists()), candidates[0])
+    return next(
+        (candidate for candidate in candidates if candidate.exists()), candidates[0]
+    )
 
 
 def load_llm_config(config_path: str | Path | None = None) -> LLMConfig:
@@ -73,7 +76,9 @@ def load_llm_config(config_path: str | Path | None = None) -> LLMConfig:
         path = Path(config_path)
     else:
         candidates = default_config_candidates()
-        path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
+        path = next(
+            (candidate for candidate in candidates if candidate.exists()), candidates[0]
+        )
 
     if not path.exists():
         if config_path:
@@ -109,7 +114,9 @@ def load_llm_config(config_path: str | Path | None = None) -> LLMConfig:
     return LLMConfig(provider=provider, raw=data)
 
 
-def save_llm_config(raw_config: Dict[str, Any], config_path: str | Path | None = None) -> Path:
+def save_llm_config(
+    raw_config: Dict[str, Any], config_path: str | Path | None = None
+) -> Path:
     """Validate and save LLM configuration to JSON file."""
     if not isinstance(raw_config, dict):
         raise ConfigError("Config root must be a JSON object.")
@@ -130,7 +137,9 @@ def save_llm_config(raw_config: Dict[str, Any], config_path: str | Path | None =
     return path
 
 
-def test_ollama_connection(base_url: str, model: str, timeout_seconds: int = 10) -> tuple[bool, str]:
+def test_ollama_connection(
+    base_url: str, model: str, timeout_seconds: int = 10
+) -> tuple[bool, str]:
     """Test local Ollama reachability and whether model exists in /api/tags."""
     normalized_url = str(base_url).strip().rstrip("/")
     model_name = str(model).strip()
@@ -150,17 +159,22 @@ def test_ollama_connection(base_url: str, model: str, timeout_seconds: int = 10)
 
     models = payload.get("models", []) if isinstance(payload, dict) else []
     model_names = {
-        str(item.get("name", "")).strip()
-        for item in models
-        if isinstance(item, dict)
+        str(item.get("name", "")).strip() for item in models if isinstance(item, dict)
     }
     if not model_names:
-        return True, f"Connected to Ollama at {normalized_url}, but no models are installed."
+        return (
+            True,
+            f"Connected to Ollama at {normalized_url}, but no models are installed.",
+        )
 
     # Accept exact match or a tag mismatch like "model" vs "model:latest".
-    if model_name in model_names or any(name.split(":", 1)[0] == model_name.split(":", 1)[0] for name in model_names):
+    if model_name in model_names or any(
+        name.split(":", 1)[0] == model_name.split(":", 1)[0] for name in model_names
+    ):
         return True, f"Connected to Ollama and found model '{model_name}'."
 
     preview = ", ".join(sorted(model_names)[:8])
-    return False, f"Connected to Ollama, but model '{model_name}' is missing. Available: {preview}"
-
+    return (
+        False,
+        f"Connected to Ollama, but model '{model_name}' is missing. Available: {preview}",
+    )

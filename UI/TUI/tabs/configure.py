@@ -1,10 +1,16 @@
 """Configure tab."""
+
 from __future__ import annotations
 
 from copy import deepcopy
 from typing import Any
 
-from llm_config import ConfigError, load_llm_config, save_llm_config, test_ollama_connection
+from llm_config import (
+    ConfigError,
+    load_llm_config,
+    save_llm_config,
+    test_ollama_connection,
+)
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, VerticalScroll
@@ -17,7 +23,9 @@ class Configure(VerticalScroll):
     """Configure tab content."""
 
     _raw_config: dict[str, Any] | None = None
-    _ollama_status: str = "unknown"  # "connected", "disconnected", "unknown", "checking"
+    _ollama_status: str = (
+        "unknown"  # "connected", "disconnected", "unknown", "checking"
+    )
 
     DEFAULT_CSS = """
     Configure {
@@ -141,9 +149,15 @@ class Configure(VerticalScroll):
                 yield Input(id="repeat-penalty-input", classes="config-input")
 
             with Horizontal(id="config-buttons"):
-                yield Button("Test Ollama", id="test-connection-button", variant="primary")
-                yield Button("Save and Reload", id="save-config-button", variant="success")
-                yield Button("Reload from File", id="reload-config-button", variant="default")
+                yield Button(
+                    "Test Ollama", id="test-connection-button", variant="primary"
+                )
+                yield Button(
+                    "Save and Reload", id="save-config-button", variant="success"
+                )
+                yield Button(
+                    "Reload from File", id="reload-config-button", variant="default"
+                )
 
         yield RichLog(id="config-log", markup=True)
 
@@ -151,7 +165,9 @@ class Configure(VerticalScroll):
         """Initialize the configure tab."""
         config_log = self.query_one("#config-log", RichLog)
         config_log.write("[bold cyan]Configuration Settings[/bold cyan]\n")
-        config_log.write("[dim]Edit local Ollama settings and save to llm_config.json[/dim]\n\n")
+        config_log.write(
+            "[dim]Edit local Ollama settings and save to llm_config.json[/dim]\n\n"
+        )
         self._load_config_into_form()
         self._update_status("Checking Ollama connection...")
         self._check_ollama_status()
@@ -177,20 +193,31 @@ class Configure(VerticalScroll):
         ollama_cfg = config.raw.get("ollama", {})
 
         self.query_one("#provider-select", Select).value = "ollama"
-        self.query_one("#base-url-input", Input).value = str(ollama_cfg.get("base_url", ""))
+        self.query_one("#base-url-input", Input).value = str(
+            ollama_cfg.get("base_url", "")
+        )
         self.query_one("#model-input", Input).value = str(ollama_cfg.get("model", ""))
-        self.query_one("#temperature-input", Input).value = self._to_text(ollama_cfg.get("temperature", 0.2))
-        self.query_one("#num-ctx-input", Input).value = self._to_text(ollama_cfg.get("num_ctx"))
-        self.query_one("#timeout-input", Input).value = self._to_text(ollama_cfg.get("timeout_seconds", 300))
-        self.query_one("#top-p-input", Input).value = self._to_text(ollama_cfg.get("top_p"))
-        self.query_one("#repeat-penalty-input", Input).value = self._to_text(ollama_cfg.get("repeat_penalty"))
+        self.query_one("#temperature-input", Input).value = self._to_text(
+            ollama_cfg.get("temperature", 0.2)
+        )
+        self.query_one("#num-ctx-input", Input).value = self._to_text(
+            ollama_cfg.get("num_ctx")
+        )
+        self.query_one("#timeout-input", Input).value = self._to_text(
+            ollama_cfg.get("timeout_seconds", 300)
+        )
+        self.query_one("#top-p-input", Input).value = self._to_text(
+            ollama_cfg.get("top_p")
+        )
+        self.query_one("#repeat-penalty-input", Input).value = self._to_text(
+            ollama_cfg.get("repeat_penalty")
+        )
         self._log("[green]Loaded settings from llm_config.json[/green]")
 
     def _update_status(self, message: str) -> None:
         """Update the status indicator with a message."""
         status_widget = self.query_one("#status-indicator", Static)
         status_widget.update(message)
-
 
     @work(thread=True)
     def _check_ollama_status(self) -> None:
@@ -290,11 +317,15 @@ class Configure(VerticalScroll):
 
         ollama_cfg["base_url"] = self.query_one("#base-url-input", Input).value.strip()
         ollama_cfg["model"] = self.query_one("#model-input", Input).value.strip()
-        ollama_cfg["temperature"] = self._parse_required_float("#temperature-input", "temperature")
+        ollama_cfg["temperature"] = self._parse_required_float(
+            "#temperature-input", "temperature"
+        )
         ollama_cfg["num_ctx"] = self._parse_optional_int("#num-ctx-input")
         ollama_cfg["timeout_seconds"] = self._parse_optional_int("#timeout-input")
         ollama_cfg["top_p"] = self._parse_optional_float("#top-p-input")
-        ollama_cfg["repeat_penalty"] = self._parse_optional_float("#repeat-penalty-input")
+        ollama_cfg["repeat_penalty"] = self._parse_optional_float(
+            "#repeat-penalty-input"
+        )
 
         if not ollama_cfg["base_url"]:
             raise ConfigError("Config 'ollama.base_url' is required.")
@@ -311,7 +342,9 @@ class Configure(VerticalScroll):
         try:
             return float(text)
         except ValueError as exc:
-            raise ConfigError(f"Config 'ollama.{field_name}' must be a number.") from exc
+            raise ConfigError(
+                f"Config 'ollama.{field_name}' must be a number."
+            ) from exc
 
     def _parse_optional_int(self, input_id: str) -> int | None:
         text = self.query_one(input_id, Input).value.strip()

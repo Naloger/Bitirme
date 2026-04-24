@@ -1,4 +1,5 @@
 """Memory Visualizer tab."""
+
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import RichLog
@@ -24,6 +25,7 @@ class MemoryVisualizer(Container):
         """Initialize the memory visualizer."""
         memory_log = self.query_one("#memory-log", RichLog)
         memory_log.write("[bold cyan]Memory Visualizer[/bold cyan]\n")
-        memory_log.write("[dim]Memory usage and cache information will be displayed here[/dim]\n")
+        memory_log.write(
+            "[dim]Memory usage and cache information will be displayed here[/dim]\n"
+        )
         memory_log.write("[yellow]• Ready to monitor memory statistics[/yellow]\n")
-

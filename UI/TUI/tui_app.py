@@ -1,4 +1,5 @@
 """LLM-style TUI application."""
+
 from textual.app import App, ComposeResult
 
 from UI.TUI.tabs.main_menu import MainMenuContainer

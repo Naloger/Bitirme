@@ -8,6 +8,7 @@ Pipeline:
 - Writes Output.txt
 No LLM used — purely rule-based.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,12 +28,14 @@ OUTPUT = BASE / "Output.txt"
 # State
 # ---------------------------------------------------------------------------
 
+
 class WordGraphState(BaseModel):
     """Shared state passed between nodes."""
+
     raw_text: str = ""
     tokens: List[str] = []
-    nodes: Dict[str, int] = {}          # word -> id
-    edges: Dict[str, int] = {}          # "word1|word2" -> weight  (JSON-safe key)
+    nodes: Dict[str, int] = {}  # word -> id
+    edges: Dict[str, int] = {}  # "word1|word2" -> weight  (JSON-safe key)
     output_text: str = ""
     error: str = ""
     window: int = 2
@@ -41,6 +44,7 @@ class WordGraphState(BaseModel):
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
+
 
 def tokenize_node(state: WordGraphState) -> dict[str, Any]:
     """Split raw_text into lowercase word tokens."""
@@ -88,7 +92,10 @@ def format_node(state: WordGraphState) -> dict[str, Any]:
 
     lines: List[str] = [
         "# Nodes (word -> id)",
-        *[f"{idx}: {word}" for word, idx in sorted(state.nodes.items(), key=lambda x: x[1])],
+        *[
+            f"{idx}: {word}"
+            for word, idx in sorted(state.nodes.items(), key=lambda x: x[1])
+        ],
         "",
         "# Edges (word1, word2) : weight",
     ]
@@ -109,6 +116,7 @@ def format_node(state: WordGraphState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Graph assembly
 # ---------------------------------------------------------------------------
+
 
 def create_word_graph_pipeline() -> Any:
     """Build and compile the LangGraph pipeline."""

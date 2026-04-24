@@ -1,4 +1,5 @@
 """Chat tab with ChatGPT-like UI."""
+
 from typing import Any
 
 from llm_config import ConfigError, load_llm_config
@@ -123,7 +124,9 @@ class ChatTab(Container):
             client_kwargs = {"timeout": timeout_seconds} if timeout_seconds else {}
             self._llm = ChatOllama(
                 model=str(ollama_cfg.get("model", "")).strip(),
-                base_url=str(ollama_cfg.get("base_url", "http://127.0.0.1:11434")).strip(),
+                base_url=str(
+                    ollama_cfg.get("base_url", "http://127.0.0.1:11434")
+                ).strip(),
                 temperature=ollama_cfg.get("temperature", 0.2),
                 num_ctx=ollama_cfg.get("num_ctx"),
                 top_p=ollama_cfg.get("top_p"),
@@ -226,4 +229,3 @@ class ChatTab(Container):
         chat_log.write("[bold cyan]LLM Chat Assistant[/bold cyan]\n")
         chat_log.write("[dim]Conversation cleared[/dim]\n\n")
         self.query_one("#message-input", Input).focus()
-

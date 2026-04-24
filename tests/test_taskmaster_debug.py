@@ -3,7 +3,10 @@
 
 from pathlib import Path
 import sys
-from Agents.Nodes.node_task_master.node_TaskMaster import TaskMasterState, task_master_node
+from Agents.Nodes.node_task_master.node_TaskMaster import (
+    TaskMasterState,
+    task_master_node,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -22,4 +25,3 @@ print("\n=== RESULT ===")
 print(f"Output (first 300 chars):\n{result['output_text'][:300]}")
 print(f"\nValidation errors: {result.get('validation_errors', [])}")
 print(f"Model: {result.get('model', 'N/A')}")
-

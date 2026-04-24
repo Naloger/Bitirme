@@ -107,4 +107,3 @@ if __name__ == "__main__":
     output = graph.invoke(test_input)
     print(f"Input: {test_input}")
     print(f"Output: {output}")
-

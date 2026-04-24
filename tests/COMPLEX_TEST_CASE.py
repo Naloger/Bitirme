@@ -32,21 +32,21 @@ expected_ctt_output = {
                     "title": "Setup Database",
                     "task_description": "Setup and configure the test database.",
                     "status": "pending",
-                    "optional": True
+                    "optional": True,
                 },
                 {
                     "task_id": "t1b",
                     "title": "Deploy Test Server",
                     "task_description": "Deploy the test server for testing.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t1c",
                     "title": "Install Dependencies",
                     "task_description": "Install all necessary dependencies for testing.",
-                    "status": "pending"
-                }
-            ]
+                    "status": "pending",
+                },
+            ],
         },
         {
             "task_id": "t2",
@@ -60,21 +60,21 @@ expected_ctt_output = {
                     "title": "Unit Tests",
                     "task_description": "Run unit tests for each module.",
                     "status": "pending",
-                    "iterative": True
+                    "iterative": True,
                 },
                 {
                     "task_id": "t2b",
                     "title": "Integration Tests",
                     "task_description": "Run integration tests.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t2c",
                     "title": "Performance Tests",
                     "task_description": "Run performance tests.",
-                    "status": "pending"
-                }
-            ]
+                    "status": "pending",
+                },
+            ],
         },
         {
             "task_id": "t3",
@@ -87,28 +87,28 @@ expected_ctt_output = {
                     "task_id": "t3a",
                     "title": "Generate Failure Report and Notify Team",
                     "task_description": "Generate a comprehensive failure report and notify the team.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t3b",
                     "title": "Auto-Retry Failed Tests",
                     "task_description": "Automatically retry failed tests.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t3c",
                     "title": "Skip and Continue",
                     "task_description": "Skip failed tests and continue with next suite.",
-                    "status": "pending"
-                }
-            ]
+                    "status": "pending",
+                },
+            ],
         },
         {
             "task_id": "t4",
             "title": "Security Scanning",
             "task_description": "Perform optional security vulnerability scanning.",
             "status": "pending",
-            "optional": True
+            "optional": True,
         },
         {
             "task_id": "t5",
@@ -121,21 +121,21 @@ expected_ctt_output = {
                     "task_id": "t5a",
                     "title": "Test Coverage Analysis",
                     "task_description": "Analyze and report test coverage statistics.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t5b",
                     "title": "Performance Metrics",
                     "task_description": "Generate performance metrics and analysis.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t5c",
                     "title": "Security Audit Report",
                     "task_description": "Generate security audit and vulnerability report.",
-                    "status": "pending"
-                }
-            ]
+                    "status": "pending",
+                },
+            ],
         },
         {
             "task_id": "t6",
@@ -148,22 +148,22 @@ expected_ctt_output = {
                     "task_id": "t6a",
                     "title": "Backup Results",
                     "task_description": "Backup all test results and artifacts.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t6b",
                     "title": "Clear Temporary Files",
                     "task_description": "Remove all temporary files created during testing.",
-                    "status": "pending"
+                    "status": "pending",
                 },
                 {
                     "task_id": "t6c",
                     "title": "Generate Final Summary",
                     "task_description": "Generate final execution summary.",
-                    "status": "pending"
-                }
-            ]
-        }
+                    "status": "pending",
+                },
+            ],
+        },
     ]
 }
 
@@ -318,15 +318,15 @@ If you see errors, common issues:
 
 if __name__ == "__main__":
     print(visual_tree)
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
     print(execution_flow)
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
     print(features_demonstrated)
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
     print(validation_summary)
 
     import json
-    print("\nExpected JSON Output:")
-    print("="*80)
-    print(json.dumps(expected_ctt_output, indent=2))
 
+    print("\nExpected JSON Output:")
+    print("=" * 80)
+    print(json.dumps(expected_ctt_output, indent=2))

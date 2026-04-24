@@ -6,13 +6,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from Agents.Nodes.node_task_master.node_TaskMaster import task_master_node, TaskMasterState
+from Agents.Nodes.node_task_master.node_TaskMaster import (
+    task_master_node,
+    TaskMasterState,
+)
 
 input_path = Path(__file__).parent / "Agents/Nodes/node_task_master/Input.txt"
 output_path = Path(__file__).parent / "Agents/Nodes/node_task_master/Output.txt"
 
 if input_path.exists():
-    test_input = input_path.read_text(encoding='utf-8').strip()
+    test_input = input_path.read_text(encoding="utf-8").strip()
     print(f"Input length: {len(test_input)} chars\n")
     print(f"Input preview:\n{test_input[:200]}...\n")
 
@@ -34,4 +37,3 @@ if input_path.exists():
     print("\n✅ Task master execution complete!")
 else:
     print(f"Input file not found: {input_path}")
-

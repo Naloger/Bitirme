@@ -13,6 +13,7 @@ Fixes applied:
 - Feedback prompt no longer re-injects thinking (avoids re-triggering
   the reasoning chain on restart)
 """
+
 from __future__ import annotations
 
 from collections import Counter, deque
@@ -40,6 +41,7 @@ _debug_logged = False
 
 class StreamGuardState(BaseModel):
     """State for stream guard node processing."""
+
     input_text: str = ""
     output_text: str = ""
     thinking_text: str = ""
@@ -59,7 +61,9 @@ def _is_looping(chunk_window: Deque[str], repeated_limit: int) -> bool:
     # Direct same-chunk repetition, catches common model stalls early.
     last = chunk_window[-1]
     if last and list(chunk_window)[-repeated_limit:].count(last) >= repeated_limit:
-        print(f"[LOOP] Detected same-chunk repetition: '{last[:40]}...'", file=sys.stderr)
+        print(
+            f"[LOOP] Detected same-chunk repetition: '{last[:40]}...'", file=sys.stderr
+        )
         return True
 
     joined = " ".join(chunk_window)
@@ -95,9 +99,13 @@ def _extract_stream_parts(chunk: Dict[str, object]) -> Tuple[str, str, bool]:
 
     # Fallbacks for models/proxies that emit different keys.
     if not content:
-        content = str(chunk.get("response", "") or "") if isinstance(chunk, dict) else ""
+        content = (
+            str(chunk.get("response", "") or "") if isinstance(chunk, dict) else ""
+        )
     if not thinking:
-        thinking = str(chunk.get("thinking", "") or "") if isinstance(chunk, dict) else ""
+        thinking = (
+            str(chunk.get("thinking", "") or "") if isinstance(chunk, dict) else ""
+        )
         # Also check within message for nested thinking (some API versions).
         if isinstance(message, dict) and not thinking:
             thinking = str(message.get("thinking_output", "") or "")
@@ -158,7 +166,9 @@ def _fallback_answer_from_thinking(thinking_text: str) -> str:
         return ""
 
     # Prefer explicit draft lines, usually the best candidate in reasoning traces.
-    draft_matches = re.findall(r"\*\s*Draft\s*\d+\s*:\s*([^\n]+)", thinking_text, flags=re.IGNORECASE)
+    draft_matches = re.findall(
+        r"\*\s*Draft\s*\d+\s*:\s*([^\n]+)", thinking_text, flags=re.IGNORECASE
+    )
     if draft_matches:
         candidate = draft_matches[-1].strip().strip('"')
         if candidate:
@@ -243,7 +253,10 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
     print(f"[PROMPT] Input: {input_prompt[:100]}...", file=sys.stderr)
 
     while True:
-        options: Dict[str, float | int] = {"temperature": temperature, "num_ctx": num_ctx}
+        options: Dict[str, float | int] = {
+            "temperature": temperature,
+            "num_ctx": num_ctx,
+        }
         if top_p is not None:
             options["top_p"] = float(top_p)
         if repeat_penalty is not None:
@@ -315,7 +328,9 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
                         thinking_text_window.append(normalized_thinking)
 
                     # Detect repeated thinking text patterns (qwen often loops here before content).
-                    if len(thinking_text_window) >= 8 and _is_looping(thinking_text_window, repeated_limit=max(3, repeated_limit - 1)):
+                    if len(thinking_text_window) >= 8 and _is_looping(
+                        thinking_text_window, repeated_limit=max(3, repeated_limit - 1)
+                    ):
                         print(
                             f"[LOOP] Breaking stream at chunk {chunk_count} (thinking text loop)",
                             file=sys.stderr,
@@ -333,7 +348,11 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
                         break
 
                     # Keep legacy short-thinking detector after content started.
-                    if content_started and len(thinking_window) >= 20 and chunk_count > 50:
+                    if (
+                        content_started
+                        and len(thinking_window) >= 20
+                        and chunk_count > 50
+                    ):
                         avg_thinking_len = sum(thinking_window) / len(thinking_window)
                         if avg_thinking_len < 12:
                             recent_lengths = list(thinking_window)[-10:]
@@ -376,7 +395,9 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
             loop_count += 1
 
             # If no content yet, still retry once with a strict direct-answer instruction.
-            assistant_seed = pass_output if pass_output.strip() else "(no content emitted yet)"
+            assistant_seed = (
+                pass_output if pass_output.strip() else "(no content emitted yet)"
+            )
             feedback = _thinking_feedback_prompt()
             messages.append({"role": "assistant", "content": assistant_seed})
             messages.append({"role": "user", "content": feedback})
@@ -443,9 +464,7 @@ if __name__ == "__main__":
             "[thinking_output]",
             result.get("thinking_text", ""),
         ]
-        OUTPUT.write_text(
-            "\n".join(output_lines).strip() + "\n", encoding="utf-8"
-        )
+        OUTPUT.write_text("\n".join(output_lines).strip() + "\n", encoding="utf-8")
         print(f"Stream guard node processed: {INPUT} -> {OUTPUT}")
     else:
         print(f"Input file not found: {INPUT}")

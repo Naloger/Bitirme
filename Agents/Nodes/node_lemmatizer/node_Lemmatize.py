@@ -3,67 +3,29 @@ import re
 from typing import Any, cast
 from typing_extensions import TypedDict
 from langgraph.graph import END, START, StateGraph
-
-# Import langdetect exception for specific handling
-try:
-    from langdetect.lang_detect_exception import LangDetectException
-except ImportError:
-    LangDetectException = Exception  # Fallback
+from langdetect.lang_detect_exception import LangDetectException
+from langdetect import detect
+import spacy
+import stanza
+from nltk.stem import WordNetLemmatizer
 
 
 BASE = Path(__file__).parent
 INPUT = BASE / "Input.txt"
 OUTPUT = BASE / "Output.txt"
 
-
-# Check dependencies at module load time and set to None if not available, allowing graceful degradation.
-# Optional dependencies
-detect = None
-try:
-    from langdetect import detect
-except ImportError:
-    detect = None
-
-spacy_en = None
-try:
-    import spacy
-    spacy_en = spacy.load("en_core_web_sm")
-except (ImportError, OSError):
-    spacy_en = None
-
-stanza_tr = None
-stanza = None
-try:
-    import stanza
-    stanza_tr = stanza.Pipeline(
-        lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
-    )
-except (ImportError, RuntimeError):
-    if stanza is not None:
-        try:
-            stanza.download("tr")
-            stanza_tr = stanza.Pipeline(
-                lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
-            )
-        except (ImportError, RuntimeError):
-            stanza_tr = None
-
-WordNetLemmatizer = None
-nltk_available = False
-try:
-    from nltk.stem import WordNetLemmatizer
-    nltk_available = True
-except ImportError:
-    WordNetLemmatizer = None
-    nltk_available = False
+spacy_en = spacy.load("en_core_web_sm")
+stanza_tr = stanza.Pipeline(lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False)
 
 
 # Program
+
 
 class LemmatizerState(TypedDict, total=False):
     text: str
     lemmatized_lines: list[str]
     error: str
+
 
 def _detect_sentence_language(sentence: str) -> str:
     """Detect language: Turkish if special chars found, else English."""
@@ -85,7 +47,7 @@ def _lemmatize_text(text: str) -> list[str]:
 
     for sentence in sentences:
         # Clean whitespace and remaining punctuation from edges
-        cleaned_sentence = sentence.strip().rstrip('.,!?;:\'"—-')
+        cleaned_sentence = sentence.strip().rstrip(".,!?;:'\"—-")
         if not cleaned_sentence:
             continue
 
@@ -104,20 +66,25 @@ def _lemmatize_text(text: str) -> list[str]:
                         w_lemma = str(getattr(word, "lemma", w_text))
                         lemma = w_lemma.lower()
                         # Remove punctuation from lemma
-                        lemma = lemma.strip().rstrip('.,!?;:\'"—-')
+                        lemma = lemma.strip().rstrip(".,!?;:'\"—-")
                         if lemma:
                             lemma_words.append(lemma)
             except RuntimeError:
                 pass
 
-        if not lemma_words and sent_lang == "en" and nltk_available and WordNetLemmatizer:
+        if (
+            not lemma_words
+            and sent_lang == "en"
+        ):
             words = re.findall(r"\w+", cleaned_sentence, flags=re.UNICODE)
             lemmatizer = WordNetLemmatizer()
             for word in words:
                 normalized = word.lower()
                 lemma_verb = lemmatizer.lemmatize(normalized, pos="v")
                 lemma_words.append(
-                    lemma_verb if lemma_verb != normalized else lemmatizer.lemmatize(normalized, pos="n")
+                    lemma_verb
+                    if lemma_verb != normalized
+                    else lemmatizer.lemmatize(normalized, pos="n")
                 )
 
         if not lemma_words:

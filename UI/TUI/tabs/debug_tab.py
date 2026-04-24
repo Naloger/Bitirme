@@ -1,4 +1,5 @@
 """debug tab."""
+
 from typing import List, Dict, Optional, Any
 from textual.app import ComposeResult
 from textual.containers import Container, HorizontalScroll, VerticalScroll
@@ -8,11 +9,12 @@ from UI.TUI.tabs.chat_tab import ChatTab
 
 class AgentGraphNode:
     """Represents a node in the visual agent execution graph."""
+
     def __init__(self, node_id: str, label: str, is_active: bool = False):
         self.node_id = node_id
         self.label = label
         self.is_active = is_active
-        self.next_nodes: List[str] = [] # List of node ids to connect to
+        self.next_nodes: List[str] = []  # List of node ids to connect to
 
 
 class GraphVisualizer(Container):
@@ -34,13 +36,13 @@ class GraphVisualizer(Container):
             for next_id in n.next_nodes:
                 if next_id in in_degrees:
                     in_degrees[next_id] += 1
-                    
+
         roots = [n for n in self.nodes_data if in_degrees[n.node_id] == 0]
-        
+
         # 2. Simple BFS to assign topological columns
-        columns_map: Dict[str, int] = {} # node_id -> col_index
+        columns_map: Dict[str, int] = {}  # node_id -> col_index
         queue: List[tuple[str, int]] = [(root.node_id, 0) for root in roots]
-        
+
         while queue:
             curr_id, col = queue.pop(0)
             if curr_id not in columns_map or columns_map[curr_id] < col:
@@ -48,24 +50,26 @@ class GraphVisualizer(Container):
                 if curr_id in self.node_map:
                     for next_id in self.node_map[curr_id].next_nodes:
                         queue.append((next_id, col + 1))
-                        
+
         if not columns_map:
             return []
-            
+
         max_col = max(columns_map.values())
-        
+
         # 3. Build actual grid
-        grid_cols: List[List[Optional[AgentGraphNode]]] = [[] for _ in range(max_col + 1)]
+        grid_cols: List[List[Optional[AgentGraphNode]]] = [
+            [] for _ in range(max_col + 1)
+        ]
         for node in self.nodes_data:
             if node.node_id in columns_map:
                 grid_cols[columns_map[node.node_id]].append(node)
-                
+
         # Pad columns so they all have the same number of rows (to form a valid grid)
         max_rows = max(len(col) for col in grid_cols) if grid_cols else 0
         for col in grid_cols:
             while len(col) < max_rows:
                 col.append(None)
-                
+
         return grid_cols
 
     def compose(self) -> ComposeResult:
@@ -76,35 +80,36 @@ class GraphVisualizer(Container):
 
         num_cols = len(grid)
         max_rows = len(grid[0]) if num_cols > 0 else 0
-        
+
         # We need space for arrows between each column
         total_grid_cols = max(1, (num_cols * 2) - 1)
 
         with HorizontalScroll(classes="with-border", id="graph-container"):
             rs = RadioSet(classes="graph-radioset")
-            
+
             # Dynamically set CSS properties for the grid
             rs.styles.layout = "grid"
             rs.styles.grid_size_columns = total_grid_cols
             rs.styles.grid_size_rows = max_rows
-            
+
             # Alternate column sizes: 1fr for nodes, 6 for arrows
             col_sizes = ["1fr" if i % 2 == 0 else "6" for i in range(total_grid_cols)]
             rs.styles.grid_columns = " ".join(col_sizes)
-            
+
             with rs:
                 has_focus_id = False
                 for r in range(max_rows):
                     for c in range(total_grid_cols):
-                        
-                        is_node_col = (c % 2 == 0)
+                        is_node_col = c % 2 == 0
                         col_idx = c // 2
-                        
+
                         if is_node_col:
                             node = grid[col_idx][r] if r < len(grid[col_idx]) else None
                             if node:
                                 if node.is_active and not has_focus_id:
-                                    yield RadioButton(node.label, id="initial_focus", value=True)
+                                    yield RadioButton(
+                                        node.label, id="initial_focus", value=True
+                                    )
                                     has_focus_id = True
                                 else:
                                     yield RadioButton(node.label, value=node.is_active)
@@ -114,13 +119,13 @@ class GraphVisualizer(Container):
                             # It's an arrow column between col_idx and col_idx + 1
                             curr_col_nodes = grid[col_idx]
                             next_col_nodes = grid[col_idx + 1]
-                            
+
                             # Are we branching from a single node to many?
                             num_curr = sum(1 for n in curr_col_nodes if n)
                             num_next = sum(1 for n in next_col_nodes if n)
-                            
+
                             arrow = ""
-                            
+
                             if num_curr == 1 and num_next > 1:
                                 # Branching out
                                 if r == 0:
@@ -195,37 +200,34 @@ class DebugTab(Container):
     def compose(self) -> ComposeResult:
         """Compose the memory visualizer."""
 
-
         # Define standard graph nodes and their connections
         n_start = AgentGraphNode("start", "START", is_active=True)
         n_task = AgentGraphNode("task", "Task Master")
-        
+
         # Parallel actions
         n_web = AgentGraphNode("web", "Action: Web")
         n_rag = AgentGraphNode("rag", "Action: RAG")
         n_code = AgentGraphNode("code", "Action: Code")
-        
+
         n_eval = AgentGraphNode("eval", "Evaluation")
         n_end = AgentGraphNode("end", "END")
 
         # Build graph topology (Edges)
         n_start.next_nodes = ["task"]
-        n_task.next_nodes = ["web", "rag", "code"] # Task splits into 3
-        
-        n_web.next_nodes = ["eval"] # All 3 merge into eval
+        n_task.next_nodes = ["web", "rag", "code"]  # Task splits into 3
+
+        n_web.next_nodes = ["eval"]  # All 3 merge into eval
         n_rag.next_nodes = ["eval"]
         n_code.next_nodes = ["eval"]
-        
+
         n_eval.next_nodes = ["end"]
 
         nodes = [n_start, n_task, n_web, n_rag, n_code, n_eval, n_end]
 
         with VerticalScroll() as scroll:
             scroll.border_title = "Agent Execution Graph (LangGraph States)"
-            yield ChatTab() # Reuse chat tab for debug here
+            yield ChatTab()  # Reuse chat tab for debug here
             yield GraphVisualizer(nodes)
-
-
 
     def on_mount(self) -> None:
         """Initialize the debug tab."""
