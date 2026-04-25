@@ -15,7 +15,9 @@ INPUT = BASE / "Input.txt"
 OUTPUT = BASE / "Output.txt"
 
 spacy_en = spacy.load("en_core_web_sm")
-stanza_tr = stanza.Pipeline(lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False)
+stanza_tr = stanza.Pipeline(
+    lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
+)
 
 
 # Program
@@ -72,10 +74,7 @@ def _lemmatize_text(text: str) -> list[str]:
             except RuntimeError:
                 pass
 
-        if (
-            not lemma_words
-            and sent_lang == "en"
-        ):
+        if not lemma_words and sent_lang == "en":
             words = re.findall(r"\w+", cleaned_sentence, flags=re.UNICODE)
             lemmatizer = WordNetLemmatizer()
             for word in words:

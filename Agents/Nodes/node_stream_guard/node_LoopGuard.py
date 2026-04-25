@@ -1,46 +1,37 @@
-"""Stream-guarded Ollama LangGraph node.
-
-- Reads prompt from state input_text
-- Streams assistant output and optional thinking tokens via Ollama
-- Detects loops in streamed chunks and cuts off when needed
-- Feeds a compact thinking summary back to the model to continue
-- Returns result in state output_text
-
-Fixes applied:
-- Thinking-only loop detection now gated on content_started flag
-  (prevents false-positive cutoff for reasoning models like gemma4)
-- Restart skipped entirely if loop fired before any content was produced
-- Feedback prompt no longer re-injects thinking (avoids re-triggering
-  the reasoning chain on restart)
-"""
-
 from __future__ import annotations
 
-from collections import Counter, deque
 import json
-from pathlib import Path
+import logging
 import re
-import sys
-from typing import Any, Deque, Dict, Iterable, List, Tuple
-from urllib.error import URLError, HTTPError
+import socket
+from collections import Counter, deque
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Tuple
+
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-
 from pydantic import BaseModel, Field
-
 from langgraph.graph import StateGraph, START, END
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+# Local imports (ensure project root is in sys.path prior to execution)
+try:
+    from llm_config import ConfigError, load_llm_config  # noqa: E402
+except ImportError as err:
+    raise ImportError(
+        "Failed to import llm_config. Ensure project root is in sys.path."
+    ) from err
 
-from llm_config import ConfigError, load_llm_config  # noqa: E402
+# ---------------------------------------------------------------------------
+# Logging Configuration
+# ---------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
 
-# Module-level flag for debug logging
-_debug_logged = False
 
-
+# ---------------------------------------------------------------------------
+# State Schema
+# ---------------------------------------------------------------------------
 class StreamGuardState(BaseModel):
-    """State for stream guard node processing."""
+    """LangGraph-compatible state schema for the stream-guard node."""
 
     input_text: str = ""
     output_text: str = ""
@@ -50,82 +41,68 @@ class StreamGuardState(BaseModel):
     messages: List[Dict[str, str]] = Field(default_factory=list)
 
 
+# ---------------------------------------------------------------------------
+# Core Utilities
+# ---------------------------------------------------------------------------
 def _normalize_chunk(text: str) -> str:
+    """Normalize whitespace and case for stable loop comparison."""
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
-def _is_looping(chunk_window: Deque[str], repeated_limit: int) -> bool:
-    if not chunk_window:
+def _detect_loop(window: deque[str], repetition_limit: int) -> bool:
+    """Determine whether the recent chunk window exhibits repetitive behavior."""
+    if len(window) < repetition_limit:
         return False
 
-    # Direct same-chunk repetition, catches common model stalls early.
-    last = chunk_window[-1]
-    if last and list(chunk_window)[-repeated_limit:].count(last) >= repeated_limit:
-        print(
-            f"[LOOP] Detected same-chunk repetition: '{last[:40]}...'", file=sys.stderr
-        )
+    # Exact recent-chunk repetition (catches immediate stalling)
+    recent = list(window)[-repetition_limit:]
+    if recent[0] and len(set(recent)) == 1:
         return True
 
-    joined = " ".join(chunk_window)
-    tokens = joined.split()
+    # N-gram token repetition over the accumulated window
+    text = " ".join(window)
+    tokens = text.split()
     if len(tokens) < 12:
         return False
 
-    # Detect repeated 5-gram patterns in the recent window.
     n = 5
     ngrams = [tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
     if not ngrams:
         return False
-    top_ngram, top_count = Counter(ngrams).most_common(1)[0]
-    threshold = max(3, repeated_limit - 1)
-    if top_count >= threshold:
-        print(
-            f"[LOOP] Detected n-gram repetition: {top_ngram} appears {top_count}x "
-            f"(threshold={threshold})",
-            file=sys.stderr,
-        )
-        return True
-    return False
+
+    most_common_ngram, count = Counter(ngrams).most_common(1)[0]
+    threshold = max(3, repetition_limit - 1)
+    return count >= threshold
 
 
-def _extract_stream_parts(chunk: Dict[str, object]) -> Tuple[str, str, bool]:
-    message = chunk.get("message") if isinstance(chunk, dict) else None
+def _extract_stream_parts(chunk: Dict[str, Any]) -> Tuple[str, str, bool]:
+    """Extract content, thinking, and completion status from an Ollama stream chunk."""
+    if not isinstance(chunk, dict):
+        return "", "", False
+
+    message = chunk.get("message")
     content = ""
     thinking = ""
 
     if isinstance(message, dict):
         content = str(message.get("content", "") or "")
-        thinking = str(message.get("thinking", "") or "")
+        thinking = str(message.get("thinking", "") or "") or str(
+            message.get("thinking_output", "") or ""
+        )
 
-    # Fallbacks for models/proxies that emit different keys.
     if not content:
-        content = (
-            str(chunk.get("response", "") or "") if isinstance(chunk, dict) else ""
-        )
+        content = str(chunk.get("response", "") or "")
     if not thinking:
-        thinking = (
-            str(chunk.get("thinking", "") or "") if isinstance(chunk, dict) else ""
-        )
-        # Also check within message for nested thinking (some API versions).
-        if isinstance(message, dict) and not thinking:
-            thinking = str(message.get("thinking_output", "") or "")
+        thinking = str(chunk.get("thinking", "") or "")
 
-    done = bool(chunk.get("done", False)) if isinstance(chunk, dict) else False
-
-    # Debug: log chunk structure on first non-empty chunk.
-    global _debug_logged
-    if (content or thinking) and not _debug_logged:
-        print(f"[DEBUG] First chunk keys: {list(chunk.keys())}", file=sys.stderr)
-        if isinstance(message, dict):
-            print(f"[DEBUG] Message keys: {list(message.keys())}", file=sys.stderr)
-        _debug_logged = True
-
+    done = bool(chunk.get("done", False))
     return content, thinking, done
 
 
 def _stream_chat_once(
-    base_url: str, payload: Dict[str, object], timeout_s: int
-) -> Iterable[Dict[str, object]]:
+    base_url: str, payload: Dict[str, Any], timeout_s: int
+) -> Iterable[Dict[str, Any]]:
+    """Yield parsed JSON objects from an Ollama streaming endpoint."""
     data = json.dumps(payload).encode("utf-8")
     req = Request(
         f"{base_url.rstrip('/')}/api/chat",
@@ -147,25 +124,20 @@ def _stream_chat_once(
                 yield parsed
 
 
-def _thinking_feedback_prompt() -> str:
-    # NOTE: We deliberately do NOT feed the thinking content back here.
-    # Reasoning models (e.g. gemma4, qwq, deepseek-r1) treat injected
-    # thinking text as a cue to re-enter their chain-of-thought loop,
-    # which causes the exact nested repetition we are trying to fix.
-    # Asking for a direct answer only avoids re-triggering the reasoning phase.
+def _generate_feedback_prompt() -> str:
+    """Return a concise instruction to halt reasoning and produce a direct answer."""
     return (
-        "Your previous response was cut short due to repetition. "
-        "Output only the final answer now, directly and concisely. "
-        "Do not reason or think step-by-step — just answer."
+        "Your previous response was interrupted due to excessive repetition. "
+        "Provide only the final answer now, directly and concisely. "
+        "Do not reason, think step-by-step, or output chain-of-thought tokens."
     )
 
 
-def _fallback_answer_from_thinking(thinking_text: str) -> str:
-    """Extract a usable one-sentence answer if model emitted only thinking."""
+def _salvage_answer_from_thinking(thinking_text: str) -> str:
+    """Attempt to extract a coherent final answer from reasoning traces."""
     if not thinking_text:
         return ""
 
-    # Prefer explicit draft lines, usually the best candidate in reasoning traces.
     draft_matches = re.findall(
         r"\*\s*Draft\s*\d+\s*:\s*([^\n]+)", thinking_text, flags=re.IGNORECASE
     )
@@ -174,7 +146,6 @@ def _fallback_answer_from_thinking(thinking_text: str) -> str:
         if candidate:
             return candidate.rstrip(" .") + "."
 
-    # Fallback: pick first substantial sentence-like fragment.
     flat = re.sub(r"\s+", " ", thinking_text).strip()
     parts = re.split(r"(?<=[.!?])\s+", flat)
     for part in parts:
@@ -185,9 +156,17 @@ def _fallback_answer_from_thinking(thinking_text: str) -> str:
     return ""
 
 
-def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
-    """LangGraph node for stream-guarded LLM generation with loop detection."""
+# ---------------------------------------------------------------------------
+# LangGraph Node
+# ---------------------------------------------------------------------------
+def stream_guard_node(state: StreamGuardState) -> Dict[str, Any]:
+    """
+    LangGraph node that streams Ollama output with adaptive loop detection.
 
+    Handles reasoning models by deferring loop detection until content tokens
+    appear, prevents thinking-token injection on retry, and salvages partial
+    outputs when necessary.
+    """
     if not state.input_text:
         return {
             "output_text": "Input is empty.",
@@ -197,235 +176,197 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
 
     try:
         cfg = load_llm_config()
-    except (ConfigError, json.JSONDecodeError) as exc:
+    except (ConfigError, json.JSONDecodeError, Exception) as err1:
+        logger.error("Configuration load failed: %s", err1)
         return {
-            "output_text": f"Config error: {exc}",
+            "output_text": f"Configuration error: {err1}",
             "thinking_text": "",
             "loop_restarts": 0,
         }
 
     if cfg.provider != "ollama":
         return {
-            "output_text": "Only ollama provider is supported.",
+            "output_text": "Unsupported provider. Only 'ollama' is permitted.",
             "thinking_text": "",
             "loop_restarts": 0,
         }
 
-    ollama_cfg = cfg.raw["ollama"]
-    loop_cfg = cfg.raw["loop_guard"]
+    ollama_cfg = cfg.raw.get("ollama", {})
+    loop_cfg = cfg.raw.get("loop_guard", {})
 
-    model = state.model or ollama_cfg["model"]
-    base_url = ollama_cfg["base_url"]
-    timeout_seconds = int(ollama_cfg["timeout_seconds"])
-    temperature = float(ollama_cfg["temperature"])
-    num_ctx = int(ollama_cfg["num_ctx"])
-    top_p = ollama_cfg["top_p"]
-    repeat_penalty = ollama_cfg["repeat_penalty"]
+    model = state.model or ollama_cfg.get("model", "llama3.2")
+    base_url = ollama_cfg.get("base_url", "http://localhost:11434")
+    timeout_s = int(ollama_cfg.get("timeout_seconds", 60))
+    temperature = float(ollama_cfg.get("temperature", 0.7))
+    num_ctx = int(ollama_cfg.get("num_ctx", 4096))
+    top_p = (
+        float(ollama_cfg.get("top_p", 0.9))
+        if ollama_cfg.get("top_p") is not None
+        else None
+    )
+    repeat_penalty = (
+        float(ollama_cfg.get("repeat_penalty", 1.1))
+        if ollama_cfg.get("repeat_penalty") is not None
+        else None
+    )
 
-    max_loops = int(loop_cfg["max_loops"])
-    repeated_limit = int(loop_cfg["max_repeated_chunk"])
-    repetition_window = int(loop_cfg["repetition_window"])
-    pre_content_chunk_limit = int(loop_cfg["pre_content_chunk_limit"])
+    max_loops = int(loop_cfg.get("max_loops", 2))
+    repeated_limit = int(loop_cfg.get("max_repeated_chunk", 4))
+    repetition_window = int(loop_cfg.get("repetition_window", 16))
+    pre_content_chunk_limit = int(loop_cfg.get("pre_content_chunk_limit", 150))
 
-    input_prompt = state.input_text
-
-    messages: List[Dict[str, str]] = [
+    # Initialize conversation history
+    messages: List[Dict[str, str]] = state.messages or [
         {
             "role": "system",
-            "content": (
-                "Be concise, avoid repetitive output, and complete the task "
-                "in one coherent answer."
-            ),
+            "content": "Be concise, avoid repetitive output, and complete the task in one coherent answer.",
         },
-        {"role": "user", "content": input_prompt},
+        {"role": "user", "content": state.input_text},
     ]
 
-    accumulated_output = ""
-    accumulated_thinking = ""
+    accumulated_output: List[str] = []
+    accumulated_thinking: List[str] = []
     loop_count = 0
 
-    print(
-        f"[START] LangGraph node with model={model}, max_loops={max_loops}, "
-        f"repeated_limit={repeated_limit}",
-        file=sys.stderr,
+    logger.info(
+        "Stream guard initialized: model=%s, max_loops=%s, repeated_limit=%s",
+        model,
+        max_loops,
+        repeated_limit,
     )
-    print(f"[CONFIG] base_url={base_url}, timeout={timeout_seconds}s", file=sys.stderr)
-    print(f"[PROMPT] Input: {input_prompt[:100]}...", file=sys.stderr)
 
     while True:
-        options: Dict[str, float | int] = {
+        options: Dict[str, Any] = {
             "temperature": temperature,
             "num_ctx": num_ctx,
         }
         if top_p is not None:
-            options["top_p"] = float(top_p)
+            options["top_p"] = top_p
         if repeat_penalty is not None:
-            options["repeat_penalty"] = float(repeat_penalty)
+            options["repeat_penalty"] = repeat_penalty
 
-        payload: Dict[str, object] = {
+        payload: Dict[str, Any] = {
             "model": model,
             "messages": messages,
             "stream": True,
             "options": options,
         }
 
-        chunk_window: Deque[str] = deque(maxlen=max(8, repetition_window))
-        thinking_window: Deque[int] = deque(maxlen=20)
-        thinking_text_window: Deque[str] = deque(maxlen=max(8, repetition_window))
-        pass_output = ""
-        pass_thinking = ""
+        chunk_window: deque[str] = deque(maxlen=max(8, repetition_window))
+        thinking_window: deque[int] = deque(maxlen=20)
+        thinking_text_window: deque[str] = deque(maxlen=max(8, repetition_window))
+
+        pass_output: List[str] = []
+        pass_thinking: List[str] = []
         stream_done = False
         loop_detected = False
-
-        # FIX: Track whether the model has started emitting content tokens yet.
-        # Reasoning models (gemma4, qwq, deepseek-r1, etc.) stream their entire
-        # chain-of-thought *before* any content appears.  The old thinking-only
-        # loop detector fired during this normal thinking phase, cutting the
-        # stream before the answer was ever produced.  We now only engage that
-        # detector once content has started flowing.
         content_started = False
 
         try:
             chunk_count = 0
             for chunk in _stream_chat_once(
-                base_url=base_url, payload=payload, timeout_s=timeout_seconds
+                base_url=base_url, payload=payload, timeout_s=timeout_s
             ):
                 chunk_count += 1
                 content, thinking, done = _extract_stream_parts(chunk)
 
-                if chunk_count % 10 == 0:
-                    print(
-                        f"[STREAM] Chunk {chunk_count}: content_len={len(content)}, "
-                        f"thinking_len={len(thinking)}, done={done}",
-                        file=sys.stderr,
-                    )
-
-                pass_output += content
-                pass_thinking += thinking
-
-                # --- Content loop detection (unchanged) ---
                 if content:
                     content_started = True
+                    pass_output.append(content)
                     normalized = _normalize_chunk(content)
                     if normalized:
                         chunk_window.append(normalized)
-                        if _is_looping(chunk_window, repeated_limit=repeated_limit):
-                            print(
-                                f"[LOOP] Breaking stream at chunk {chunk_count} "
-                                "(content loop detected)",
-                                file=sys.stderr,
+                        if _detect_loop(chunk_window, repetition_limit=repeated_limit):
+                            logger.warning(
+                                "Content loop detected at chunk %d", chunk_count
                             )
                             loop_detected = True
                             break
 
-                # --- Thinking-only loop detection ---
-                # FIX: Guard on content_started so we never interrupt a model
-                # that is still in its pure reasoning / chain-of-thought phase.
                 if not content and thinking:
+                    pass_thinking.append(thinking)
                     thinking_window.append(len(thinking))
                     normalized_thinking = _normalize_chunk(thinking)
                     if normalized_thinking:
                         thinking_text_window.append(normalized_thinking)
 
-                    # Detect repeated thinking text patterns (qwen often loops here before content).
-                    if len(thinking_text_window) >= 8 and _is_looping(
-                        thinking_text_window, repeated_limit=max(3, repeated_limit - 1)
+                    # Thinking-only loop detection (gated post-content-start or early-hard-stop)
+                    if len(thinking_text_window) >= 8 and _detect_loop(
+                        thinking_text_window,
+                        repetition_limit=max(3, repeated_limit - 1),
                     ):
-                        print(
-                            f"[LOOP] Breaking stream at chunk {chunk_count} (thinking text loop)",
-                            file=sys.stderr,
+                        logger.warning(
+                            "Thinking text loop detected at chunk %d", chunk_count
                         )
                         loop_detected = True
                         break
 
-                    # Hard-stop if model keeps thinking for too long before first content token.
                     if not content_started and chunk_count >= pre_content_chunk_limit:
-                        print(
-                            f"[LOOP] Breaking stream at chunk {chunk_count} (no content before limit={pre_content_chunk_limit})",
-                            file=sys.stderr,
+                        logger.warning(
+                            "Pre-content chunk limit reached (%d)",
+                            pre_content_chunk_limit,
                         )
                         loop_detected = True
                         break
 
-                    # Keep legacy short-thinking detector after content started.
                     if (
                         content_started
                         and len(thinking_window) >= 20
                         and chunk_count > 50
                     ):
-                        avg_thinking_len = sum(thinking_window) / len(thinking_window)
-                        if avg_thinking_len < 12:
-                            recent_lengths = list(thinking_window)[-10:]
-                            max_recent = max(recent_lengths)
-                            if max_recent < 15:
-                                print(
-                                    f"[LOOP] Breaking stream at chunk {chunk_count} "
-                                    f"(thinking-only loop: avg_len={avg_thinking_len:.1f}, "
-                                    f"max_recent={max_recent})",
-                                    file=sys.stderr,
-                                )
-                                loop_detected = True
-                                break
+                        avg_len = sum(thinking_window) / len(thinking_window)
+                        max_recent = max(list(thinking_window)[-10:])
+                        if avg_len < 12 and max_recent < 15:
+                            logger.warning(
+                                "Thinking token stall detected at chunk %d", chunk_count
+                            )
+                            loop_detected = True
+                            break
 
                 if done:
                     stream_done = True
-                    print(
-                        f"[STREAM] Stream complete at chunk {chunk_count} "
-                        f"(total_content={len(pass_output)}, "
-                        f"total_thinking={len(pass_thinking)})",
-                        file=sys.stderr,
-                    )
+                    logger.info("Stream completed at chunk %d", chunk_count)
                     break
 
-        except (HTTPError, URLError, TimeoutError) as exc:
+        except (HTTPError, URLError, socket.timeout, Exception) as err2:
+            logger.error("Ollama stream request failed: %s", err2)
             return {
-                "output_text": (
-                    f"Ollama request failed: {exc}\n\n"
-                    "Make sure Ollama is running:\n  ollama serve"
-                ),
+                "output_text": f"Ollama request failed: {err2}",
                 "thinking_text": "",
                 "loop_restarts": loop_count,
                 "model": model,
             }
 
-        accumulated_output += pass_output
-        accumulated_thinking += pass_thinking
+        accumulated_output.extend(pass_output)
+        accumulated_thinking.extend(pass_thinking)
 
         if loop_detected and loop_count < max_loops:
             loop_count += 1
-
-            # If no content yet, still retry once with a strict direct-answer instruction.
             assistant_seed = (
-                pass_output if pass_output.strip() else "(no content emitted yet)"
+                "".join(pass_output).strip()
+                if pass_output
+                else "(no content emitted yet)"
             )
-            feedback = _thinking_feedback_prompt()
             messages.append({"role": "assistant", "content": assistant_seed})
-            messages.append({"role": "user", "content": feedback})
-            print(
-                f"[LOOP] Restarting generation #{loop_count} with feedback",
-                file=sys.stderr,
-            )
+            messages.append({"role": "user", "content": _generate_feedback_prompt()})
+            logger.info("Restarting generation (attempt %d/%d)", loop_count, max_loops)
             continue
 
         if stream_done or not loop_detected or loop_count >= max_loops:
             break
 
-    print(
-        f"Stream guard node completed: loop_restarts={loop_count}, "
-        f"output_len={len(accumulated_output)}",
-        file=sys.stderr,
-    )
+    final_output = "".join(accumulated_output).strip()
+    final_thinking = "".join(accumulated_thinking).strip() or "(thinking not available)"
 
-    final_output = accumulated_output.strip()
-    final_thinking = accumulated_thinking.strip() or "(thinking not available)"
-
-    # If model never emitted content, salvage one concise sentence from thinking.
     if not final_output:
-        rescued = _fallback_answer_from_thinking(accumulated_thinking)
+        rescued = _salvage_answer_from_thinking("".join(accumulated_thinking))
         if rescued:
             final_output = rescued
-            print("[FALLBACK] Derived answer from thinking trace.", file=sys.stderr)
+            logger.info("Derived answer from thinking trace via fallback extraction.")
 
+    logger.info(
+        "Node completed: loops=%d, output_len=%d", loop_count, len(final_output)
+    )
     return {
         "output_text": final_output,
         "thinking_text": final_thinking,
@@ -434,8 +375,11 @@ def stream_guard_node(state: StreamGuardState) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# Graph Construction
+# ---------------------------------------------------------------------------
 def create_stream_guard_graph() -> StateGraph[StreamGuardState]:
-    """Create and return the stream guard LangGraph."""
+    """Construct and return the LangGraph workflow for stream-guarded generation."""
     graph = StateGraph(state_schema=StreamGuardState)
     graph.add_node("stream_guard", stream_guard_node)
     graph.add_edge(START, "stream_guard")
@@ -443,17 +387,23 @@ def create_stream_guard_graph() -> StateGraph[StreamGuardState]:
     return graph
 
 
+# ---------------------------------------------------------------------------
+# CLI / Test Entry Point
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    BASE = Path(__file__).parent
-    INPUT = BASE / "Input.txt"
-    OUTPUT = BASE / "Output.txt"
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s"
+    )
+    base_path = Path(__file__).parent
+    input_file = base_path / "Input.txt"
+    output_file = base_path / "Output.txt"
 
-    if INPUT.exists():
-        test_prompt = INPUT.read_text(encoding="utf-8").strip()
-        test_state = StreamGuardState(input_text=test_prompt)
-        result = stream_guard_node(test_state)
+    if input_file.exists():
+        prompt = input_file.read_text(encoding="utf-8").strip()
+        initial_state = StreamGuardState(input_text=prompt)
+        result = stream_guard_node(initial_state)
 
-        output_lines = [
+        report = [
             "provider=ollama",
             f"model={result.get('model', '')}",
             f"loop_restarts={result.get('loop_restarts', 0)}",
@@ -464,7 +414,7 @@ if __name__ == "__main__":
             "[thinking_output]",
             result.get("thinking_text", ""),
         ]
-        OUTPUT.write_text("\n".join(output_lines).strip() + "\n", encoding="utf-8")
-        print(f"Stream guard node processed: {INPUT} -> {OUTPUT}")
+        output_file.write_text("\n".join(report).strip() + "\n", encoding="utf-8")
+        logger.info("Processed: %s -> %s", input_file, output_file)
     else:
-        print(f"Input file not found: {INPUT}")
+        logger.error("Input file not found: %s", input_file)

@@ -28,17 +28,15 @@ class CttTask(TypedDict):
     title: Required[str]
     task_description: Required[str]
     status: NotRequired[TaskStatus]
-    optional: NotRequired[bool]  # [T]
-    iterative: NotRequired[bool]  # T*
-    # Old flat children list (deprecated, use children_tree instead)
-    children: NotRequired[List["CttTask"]]
-    # New: Expression Tree support - children can be tasks or operators
+    optional: NotRequired[bool]            # [T]
+    iterative: NotRequired[bool]           # T*
     children_tree: NotRequired[List[Union["CttTask", "CttOperatorNode"]]]
+    # Added for complexity scoring and decomposition
+    complexity_score: NotRequired[float]   # 0..1
+    decomposition_depth: NotRequired[int]  # recursion depth
 
 
 class CttOperatorNode(TypedDict):
-    """Expression Tree node representing a temporal operator between child tasks."""
-
     operator: Required[CttOperator]
     left: Required[Union["CttTask", "CttOperatorNode"]]
     right: Required[Union["CttTask", "CttOperatorNode"]]
@@ -66,39 +64,27 @@ def validate_ctt_tree(root_tasks: List[CttTask]) -> List[str]:
             return
         seen_ids.add(task_id)
 
-        # Check old-style children (flat list)
-        children = task.get("children")
-        if children:
-            for child in children:
-                walk_task(child, task_path)
-
-        # Check new-style children_tree (expression tree)
         children_tree = task.get("children_tree")
         if children_tree:
             for node in children_tree:
                 walk_node(node, task_path)
 
     def walk_node(node: Any, path: str) -> None:
-        """Walk through expression tree nodes."""
         if not isinstance(node, dict):
             return
-
         if "operator" in node:
-            # It's an operator node
-            left: Any = node.get("left")
-            right: Any = node.get("right")
-            operator: Any = node.get("operator")
+            left = node.get("left")
+            right = node.get("right")
+            operator = node.get("operator")
             if left:
                 walk_node(left, f"{path}/op({operator})")
             if right:
                 walk_node(right, f"{path}/op({operator})")
         elif "task_id" in node:
-            # It's a task node
             walk_task(node, path)  # type: ignore
 
     for root in root_tasks:
         walk_task(root, path="root")
-
     return errors
 
 

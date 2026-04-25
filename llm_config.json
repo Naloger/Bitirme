@@ -2,9 +2,9 @@
   "provider": "ollama",
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
-    "model": "gemma4-e2b-128k:latest",
+    "model": "qwen3.5:0.8b",
     "temperature": 0.7,
-    "num_ctx": 125000,
+    "num_ctx": 4000,
     "timeout_seconds": 300,
     "top_p": null,
     "repeat_penalty": null

@@ -14,3 +14,8 @@ typing_extensions
 # python -m spacy download tr_core_news_sm
 
 pyinstaller
+langchain-core
+typer
+pydantic-settings
+loguru
+ollama
