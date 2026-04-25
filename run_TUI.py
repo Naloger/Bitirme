@@ -1,4 +1,5 @@
 """Entry point for the TUI application."""
+# konsoldan çalıştırın
 
 from UI.TUI.tui_app import main
 

@@ -1,0 +1,13 @@
+
+Analyze the text and return ONLY a JSON object with exactly these keys:
+- actor: the main actor performing the action
+- actor_action: the action taken by the actor
+- action_intent: what the actor is trying to achieve
+- is_trustworthy: true or false
+- referable_source: source or reason justifying trustworthiness
+- other_actors_reaction: how other actors would likely react
+
+Text:
+{text}
+
+Return only the JSON object, no explanation.

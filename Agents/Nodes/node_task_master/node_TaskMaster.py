@@ -31,7 +31,9 @@ class CttTaskModel(BaseModel):
     title: str = Field(..., description="Short title of the task")
     task_description: str = Field(..., description="Detailed description of the task")
     status: Literal["pending", "running", "blocked", "done", "failed"] = "pending"
-    complexity_score: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Normalized complexity score (0-1)")
+    complexity_score: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Normalized complexity score (0-1)"
+    )
     decomposition_depth: int = Field(default=0, description="Current recursion depth")
     optional: bool = False
     iterative: bool = False
@@ -199,6 +201,7 @@ def _convert_operator(py_op: CttOperatorNodeModel) -> CttOperatorNode:
 # Complexity scoring heuristics
 # ----------------------------------------------------------------------
 
+
 def compute_complexity_from_task(task: CttTask) -> float:
     """
     Heuristic complexity score (0..1) based on multiple factors:
@@ -211,9 +214,9 @@ def compute_complexity_from_task(task: CttTask) -> float:
 
     score = 0.0
     weights = {
-        "description": 0.35,   # up to 0.35
-        "children": 0.30,      # up to 0.30
-        "depth": 0.15,         # up to 0.15
+        "description": 0.35,  # up to 0.35
+        "children": 0.30,  # up to 0.30
+        "depth": 0.15,  # up to 0.15
     }
 
     # 1. Description complexity (word count + character length)
@@ -238,16 +241,18 @@ def compute_complexity_from_task(task: CttTask) -> float:
 
 def update_complexity_scores(tree: list[CttTask]) -> None:
     """Recursively compute and store complexity_score for every task."""
+
     def recurse(node: Union[CttTask, CttOperatorNode]) -> None:
         if "operator" in node:
             recurse(node["left"])
             recurse(node["right"])
         else:
-            task = cast(CttTask, node)   # explicit cast to CttTask
+            task = cast(CttTask, node)  # explicit cast to CttTask
             task["complexity_score"] = compute_complexity_from_task(task)
             if "children_tree" in task:
                 for child in task["children_tree"]:
                     recurse(child)
+
     for root in tree:
         recurse(root)
 
@@ -256,7 +261,10 @@ def update_complexity_scores(tree: list[CttTask]) -> None:
 # Recursive decomposition and iterative refinement
 # ----------------------------------------------------------------------
 
-def should_decompose(task: CttTask, current_depth: int, max_depth: int, threshold: float) -> bool:
+
+def should_decompose(
+    task: CttTask, current_depth: int, max_depth: int, threshold: float
+) -> bool:
     """Decide whether a task needs to be broken down further."""
     if current_depth >= max_depth:
         return False
@@ -265,6 +273,7 @@ def should_decompose(task: CttTask, current_depth: int, max_depth: int, threshol
         complexity = 1.0
     children = task.get("children_tree", [])
     return complexity > threshold and len(children) == 0
+
 
 def call_decomposition_agent(
     task_title: str,
@@ -315,7 +324,9 @@ Return ONLY the JSON, no extra text.
     )
     config: RunnableConfig = {"configurable": {"thread_id": f"decomp_{task_title}"}}
     try:
-        response = agent.invoke({"messages": [HumanMessage(content=prompt)]}, config=config)
+        response = agent.invoke(
+            {"messages": [HumanMessage(content=prompt)]}, config=config
+        )
         if not response or not response.get("messages"):
             return None
         tool_calls = []
@@ -330,14 +341,19 @@ Return ONLY the JSON, no extra text.
                 content = last_msg.content
                 # Extract JSON block
                 import re
-                json_match = re.search(r'\{.*}|\[.*]', content, re.DOTALL)
+
+                json_match = re.search(r"\{.*}|\[.*]", content, re.DOTALL)
                 if json_match:
                     try:
                         parsed = json.loads(json_match.group())
                         if "root_tasks" in parsed:
                             args = parsed
                         else:
-                            args = {"root_tasks": [parsed] if isinstance(parsed, dict) else parsed}
+                            args = {
+                                "root_tasks": [parsed]
+                                if isinstance(parsed, dict)
+                                else parsed
+                            }
                         # Manually validate and repair missing task_description
                         args = _repair_missing_task_description(args)
                         validated = CttRoot.model_validate(args)
@@ -377,6 +393,7 @@ Return ONLY the JSON, no extra text.
         logger.warning(f"Decomposition agent error: {e}")
         return None
 
+
 def _repair_missing_task_description(args: dict) -> dict:
     """Recursively add default task_description if missing."""
     if "root_tasks" in args:
@@ -386,18 +403,26 @@ def _repair_missing_task_description(args: dict) -> dict:
         _repair_task(args)
     return args
 
+
 def _repair_task(task: dict) -> None:
     if "task_description" not in task or not task["task_description"]:
-        task["task_description"] = f"Subtask of {task.get('title', task.get('task_id', 'unnamed'))}"
+        task["task_description"] = (
+            f"Subtask of {task.get('title', task.get('task_id', 'unnamed'))}"
+        )
     if "children_tree" in task:
         for child in task["children_tree"]:
             if "operator" in child:
                 if "left" in child:
-                    _repair_task(child["left"] if isinstance(child["left"], dict) else {})
+                    _repair_task(
+                        child["left"] if isinstance(child["left"], dict) else {}
+                    )
                 if "right" in child:
-                    _repair_task(child["right"] if isinstance(child["right"], dict) else {})
+                    _repair_task(
+                        child["right"] if isinstance(child["right"], dict) else {}
+                    )
             else:
                 _repair_task(child)
+
 
 def refine_tree(
     root_tasks: list[CttTask],
@@ -444,7 +469,9 @@ def refine_tree(
                     # Process new children
                     processed_children = []
                     for child in task["children_tree"]:
-                        processed_children.append(process_node(child, current_depth + 1))
+                        processed_children.append(
+                            process_node(child, current_depth + 1)
+                        )
                     task["children_tree"] = processed_children
                     task["complexity_score"] = compute_complexity_from_task(task)
             # Process existing children
@@ -477,6 +504,7 @@ def refine_tree(
                     score > complexity_threshold
                     and len(task.get("children_tree", [])) == 0
                 )
+
         if any(needs_more(t) for t in new_trees):
             changed = True
         current_trees = new_trees

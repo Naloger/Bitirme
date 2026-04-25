@@ -28,11 +28,11 @@ class CttTask(TypedDict):
     title: Required[str]
     task_description: Required[str]
     status: NotRequired[TaskStatus]
-    optional: NotRequired[bool]            # [T]
-    iterative: NotRequired[bool]           # T*
+    optional: NotRequired[bool]  # [T]
+    iterative: NotRequired[bool]  # T*
     children_tree: NotRequired[List[Union["CttTask", "CttOperatorNode"]]]
     # Added for complexity scoring and decomposition
-    complexity_score: NotRequired[float]   # 0..1
+    complexity_score: NotRequired[float]  # 0..1
     decomposition_depth: NotRequired[int]  # recursion depth
 
 

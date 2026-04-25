@@ -1,0 +1,7 @@
+Actor            : User
+Action           : Greeting/Inquiry
+Actors Reason    : The user initiated a conversation with a standard social greeting.
+Intent           : Greeting
+Is Trustworthy   : True
+Source           : Hi how are you
+Other Reaction   : A polite response is expected.
