@@ -81,9 +81,6 @@ class StructuredPage(Page):  # Page sınıfından miras aldığını varsayıyor
     revision_count: int = 0
     extracted_at: float = Field(default_factory=time.time)
     last_updated_at: float = Field(default_factory=time.time)
-    
-
-
 
     def add_relation(self, subject: str, predicate: str, obj: str, weight: float = 1.0):
         """

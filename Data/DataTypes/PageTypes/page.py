@@ -1,6 +1,5 @@
 import uuid
 import time
-from typing import Set
 from pydantic import BaseModel, Field
 
 
@@ -14,8 +13,6 @@ class Page(BaseModel):
     updated_at: float = Field(default_factory=time.time)
 
     raw_text: str = ""
-
-
 
     def touch(self):
         """Sayfa güncellendiğinde updated_at değerini tazeler."""

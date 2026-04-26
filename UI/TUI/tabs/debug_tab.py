@@ -1,10 +1,29 @@
 """debug tab."""
 
+import sys
+from pathlib import Path
+
 from typing import List, Dict, Optional, Any
+
+from langgraph.constants import START
 from textual.app import ComposeResult
 from textual.containers import Container, HorizontalScroll, VerticalScroll
-from textual.widgets import RadioSet, RadioButton, Label
+from textual.widgets import RadioSet, RadioButton, Label, TextArea, Button, Static
 from UI.TUI.tabs.chat_tab import ChatTab
+
+# Import the intent parser node
+# Accessing _load_llm is intentional as it's the module's LLM factory function
+from Agents.Nodes.node_intent_parser.node_IntentParser import (
+    _load_llm,
+    evaluate_extraction,
+    save_final_output,
+)
+from langchain_core.messages import BaseMessage, SystemMessage
+from langgraph.graph import StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from pydantic import BaseModel
+from typing import Annotated
 
 
 class AgentGraphNode:
@@ -73,6 +92,7 @@ class GraphVisualizer(Container):
         return grid_cols
 
     def compose(self) -> ComposeResult:
+        """Creates the visual representation of the agent execution graph."""
         grid = self._build_layout_grid()
         if not grid:
             yield Label("Empty Graph")
@@ -195,13 +215,40 @@ class DebugTab(Container):
         width: 100%;
         height: 100%;
     }
+    
+    .input-label {
+        text-style: bold;
+        margin-top: 1;
+        margin-bottom: 0;
+        height: 1;
+    }
+    
+    .output-label {
+        text-style: bold;
+        margin-top: 1;
+        margin-bottom: 0;
+        height: 1;
+    }
+    
+    .input-area, .output-area {
+        height: 8;
+        border: solid $primary;
+        margin-bottom: 1;
+    }
+    
+    #parse-button {
+        margin: 1 0;
+        width: 20;
+    }
     """
 
     def compose(self) -> ComposeResult:
         """Compose the memory visualizer."""
 
+
         # Define standard graph nodes and their connections
         n_start = AgentGraphNode("start", "START", is_active=True)
+        n_intent = AgentGraphNode("intent", "Intent Parser")
         n_task = AgentGraphNode("task", "Task Master")
 
         # Parallel actions
@@ -213,7 +260,8 @@ class DebugTab(Container):
         n_end = AgentGraphNode("end", "END")
 
         # Build graph topology (Edges)
-        n_start.next_nodes = ["task"]
+        n_start.next_nodes = ["intent"]
+        n_intent.next_nodes = ["task"]
         n_task.next_nodes = ["web", "rag", "code"]  # Task splits into 3
 
         n_web.next_nodes = ["eval"]  # All 3 merge into eval
@@ -222,11 +270,22 @@ class DebugTab(Container):
 
         n_eval.next_nodes = ["end"]
 
-        nodes = [n_start, n_task, n_web, n_rag, n_code, n_eval, n_end]
+        nodes = [n_start, n_intent, n_task, n_web, n_rag, n_code, n_eval, n_end]
 
         with VerticalScroll() as scroll:
             scroll.border_title = "Agent Execution Graph (LangGraph States)"
             yield ChatTab()  # Reuse chat tab for debug here
+            yield Static("Input Text:", classes="input-label")
+            yield TextArea(
+                id="intent-input",
+                placeholder="Enter text for intent parsing...",
+                classes="input-area",
+            )
+            yield Button("Parse Intent", id="parse-button", variant="primary")
+            yield Static("Output:", classes="output-label")
+            yield TextArea(id="intent-output", read_only=True, classes="output-area")
+
+            yield Static("Daha Fonksiyonel Değil:", classes="output-label")
             yield GraphVisualizer(nodes)
 
     def on_mount(self) -> None:
@@ -235,3 +294,115 @@ class DebugTab(Container):
             self.query_one("#initial_focus", RadioButton).focus()
         except Exception as e:
             self.log(f"Could not focus initial node: {e}")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press events."""
+        if event.button.id == "parse-button":
+            self.parse_intent_from_ui()
+
+    def parse_intent_from_ui(self) -> None:
+        """Parse intent from UI input instead of file."""
+        try:
+            # Get input text from the text area
+            input_text_area = self.query_one("#intent-input", TextArea)
+            input_text = input_text_area.text.strip()
+
+            if not input_text:
+                self.notify("Please enter some text to parse", severity="warning")
+                return
+
+            # Add the Agents directory to the path so we can import the intent parser
+            agents_path = Path(__file__).parents[3] / "Agents"
+            sys.path.insert(0, str(agents_path))
+
+            # ----------------------------------------
+            # ----------------------------------------
+
+            # Override the read_input_file function to use our UI input
+            def read_ui_input() -> str:
+                """Reads the input text from UI and returns its content. Call this first to get context."""
+                return input_text
+
+            # Create a custom agent that uses our UI input
+            def build_custom_agent():
+                """Builds a custom agent that uses UI input instead of file input."""
+                tools = [read_ui_input, evaluate_extraction, save_final_output]
+                tool_node = ToolNode(tools)
+                llm_with_tools = _load_llm().bind_tools(tools)
+
+                system_prompt = SystemMessage(
+                    content="""You are an autonomous Intent Parsing Agent equipped with file and evaluation tools. 
+                Your strict workflow is:
+                1. Call `read_input_file` to fetch the source text.
+                2. Analyze the text and extract the required parameters.
+                3. Call `evaluate_extraction` to critique your own extraction.
+                4. If critique is given, adjust and call `evaluate_extraction` again.
+                5. Only when 'PASS' is returned, call `save_final_output` to save.
+                6. Conclude the workflow.
+                """
+                )
+
+                # Strongly typed Node function
+                def call_model(state: AgentState) -> Dict[str, list[BaseMessage]]:
+                    """Processes the current state and returns the LLM's response."""
+                    messages = state.messages
+                    if not any(isinstance(m, SystemMessage) for m in messages):
+                        messages = [system_prompt] + messages
+
+                    response = llm_with_tools.invoke(messages)
+                    return {"messages": [response]}
+
+                # Initialize Graph with the standard TypedDict
+                workflow = StateGraph(AgentState)
+
+                workflow.add_node("agent", call_model)
+                workflow.add_node("tools", tool_node)
+
+                workflow.add_edge(START, "agent")
+                workflow.add_conditional_edges("agent", tools_condition)
+                workflow.add_edge("tools", "agent")
+
+                return workflow.compile()
+
+            # Define the AgentState (copied from the original)
+            class AgentState(BaseModel):
+                """State model for the intent parsing agent."""
+
+                messages: Annotated[list[BaseMessage], add_messages]
+
+            # Run the agent
+            self.notify("Parsing intent...", severity="information")
+            graph = build_custom_agent()
+
+            graph.invoke(
+                {
+                    "messages": [
+                        (
+                            "user",
+                            "Start the pipeline: Read the input file, evaluate your intent extraction until it passes, and write to output.",
+                        )
+                    ]
+                }
+            )
+
+            # Check the output file for results
+            output_file = (
+                Path(__file__).parents[3]
+                / "Agents"
+                / "Nodes"
+                / "node_intent_parser"
+                / "Output.txt"
+            )
+            if output_file.exists():
+                output_text = output_file.read_text(encoding="utf-8")
+                output_area = self.query_one("#intent-output", TextArea)
+                output_area.text = output_text
+                self.notify("Intent parsed successfully!", severity="information")
+            else:
+                self.notify(
+                    "Failed to parse intent - no output generated", severity="error"
+                )
+
+        except Exception as e:
+            self.notify(f"Error parsing intent: {str(e)}", severity="error")
+            self.log(f"Error in parse_intent_from_ui: {e}")

@@ -1,15 +1,25 @@
-#!/usr/bin/env python3
 """
 Automated PyInstaller build script for Textual TUI applications.
 Collects all dynamic imports from 'textual.widgets' and other known
 problematic packages.
+
+Edit the TUI_ENTRY_PATH variable below to point to your TUI script.
 """
 
 import sys
 import os
+from pathlib import Path
 from typing import List
 from PyInstaller.__main__ import run as pyinstaller_run
 from PyInstaller.utils.hooks import collect_submodules
+
+# ============================================================
+# SET YOUR TUI ENTRY SCRIPT HERE (relative or absolute path)
+
+BASE = Path(__file__).parents[1]
+TUI_ENTRY_PATH = BASE / "run_TUI.py"
+
+# ============================================================
 
 
 def get_dynamic_hiddenimports() -> List[str]:
@@ -18,11 +28,10 @@ def get_dynamic_hiddenimports() -> List[str]:
 
     # Textual: all widgets submodules (includes _tab, _tabs, etc.)
     try:
-        # collect_submodules returns List[str]
         hidden.extend(collect_submodules("textual.widgets"))
     except (ImportError, ModuleNotFoundError) as e:
         print(f"Warning: Could not collect textual.widgets submodules: {e}")
-    except Exception as e:  # unexpected error, but still catch
+    except Exception as e:
         print(f"Unexpected error collecting textual.widgets: {e}")
 
     # Also include textual.containers (may be dynamically used)
@@ -38,7 +47,7 @@ def get_dynamic_hiddenimports() -> List[str]:
         try:
             hidden.extend(collect_submodules(pkg))
         except (ImportError, ModuleNotFoundError):
-            pass  # optional dependency not installed
+            pass
         except Exception as e:
             print(f"Warning: Error collecting {pkg}: {e}")
 
@@ -56,8 +65,9 @@ def build(entry_script: str) -> None:
     if hidden_imports:
         print("Sample:", hidden_imports[:5])
 
-    # Prepare PyInstaller arguments (all must be strings)
-    base_name = os.path.splitext(entry_script)[0]
+    # ✅ Extract just the base name (e.g., "run_TUI" from "/path/to/run_TUI.py")
+    base_name = os.path.splitext(os.path.basename(entry_script))[0]
+
     args: List[str] = [
         entry_script,
         "--name",
@@ -66,15 +76,16 @@ def build(entry_script: str) -> None:
         "--console",
         "--clean",
         "--noconfirm",
+        "--distpath",
+        str(BASE / "build" / "dist"),
+        "--workpath",
+        str(BASE / "build" / "temp"),
+        "--specpath",
+        str(BASE / "build"),
     ]
 
-    # Add each hidden import as a separate --hidden-import argument
     for imp in hidden_imports:
-        # Ensure imp is a string (it should be, but we cast to be safe)
         args.extend(["--hidden-import", str(imp)])
-
-    # Optional: add data files if needed (example)
-    # args.extend(['--add-data', 'path/to/css:css'])
 
     print("\nRunning PyInstaller with arguments:")
     print(" ".join(args), "\n")
@@ -82,6 +93,5 @@ def build(entry_script: str) -> None:
 
 
 if __name__ == "__main__":
-    # Use command line argument or default to 'run_TUI.py'
-    target = sys.argv[1] if len(sys.argv) > 1 else "run_TUI.py"
-    build(target)
+    # Convert Path to string before passing to build()
+    build(str(TUI_ENTRY_PATH))

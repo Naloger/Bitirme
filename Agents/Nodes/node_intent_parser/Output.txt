@@ -1,7 +1,7 @@
 Actor            : User
-Action           : Greeting/Inquiry
-Actors Reason    : The user initiated a conversation with a standard social greeting.
-Intent           : Greeting
+Action           : Greeting
+Actors Reason    : The user provided a simple greeting, which implies the intent is to start a conversation.
+Intent           : Start_Conversation
 Is Trustworthy   : True
-Source           : Hi how are you
-Other Reaction   : A polite response is expected.
+Source           : Input text is "Hi"
+Other Reaction   : The system should respond with a greeting or an acknowledgement.
