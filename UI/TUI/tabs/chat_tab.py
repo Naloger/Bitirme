@@ -111,6 +111,7 @@ class ChatTab(Container):
 
         self._initialize_llm()
 
+
     def _initialize_llm(self) -> None:
         """Create a local Ollama chat client from JSON config."""
         chat_log = self.query_one("#chat-messages", RichLog)
@@ -133,7 +134,6 @@ class ChatTab(Container):
                 repeat_penalty=ollama_cfg.get("repeat_penalty"),
                 client_kwargs=client_kwargs,
             )
-            chat_log.write("[green]Connected to local Ollama model.[/green]\n\n")
         except ConfigError as exc:
             self._llm_error = f"Config error: {exc}"
             chat_log.write(f"[bold red]Error:[/bold red] {self._llm_error}\n\n")
