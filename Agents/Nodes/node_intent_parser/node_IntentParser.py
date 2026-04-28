@@ -1,42 +1,29 @@
 from __future__ import annotations
 
-import json
-import sys
+from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.tools import tool
-from langchain_ollama import ChatOllama
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
 
+from support_lib.load_llm import load_llm
+
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE = Path(__file__).parent
-_ROOT = BASE.parents[2]
 INPUT_FILE = BASE / "Input.txt"
 OUTPUT_FILE = BASE / "Output.txt"
-LLM_CONFIG = _ROOT / "llm_config.json"
 
 
-# ── 1. LLM Construction ─────────────────────────────────────────────────────
-def _load_llm() -> Any:
-    if not LLM_CONFIG.exists():
-        sys.exit(f"LLM config not found: {LLM_CONFIG}")
-    cfg = json.loads(LLM_CONFIG.read_text(encoding="utf-8"))
-    ollama_cfg = cfg["ollama"]
+@lru_cache(maxsize=1)
+def get_llm():
+    """Load and cache the shared LLM client on first use."""
+    return load_llm()
 
-    return ChatOllama(
-        base_url=ollama_cfg["base_url"],
-        model=ollama_cfg["model"],
-        temperature=ollama_cfg.get("temperature", 0),
-        num_ctx=ollama_cfg.get("num_ctx", 2048),
-    )
-
-
-_llm = _load_llm()
 
 
 # ── 2. Type-Safe State Definition ────────────────────────────────────────────
@@ -122,7 +109,7 @@ Extracted fields:
 - **If ALL rules are satisfied**: reply exactly: `PASS`
 - **Otherwise**: Write a short critique: `Field "X" fails because ...`
 """
-    response = _llm.invoke(eval_prompt).content.strip()
+    response = get_llm().invoke(eval_prompt).content.strip()
     return response
 
 
@@ -157,7 +144,7 @@ def save_final_output(
 def build_agent():
     tools = [read_input_file, evaluate_extraction, save_final_output]
     tool_node = ToolNode(tools)
-    llm_with_tools = _llm.bind_tools(tools)
+    llm_with_tools = get_llm().bind_tools(tools)
 
     system_prompt = SystemMessage(
         content="""You are an autonomous Intent Parsing Agent equipped with file and evaluation tools. 
@@ -172,7 +159,7 @@ def build_agent():
     )
 
     # Strongly typed Node function
-    def call_model(state: AgentState) -> BaseModel[str, list[BaseMessage]]:
+    def call_model(state: AgentState) -> dict[str, list[BaseMessage]]:
         messages = state.messages
         if not any(isinstance(m, SystemMessage) for m in messages):
             messages = [system_prompt] + messages

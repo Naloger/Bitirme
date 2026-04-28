@@ -2,7 +2,7 @@
   "provider": "ollama",
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
-    "model": "gemma4:e2b",
+    "model": "gemma4:e4b",
     "temperature": 0.7,
     "num_ctx": 4000,
     "timeout_seconds": 300,
@@ -10,7 +10,7 @@
     "repeat_penalty": null
   },
   "loop_guard": {
-    "max_loops": 2,
+    "max_loops": 7,
     "max_repeated_chunk": 5,
     "repetition_window": 24,
     "thinking_feedback_chars": 1200,

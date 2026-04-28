@@ -8,6 +8,7 @@ Edit the TUI_ENTRY_PATH variable below to point to your TUI script.
 
 import sys
 import os
+import shutil
 from pathlib import Path
 from typing import List
 from PyInstaller.__main__ import run as pyinstaller_run
@@ -90,6 +91,17 @@ def build(entry_script: str) -> None:
     print("\nRunning PyInstaller with arguments:")
     print(" ".join(args), "\n")
     pyinstaller_run(args)
+
+    config_src = BASE / "llm_config.json"
+    config_dst = BASE / "build" / "dist" / "llm_config.json"
+    if config_src.exists():
+        try:
+            shutil.copy2(config_src, config_dst)
+            print(f"Copied config to {config_dst}")
+        except Exception as e:
+            print(f"Warning: could not copy llm_config.json to dist folder: {e}")
+    else:
+        print(f"Warning: llm_config.json not found at {config_src}; EXE will use runtime fallback only.")
 
 
 if __name__ == "__main__":

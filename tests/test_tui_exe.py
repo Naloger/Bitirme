@@ -5,7 +5,7 @@ import sys
 import time
 import os
 
-exe_path = r"../dist/run_TUI.exe"
+exe_path = r"../build/dist/run_TUI.exe"
 
 print("Testing the EXE application...")
 print(f"Path: {exe_path}")

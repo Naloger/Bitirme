@@ -14,7 +14,7 @@ from UI.TUI.tabs.chat_tab import ChatTab
 # Import the intent parser node
 # Accessing _load_llm is intentional as it's the module's LLM factory function
 from Agents.Nodes.node_intent_parser.node_IntentParser import (
-    _load_llm,
+    load_llm,
     evaluate_extraction,
     save_final_output,
 )
@@ -328,7 +328,7 @@ class DebugTab(Container):
                 """Builds a custom agent that uses UI input instead of file input."""
                 tools = [read_ui_input, evaluate_extraction, save_final_output]
                 tool_node = ToolNode(tools)
-                llm_with_tools = _load_llm().bind_tools(tools)
+                llm_with_tools = load_llm().bind_tools(tools)
 
                 system_prompt = SystemMessage(
                     content="""You are an autonomous Intent Parsing Agent equipped with file and evaluation tools. 
