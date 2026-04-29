@@ -245,7 +245,6 @@ class DebugTab(Container):
     def compose(self) -> ComposeResult:
         """Compose the memory visualizer."""
 
-
         # Define standard graph nodes and their connections
         n_start = AgentGraphNode("start", "START", is_active=True)
         n_intent = AgentGraphNode("intent", "Intent Parser")

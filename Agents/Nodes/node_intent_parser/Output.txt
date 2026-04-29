@@ -1,7 +1,7 @@
 Actor            : User
-Action           : Greeting
-Actors Reason    : The user initiated a simple social interaction asking how someone is.
-Intent           : Social_Greeting
-Is Trustworthy   : True
-Source           : Hi how are you
-Other Reaction   : A polite response is expected.
+Action           : processed
+Actors Reason    : correct analysis
+Intent           : understood
+Is Trustworthy   : False
+Source           : input_text
+Other Reaction   : agreed

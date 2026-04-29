@@ -16,7 +16,11 @@ def load_llm(config_path: Path | None = None) -> ChatOllama:
     """
     if config_path is None:
         config_path = next(
-            (candidate for candidate in default_config_candidates() if candidate.exists()),
+            (
+                candidate
+                for candidate in default_config_candidates()
+                if candidate.exists()
+            ),
             runtime_base_dir() / "llm_config.json",
         )
 
@@ -33,8 +37,13 @@ def load_llm(config_path: Path | None = None) -> ChatOllama:
     temperature = ollama_cfg.get("temperature", 0)
     num_ctx = ollama_cfg.get("num_ctx", 2048)
 
-    logger.info("Initializing ChatOllama: model=%s, base_url=%s, temp=%s, num_ctx=%s",
-                model, base_url, temperature, num_ctx)
+    logger.info(
+        "Initializing ChatOllama: model=%s, base_url=%s, temp=%s, num_ctx=%s",
+        model,
+        base_url,
+        temperature,
+        num_ctx,
+    )
 
     return ChatOllama(
         base_url=base_url,

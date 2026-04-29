@@ -101,7 +101,9 @@ def build(entry_script: str) -> None:
         except Exception as e:
             print(f"Warning: could not copy llm_config.json to dist folder: {e}")
     else:
-        print(f"Warning: llm_config.json not found at {config_src}; EXE will use runtime fallback only.")
+        print(
+            f"Warning: llm_config.json not found at {config_src}; EXE will use runtime fallback only."
+        )
 
 
 if __name__ == "__main__":

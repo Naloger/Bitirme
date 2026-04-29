@@ -301,8 +301,12 @@ class StreamGuardMiddleware(AgentMiddleware):
                         normalized = _normalize_chunk(content)
                         if normalized:
                             chunk_window.append(normalized)
-                            if _detect_loop(chunk_window, repetition_limit=repeated_limit):
-                                logger.warning("Content loop detected at chunk %d", chunk_count)
+                            if _detect_loop(
+                                chunk_window, repetition_limit=repeated_limit
+                            ):
+                                logger.warning(
+                                    "Content loop detected at chunk %d", chunk_count
+                                )
                                 loop_detected = True
                                 break
 
@@ -317,12 +321,20 @@ class StreamGuardMiddleware(AgentMiddleware):
                             thinking_text_window,
                             repetition_limit=max(3, repeated_limit - 1),
                         ):
-                            logger.warning("Thinking text loop detected at chunk %d", chunk_count)
+                            logger.warning(
+                                "Thinking text loop detected at chunk %d", chunk_count
+                            )
                             loop_detected = True
                             break
 
-                        if not content_started and chunk_count >= pre_content_chunk_limit:
-                            logger.warning("Pre-content chunk limit reached (%d)", pre_content_chunk_limit)
+                        if (
+                            not content_started
+                            and chunk_count >= pre_content_chunk_limit
+                        ):
+                            logger.warning(
+                                "Pre-content chunk limit reached (%d)",
+                                pre_content_chunk_limit,
+                            )
                             loop_detected = True
                             break
 
@@ -334,7 +346,10 @@ class StreamGuardMiddleware(AgentMiddleware):
                             avg_len = sum(thinking_window) / len(thinking_window)
                             max_recent = max(list(thinking_window)[-10:])
                             if avg_len < 12 and max_recent < 15:
-                                logger.warning("Thinking token stall detected at chunk %d", chunk_count)
+                                logger.warning(
+                                    "Thinking token stall detected at chunk %d",
+                                    chunk_count,
+                                )
                                 loop_detected = True
                                 break
 
@@ -352,23 +367,35 @@ class StreamGuardMiddleware(AgentMiddleware):
 
             if loop_detected and loop_count < max_loops:
                 loop_count += 1
-                assistant_seed = "".join(pass_output).strip() if pass_output else "(no content emitted yet)"
+                assistant_seed = (
+                    "".join(pass_output).strip()
+                    if pass_output
+                    else "(no content emitted yet)"
+                )
                 messages.append({"role": "assistant", "content": assistant_seed})
-                messages.append({"role": "user", "content": _generate_feedback_prompt()})
-                logger.info("Restarting generation (attempt %d/%d)", loop_count, max_loops)
+                messages.append(
+                    {"role": "user", "content": _generate_feedback_prompt()}
+                )
+                logger.info(
+                    "Restarting generation (attempt %d/%d)", loop_count, max_loops
+                )
                 continue
 
             if stream_done or not loop_detected or loop_count >= max_loops:
                 break
 
         final_output = "".join(accumulated_output).strip()
-        final_thinking = "".join(accumulated_thinking).strip() or "(thinking not available)"
+        final_thinking = (
+            "".join(accumulated_thinking).strip() or "(thinking not available)"
+        )
 
         if not final_output:
             rescued = _salvage_answer_from_thinking("".join(accumulated_thinking))
             if rescued:
                 final_output = rescued
-                logger.info("Derived answer from thinking trace via fallback extraction.")
+                logger.info(
+                    "Derived answer from thinking trace via fallback extraction."
+                )
 
         return final_output, final_thinking, loop_count, True
 
@@ -386,7 +413,9 @@ class StreamGuardMiddleware(AgentMiddleware):
 
         logger.error("Invalid Ollama base_url: %s", self.config.base_url)
         return {
-            "messages": [AIMessage(content="Configuration error: invalid Ollama endpoint.")],
+            "messages": [
+                AIMessage(content="Configuration error: invalid Ollama endpoint.")
+            ],
             "stream_guard_success": False,
             "jump_to": "end",
         }
@@ -412,14 +441,18 @@ class StreamGuardMiddleware(AgentMiddleware):
             if ollama_messages and ollama_messages[0]["role"] == "system":
                 ollama_messages[0]["content"] = self.config.system_prompt
             else:
-                ollama_messages.insert(0, {"role": "system", "content": self.config.system_prompt})
+                ollama_messages.insert(
+                    0, {"role": "system", "content": self.config.system_prompt}
+                )
 
         options = self._build_generation_options()
 
         # Execute guarded streaming generation
-        output_text, thinking_text, loop_restarts, success = self._execute_stream_with_guard(
-            ollama_messages=ollama_messages,
-            options=options,
+        output_text, thinking_text, loop_restarts, success = (
+            self._execute_stream_with_guard(
+                ollama_messages=ollama_messages,
+                options=options,
+            )
         )
 
         # Construct the model response with guarded output
@@ -517,7 +550,6 @@ def create_stream_guard_middleware(
 # Example Usage
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-
     logging.basicConfig(
         level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s"
     )
@@ -533,9 +565,11 @@ if __name__ == "__main__":
             max_loops=3,
             system_prompt="Be concise and avoid repetitive output.",
         )
-        output_text, thinking_text, loop_restarts, success = middleware._execute_stream_with_guard(  # type: ignore[attr-defined]
-            ollama_messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0.7, "num_ctx": 4096},
+        output_text, thinking_text, loop_restarts, success = (
+            middleware._execute_stream_with_guard(  # type: ignore[attr-defined]
+                ollama_messages=[{"role": "user", "content": prompt}],
+                options={"temperature": 0.7, "num_ctx": 4096},
+            )
         )
         report = [
             "provider=ollama",

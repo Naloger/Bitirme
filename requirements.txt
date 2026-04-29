@@ -19,3 +19,6 @@ typer
 pydantic-settings
 loguru
 ollama
+requests
+beautifulsoup4
+langchain-classic

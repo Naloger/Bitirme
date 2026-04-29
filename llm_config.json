@@ -2,7 +2,7 @@
   "provider": "ollama",
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
-    "model": "gemma4:e4b",
+    "model": "lfm2.5-thinking",
     "temperature": 0.7,
     "num_ctx": 4000,
     "timeout_seconds": 300,

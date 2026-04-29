@@ -111,7 +111,6 @@ class ChatTab(Container):
 
         self._initialize_llm()
 
-
     def _initialize_llm(self) -> None:
         """Create a local Ollama chat client from JSON config."""
         chat_log = self.query_one("#chat-messages", RichLog)
