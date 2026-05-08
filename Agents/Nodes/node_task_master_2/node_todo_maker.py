@@ -18,9 +18,11 @@ from langgraph.graph import StateGraph, END
 class TodoWizardState(TypedDict):
     todo_list: TodoList
     user_request: str
-    todos_to_add: List[dict] # Expected format: [{"title": "...", "description": "..."}, ...]
+    todos_to_add: List[
+        dict
+    ]  # Expected format: [{"title": "...", "description": "..."}, ...]
     current_index: int
-    step: str                   # "ask_user", "generate_todos", "add_todos", "end"
+    step: str  # "ask_user", "generate_todos", "add_todos", "end"
 
 
 # ------------------------------------------------------------------
@@ -28,21 +30,23 @@ class TodoWizardState(TypedDict):
 # ------------------------------------------------------------------
 def node_ask_user(_state: TodoWizardState):
     print("\n=== Todo Generator ===")
-    request = input("What do you want to do? (e.g., 'how to bake a cake', or 'q' to quit): ").strip()
-    
-    if request.lower() == 'q' or not request:
+    request = input(
+        "What do you want to do? (e.g., 'how to bake a cake', or 'q' to quit): "
+    ).strip()
+
+    if request.lower() == "q" or not request:
         return {"user_request": "", "step": "end"}
-        
+
     return {"user_request": request, "step": "generate_todos"}
 
 
 def node_generate_todos(state: TodoWizardState):
     request = state["user_request"]
     print(f"Generating steps for: '{request}'...")
-    
+
     # Load LLM
     llm = load_llm()
-    
+
     # Create prompt
     system_prompt = """You are a helpful assistant that breaks down a task into a series of actionable steps (todo items).
 You MUST respond ONLY with a valid JSON array of objects.
@@ -54,12 +58,14 @@ Example output:
   {"title": "Step 1", "description": "Do the first thing"},
   {"title": "Step 2", "description": "Do the second thing"}
 ]"""
-    
+
     messages = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content=f"Please create a step-by-step todo list for the following task: {request}")
+        HumanMessage(
+            content=f"Please create a step-by-step todo list for the following task: {request}"
+        ),
     ]
-    
+
     try:
         response = llm.invoke(messages)
         # Parse JSON
@@ -70,7 +76,7 @@ Example output:
             content = content[3:]
         if content.endswith("```"):
             content = content[:-3]
-        
+
         todos = json.loads(content.strip())
         print(f"Generated {len(todos)} steps.")
         return {"todos_to_add": todos, "current_index": 0, "step": "add_todos"}
@@ -83,17 +89,17 @@ def node_add_todos(state: TodoWizardState):
     todos = state["todos_to_add"]
     idx = state["current_index"]
     todo_list = state["todo_list"]
-    
+
     if idx < len(todos):
         todo = todos[idx]
-        title = todo.get("title", f"Step {idx+1}")
+        title = todo.get("title", f"Step {idx + 1}")
         desc = todo.get("description", "")
-        
+
         add_todo(todo_list, title, desc)
         print(f"✅ Added: '{title}'")
-        
+
         return {"current_index": idx + 1, "step": "add_todos"}
-    
+
     return {"step": "ask_user"}
 
 
@@ -119,11 +125,11 @@ def route_step(state: TodoWizardState) -> str:
 # 4. Build the graph
 # ------------------------------------------------------------------
 def build_wizard_graph():
-    graph = StateGraph(TodoWizardState) # type: ignore
+    graph = StateGraph(TodoWizardState)  # type: ignore
 
-    graph.add_node("ask_user", node_ask_user) # type: ignore
-    graph.add_node("generate_todos", node_generate_todos) # type: ignore
-    graph.add_node("add_todos", node_add_todos) # type: ignore
+    graph.add_node("ask_user", node_ask_user)  # type: ignore
+    graph.add_node("generate_todos", node_generate_todos)  # type: ignore
+    graph.add_node("add_todos", node_add_todos)  # type: ignore
 
     graph.set_entry_point("ask_user")
 
@@ -133,18 +139,18 @@ def build_wizard_graph():
         {
             "generate_todos": "generate_todos",
             END: END,
-        }
+        },
     )
-    
+
     graph.add_edge("generate_todos", "add_todos")
-    
+
     graph.add_conditional_edges(
         "add_todos",
         route_step,
         {
             "add_todos": "add_todos",
             "ask_user": "ask_user",
-        }
+        },
     )
 
     return graph.compile()
@@ -162,7 +168,7 @@ def run_todo_wizard(todo_list: TodoList):
         "user_request": "",
         "todos_to_add": [],
         "current_index": 0,
-        "step": "ask_user"
+        "step": "ask_user",
     }
 
     graph.invoke(initial_state)

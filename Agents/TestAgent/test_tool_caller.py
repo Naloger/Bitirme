@@ -13,11 +13,9 @@ from Tools import util_tools
 from support_lib.load_llm import load_llm
 
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-
 
 
 @tool
@@ -27,18 +25,17 @@ def current_datetime() -> dict[str, str]:
 
 
 @tool
-def web_search(query,max_results=5 ) -> list[dict[str, str]]:
+def web_search(query, max_results=5) -> list[dict[str, str]]:
     """Return the current local date and time."""
-    return util_tools.duckduckgo_search(query,max_results)
+    return util_tools.duckduckgo_search(query, max_results)
+
 
 def build_agent():
     llm = load_llm()
     return create_agent(
         model=llm,
-        tools=[current_datetime,web_search],
-        system_prompt=(
-            "You are a helpful assistant. "
-        ),
+        tools=[current_datetime, web_search],
+        system_prompt=("You are a helpful assistant. "),
         checkpointer=MemorySaver(),
     )
 

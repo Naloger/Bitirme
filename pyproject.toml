@@ -1,0 +1,17 @@
+[project]
+name = "designproject"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "langchain-core>=1.3.3",
+    "langchain-ollama>=1.1.0",
+    "langdetect>=1.0.9",
+    "langgraph>=1.1.10",
+    "nltk>=3.9.4",
+    "pyinstaller>=6.20.0",
+    "pytest>=9.0.3",
+    "spacy>=3.8.14",
+    "stanza>=1.11.1",
+    "textual>=8.2.5",
+    "typing-extensions>=4.15.0",
+]

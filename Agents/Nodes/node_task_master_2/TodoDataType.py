@@ -64,5 +64,6 @@ def list_todos(todo_list: TodoList) -> str:
     incomplete = todo_list.list_incomplete()
     if not incomplete:
         return "No pending todos. Great job!"
-    return "Pending todos:\n" + "\n".join(f"- {t.title} (id: {t.id})" for t in incomplete)
-
+    return "Pending todos:\n" + "\n".join(
+        f"- {t.title} (id: {t.id})" for t in incomplete
+    )
