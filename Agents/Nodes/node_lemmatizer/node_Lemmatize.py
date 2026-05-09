@@ -1,26 +1,14 @@
 from pathlib import Path
-import re
 from typing import Any, cast
-from typing_extensions import TypedDict
-from langgraph.graph import END, START, StateGraph
-from langdetect.lang_detect_exception import LangDetectException
-from langdetect import detect
-import spacy
-import stanza
-from nltk.stem import WordNetLemmatizer
 
+from langgraph.graph import END, START, StateGraph
+from typing_extensions import TypedDict
+
+from support_lib.Lemmatizer.lemmatize_text import lemmatize_text
 
 BASE = Path(__file__).parent
 INPUT = BASE / "Input.txt"
 OUTPUT = BASE / "Output.txt"
-
-spacy_en = spacy.load("en_core_web_sm")
-stanza_tr = stanza.Pipeline(
-    lang="tr", processors="tokenize,mwt,pos,lemma", use_gpu=False, verbose=False
-)
-
-
-# Program
 
 
 class LemmatizerState(TypedDict, total=False):
@@ -29,80 +17,13 @@ class LemmatizerState(TypedDict, total=False):
     error: str
 
 
-def _detect_sentence_language(sentence: str) -> str:
-    """Detect language: Turkish if special chars found, else English."""
-    if re.search(r"[çğıöşüÇĞİÖŞÜ]", sentence):
-        return "tr"
-    if detect:
-        try:
-            detected = detect(sentence)
-            return "tr" if detected.startswith("tr") else "en"
-        except LangDetectException:
-            pass
-    return "en"
-
-
-def _lemmatize_text(text: str) -> list[str]:
-    # Split by sentence boundaries and common punctuation
-    sentences = re.split(r'[\n.!?;:,—\-"\']+', text)
-    lemmatized_lines: list[str] = []
-
-    for sentence in sentences:
-        # Clean whitespace and remaining punctuation from edges
-        cleaned_sentence = sentence.strip().rstrip(".,!?;:'\"—-")
-        if not cleaned_sentence:
-            continue
-
-        sent_lang = _detect_sentence_language(cleaned_sentence)
-        lemma_words: list[str] = []
-
-        if sent_lang == "en" and spacy_en is not None:
-            doc = spacy_en(cleaned_sentence)
-            lemma_words = [token.lemma_.lower() for token in doc if token.text.strip()]
-        elif sent_lang == "tr" and stanza_tr is not None:
-            try:
-                tr_doc = stanza_tr(cleaned_sentence)
-                for sent_obj in getattr(tr_doc, "sentences", []):
-                    for word in getattr(sent_obj, "words", []):
-                        w_text = str(getattr(word, "text", ""))
-                        w_lemma = str(getattr(word, "lemma", w_text))
-                        lemma = w_lemma.lower()
-                        # Remove punctuation from lemma
-                        lemma = lemma.strip().rstrip(".,!?;:'\"—-")
-                        if lemma:
-                            lemma_words.append(lemma)
-            except RuntimeError:
-                pass
-
-        if not lemma_words and sent_lang == "en":
-            words = re.findall(r"\w+", cleaned_sentence, flags=re.UNICODE)
-            lemmatizer = WordNetLemmatizer()
-            for word in words:
-                normalized = word.lower()
-                lemma_verb = lemmatizer.lemmatize(normalized, pos="v")
-                lemma_words.append(
-                    lemma_verb
-                    if lemma_verb != normalized
-                    else lemmatizer.lemmatize(normalized, pos="n")
-                )
-
-        if not lemma_words:
-            words = re.findall(r"\w+", cleaned_sentence, flags=re.UNICODE)
-            lemma_words = [word.lower() for word in words]
-
-        if lemma_words:
-            lemmatized_lines.append(" ".join(lemma_words))
-
-    return lemmatized_lines
-
-
 def lemmatize_node(state: LemmatizerState) -> LemmatizerState:
     """Process text through lemmatization pipeline."""
     input_text = state.get("text", "")
     if not input_text.strip():
         return {"lemmatized_lines": [], "error": "Empty input text."}
 
-    lines = _lemmatize_text(input_text)
+    lines = lemmatize_text(input_text)
     return {"lemmatized_lines": lines, "error": ""}
 
 

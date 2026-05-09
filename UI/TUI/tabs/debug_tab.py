@@ -173,75 +173,9 @@ class GraphVisualizer(Container):
 class DebugTab(Container):
     """Debug tab content."""
 
-    DEFAULT_CSS = """
-    DebugTab {
-        width: 100%;
-        height: 100%;
-        background: $panel;
-        padding: 1;
-    }
-    
-    .with-border {
-        border: round $primary;
-        border-title-color: $text;
-        background: $surface;
-        padding: 1 2;
-    }
-    
-    #graph-container {
-        height: auto;
-        min-height: 15;
-    }
-    
-    .graph-radioset {
-        border: none;
-        background: transparent;
-        width: auto;
-    }
-    
-    RadioButton {
-        padding: 0 1;
-        height: 3;
-    }
-    
-    .arrow {
-        content-align: center middle;
-        color: $text-muted;
-        text-style: bold;
-        height: 3;
-    }
-    
-    .empty {
-        width: 100%;
-        height: 100%;
-    }
-    
-    .input-label {
-        text-style: bold;
-        margin-top: 1;
-        margin-bottom: 0;
-        height: 1;
-    }
-    
-    .output-label {
-        text-style: bold;
-        margin-top: 1;
-        margin-bottom: 0;
-        height: 1;
-    }
-    
-    .input-area, .output-area {
-        height: 8;
-        border: solid $primary;
-        margin-bottom: 1;
-    }
-    
-    #parse-button {
-        margin: 1 0;
-        width: 20;
-    }
-    """
-
+    DEFAULT_CSS = (Path(__file__).parent / "css" / "debug_tab.tcss").read_text(
+        encoding="utf-8"
+    )
     def compose(self) -> ComposeResult:
         """Compose the memory visualizer."""
 

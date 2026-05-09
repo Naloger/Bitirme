@@ -1,4 +1,3 @@
-
 from support_lib.CTT.tree_utilities import (
     visualize_expression_tree,
     linearize_expression_tree,
@@ -10,7 +9,6 @@ from support_lib.CTT.tree_utilities import (
 )
 
 __all__ = [
-
     "visualize_expression_tree",
     "linearize_expression_tree",
     "flatten_expression_tree",

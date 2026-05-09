@@ -11,6 +11,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
 
+from Agents.Tools.read_input_file import read_input_file
 from support_lib.load_llm import load_llm
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
@@ -51,12 +52,6 @@ class EvaluateExtractionSchema(ExtractionSchema):
 
 
 # ── 4. Agent Tools ───────────────────────────────────────────────────────────
-@tool
-def read_input_file() -> str:
-    """Reads the input text file and returns its content. Call this first to get context."""
-    if not INPUT_FILE.exists():
-        return f"Error: Input file not found at {INPUT_FILE}"
-    return INPUT_FILE.read_text(encoding="utf-8").strip()
 
 
 @tool("evaluate_extraction", args_schema=EvaluateExtractionSchema)

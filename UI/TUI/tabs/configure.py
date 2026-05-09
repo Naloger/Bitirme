@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 from llm_config import (
@@ -27,81 +28,9 @@ class Configure(VerticalScroll):
         "unknown"  # "connected", "disconnected", "unknown", "checking"
     )
 
-    DEFAULT_CSS = """
-    Configure {
-        width: 100%;
-        height: 100%;
-        background: $panel;
-        padding: 1;
-        layout: vertical;
-        overflow-y: auto;
-    }
-
-    Configure #status-bar {
-        width: 100%;
-        height: auto;
-        layout: horizontal;
-        border: solid $accent;
-        padding: 1;
-        margin-bottom: 1;
-    }
-
-    Configure #status-label {
-        width: auto;
-        content-align: left middle;
-    }
-
-    Configure #status-indicator {
-        width: auto;
-        content-align: center middle;
-        margin-left: 2;
-    }
-
-    Configure #config-form {
-        width: 100%;
-        height: auto;
-        layout: vertical;
-        border: solid $accent;
-        padding: 1;
-        margin-bottom: 1;
-    }
-
-    Configure .config-row {
-        width: 100%;
-        height: auto;
-        layout: horizontal;
-        margin-bottom: 1;
-    }
-
-    Configure .config-label {
-        width: 24;
-        content-align: left middle;
-    }
-
-    Configure .config-input {
-        width: 1fr;
-    }
-
-    Configure #config-buttons {
-        width: 100%;
-        height: auto;
-        layout: horizontal;
-        margin-top: 1;
-    }
-
-    Configure #config-buttons Button {
-        width: 1fr;
-        margin: 0 1;
-    }
-
-    Configure #config-log {
-        width: 100%;
-        height: 1fr;
-        border: solid $accent;
-        background: $surface;
-    }
-    """
-
+    DEFAULT_CSS = (Path(__file__).parent / "css" / "configure.tcss").read_text(
+        encoding="utf-8"
+    )
     def compose(self) -> ComposeResult:
         """Compose the configure tab."""
         # Status bar

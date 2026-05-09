@@ -1,4 +1,5 @@
 """Main LLM Menu interface."""
+from pathlib import Path
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -22,46 +23,10 @@ class MainMenuContainer(Container):
         "tab_debug": "panel_debug",
     }
 
-    CSS = """
-    LLMAssistantContainer {
-        width: 100%;
-        height: 1fr;
-        layout: vertical;
-    }
-    
-    LLMAssistantContainer #llm-header {
-        width: 100%;
-        height: 3;
-        background: $boost;
-        border-bottom: solid $accent;
-        content-align: center middle;
-    }
-    
-    LLMAssistantContainer #llm-header Static {
-        width: 100%;
-        text-align: center;
-    }
-    
-    LLMAssistantContainer #llm-tabs {
-        width: 100%;
-        height: auto;
-        dock: top;
-    }
-    
-    LLMAssistantContainer #llm-main {
-        width: 100%;
-        height: 1fr;
-        background: $surface;
-    }
-    
-    LLMAssistantContainer .tab-panel {
-        width: 100%;
-        height: 100%;
-        layout: vertical;
-    }
-    
-    """
-
+    # CSS instead of Default_CSS
+    DEFAULT_CSS = (Path(__file__).parent / "css" / "main_menu.tcss").read_text(
+        encoding="utf-8"
+    )
     def compose(self) -> ComposeResult:
         """Create child widgets for the LLM Assistant container."""
         # Header

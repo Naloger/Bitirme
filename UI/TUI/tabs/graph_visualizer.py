@@ -1,4 +1,5 @@
 """Graph State Visualizer tab."""
+from pathlib import Path
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -8,15 +9,9 @@ from textual.widgets import RichLog
 class GraphVisualizer(Container):
     """Graph State Visualizer tab content."""
 
-    DEFAULT_CSS = """
-    GraphVisualizer {
-        width: 100%;
-        height: 100%;
-        background: $panel;
-        padding: 1;
-    }
-    """
-
+    DEFAULT_CSS = (Path(__file__).parent / "css" / "graph_visualizer.tcss").read_text(
+        encoding="utf-8"
+    )
     def compose(self) -> ComposeResult:
         """Compose the graph visualizer."""
         yield RichLog(id="graph-log", markup=True)

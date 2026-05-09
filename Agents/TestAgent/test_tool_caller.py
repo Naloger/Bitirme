@@ -6,10 +6,11 @@ from pathlib import Path
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables.config import RunnableConfig
-from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 
-from Tools import util_tools
+from Agents.Tools.get_datetime import get_datetime
+from Agents.Tools.duckduckgo_search import duckduckgo_search
+
 from support_lib.load_llm import load_llm
 
 
@@ -18,24 +19,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
-@tool
-def current_datetime() -> dict[str, str]:
-    """Return the current local date and time."""
-    return util_tools.get_datetime()
-
-
-@tool
-def web_search(query, max_results=5) -> list[dict[str, str]]:
-    """Return the current local date and time."""
-    return util_tools.duckduckgo_search(query, max_results)
-
-
 def build_agent():
     llm = load_llm()
     return create_agent(
         model=llm,
-        tools=[current_datetime, web_search],
-        system_prompt=("You are a helpful assistant. "),
+        tools=[get_datetime, duckduckgo_search],
+        system_prompt="You are a helpful assistant.",
         checkpointer=MemorySaver(),
     )
 

@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import re
 
-from .turkish_chars import TURKISH_DIACRITICS_MAP, restore_turkish_diacritics
-
 
 MIN_WORD_LENGTH = 2
 """Minimum character length for a lemmatized token to be kept."""
@@ -54,10 +52,6 @@ def normalize_lemmatized_output(tokens: list[str]) -> list[str]:
         if _should_filter(cleaned):
             continue
 
-        # Restore Turkish diacritics for known Turkish words
-        if cleaned.lower() in TURKISH_DIACRITICS_MAP:
-            cleaned = TURKISH_DIACRITICS_MAP[cleaned.lower()]
-
         normalized.append(cleaned)
 
     return normalized
@@ -76,4 +70,4 @@ def normalize_lemmatized_text(text: str) -> str:
     normalized = normalize_lemmatized_output(tokens)
     result = " ".join(normalized)
     # Restore Turkish diacritics if any Turkish words are present
-    return restore_turkish_diacritics(result)
+    return result

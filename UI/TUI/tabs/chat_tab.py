@@ -1,5 +1,5 @@
 """Chat tab with ChatGPT-like UI."""
-
+from pathlib import Path
 from typing import Any
 
 from llm_config import ConfigError, load_llm_config
@@ -16,73 +16,9 @@ class ChatTab(Container):
     _llm: Any = None
     _llm_error: str | None = None
 
-    DEFAULT_CSS = """
-    ChatTab {
-        width: 100%;
-        height: 90%;
-        layout: vertical;
-        background: $panel;
-    }
-
-    ChatTab #chat-messages {
-        width: 100%;
-        height: 1fr;
-        border: solid $accent;
-        background: $surface;
-    }
-
-    ChatTab #chat-input-area {
-        width: 100%;
-        height: auto;
-        border-top: solid $accent;
-        background: $panel;
-        padding: 1;
-        layout: vertical;
-    }
-
-    ChatTab #message-input {
-        width: 100%;
-        height: 3;
-        border: solid $accent;
-        margin-bottom: 1;
-    }
-
-    ChatTab #button-container {
-        width: 100%;
-        height: auto;
-        layout: horizontal;
-    }
-
-    ChatTab Button {
-        width: 1fr;
-        height: 3;
-        margin: 0 1;
-        content-align: center middle;
-        text-align: center;
-    }
-
-    ChatTab #send-button {
-        background: $accent;
-        color: white;
-    }
-
-    ChatTab #send-button:hover {
-        background: $boost;
-    }
-
-    ChatTab #clear-button {
-        background: $warning;
-        color: white;
-    }
-
-    ChatTab #clear-button:hover {
-        background: $error;
-    }
-
-    ChatTab Static {
-        width: 100%;
-    }
-    """
+    DEFAULT_CSS = (Path(__file__).parent / "css" / "chat_tab.tcss").read_text(
+        encoding="utf-8"
+    )
 
     def compose(self) -> ComposeResult:
         """Compose the chat tab."""

@@ -30,7 +30,7 @@ def test_normalize_filters_stanza_artifacts() -> None:
     assert result[1] == "kitap"
     assert result[2] == "oku"
     # Check that first result contains the Turkish ü character (UTF-8 bytes c3bc)
-    assert result[0].encode('utf-8') == b'bug\xc3\xbcn'
+    assert result[0].encode("utf-8") == b"bug\xc3\xbcn"
 
 
 def test_normalize_keeps_valid_words() -> None:
@@ -67,7 +67,7 @@ def test_normalize_multilingual_mix() -> None:
     assert result[1] == "quickly"
     assert result[2] == "ve"
     # 'bugun' normalized to 'bugün' with ü character
-    assert result[3].encode('utf-8') == b'bug\xc3\xbcn'
+    assert result[3].encode("utf-8") == b"bug\xc3\xbcn"
     assert result[4] == "kitap"
     assert result[5] == "oku"
 
