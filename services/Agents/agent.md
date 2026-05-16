@@ -1,0 +1,6 @@
+| Ajan Türü            | Jung Fonksiyonu   | İçsel İşlem                                             | Dışsal İşlem                                             | Graf Görevi                                     |
+| -------------------- | ----------------- | ------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| **Collector Agent**  | Algılama — S/N    | İç veri al → Örüntüleri analiz et → Depola              | Dış veri al → Olasılıkları analiz et → Depola            | Veri toplama, co-occurrence takibi              |
+| **Organizer Agent**  | Düşünme — T       | Depolanan iç veriyi düzenle → Mantıksal yapıya dönüştür | Depolanan dış veriyi düzenle → Mantıksal yapıya dönüştür | Louvain ile topluluk tespiti, kavram indeksleme |
+| **Reflector Agent**  | Değerlendirme — F | İç tutarsızlıkları tespit et → Çözüm öner               | Dış tutarsızlıkları tespit et → Çözüm öner               | Tutarsızlık giderme, güven skoru hesaplama      |
+| **Integrator Agent** | Yargılama — J     | İç ve depolanan çıktıları birleştir → Önceliklendir     | Dış ve depolanan çıktıları birleştir → Eyleme dönüştür   | Karar verme, nihai çıktı üretimi                |

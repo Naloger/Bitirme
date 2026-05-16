@@ -1,0 +1,10 @@
+provider=
+model=granite4.1:3b
+loop_restarts=0
+success=True
+
+[assistant_output]
+Artificial Intelligence (AI) refers to the simulation of human intelligence processes by machines, especially computer systems, that can learn from data, recognize patterns, make decisions, and perform tasks typically requiring human-like reasoning or perception.
+
+[thinking_output]
+(thinking not available)

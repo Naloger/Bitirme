@@ -1,0 +1,1 @@
+Bilgi toplama sürecini simüle eder. Dış dünyadan ham veri akışını (Se — Extraverted Sensing) ve olasılıkları (Ne — Extraverted Intuition) tarayarak sistemin "gözlem" yeteneğini oluşturur. İçsel olarak, geçmiş deneyimlerden örüntü çıkarımı (Si — Introverted Sensing, Ni — Introverted Intuition) yapar.

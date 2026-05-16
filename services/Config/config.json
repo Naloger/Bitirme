@@ -1,0 +1,13 @@
+{
+  "api_config": {
+	"provider": "ollama",
+	"model": "granite4.1:3b",
+	"api_key": null,
+	"base_url": "http://localhost:11434/v1",
+	"temperature": 0.7,
+	"max_tokens": 8000,
+    "max_loops": 3,
+	"timeout": 60.0
+  }
+}
+

@@ -1,0 +1,1 @@
+Mantıksal yapılandırma sürecidir. Veriyi kategorize etme, dışsal düzeni sağlama (Te — Extraverted Thinking) ve içsel mantıksal tutarlılık (Ti — Introverted Thinking) prensiplerine göre grafiği optimize eder.

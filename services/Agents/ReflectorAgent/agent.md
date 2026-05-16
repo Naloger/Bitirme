@@ -1,0 +1,1 @@
+Sistemin "değer" yargısı ve uyum (alignment) sürecidir. İçsel çelişkileri giderme (Fi — Introverted Feeling) ve sistemin genel harmonisini koruma amacı güder. Hatalı veya "Shadow" veriyi rehabilite eder.

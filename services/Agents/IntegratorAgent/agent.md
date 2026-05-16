@@ -1,0 +1,1 @@
+Karar verme ve sonlandırma (Closure) dürtüsüdür. Analiz edilen ve organize edilen veriyi nihai bir eyleme veya çıktıya dönüştürerek bilişsel döngüyü tamamlar.
