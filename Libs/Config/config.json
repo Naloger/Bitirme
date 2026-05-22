@@ -1,0 +1,5 @@
+{
+    "database": {
+        "path": "../../../backend/data/pages.db"
+    }
+}
