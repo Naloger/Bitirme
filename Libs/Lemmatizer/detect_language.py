@@ -37,7 +37,7 @@ def _get_stanza_langid_pipeline() -> Any | None:
             use_gpu=False,
             download_method=DownloadMethod.REUSE_RESOURCES,
         )
-    except (RuntimeError, OSError) as e:
+    except (RuntimeError, OSError) :
         _stanza_langid_pipeline = None
 
     return _stanza_langid_pipeline
@@ -77,7 +77,7 @@ def detect_text_language(text: str) -> str:
                     scores["tr"] += weight
                 elif lang.startswith("en"):
                     scores["en"] += weight
-            except (RuntimeError, AttributeError) as e:
+            except (RuntimeError, AttributeError) :
                 continue
 
     # Secondary signal: probability-based langdetect.

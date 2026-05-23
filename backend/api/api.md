@@ -5,7 +5,7 @@ FastAPI application for managing Pages with an SQLite database.
 ## Run
 
 ```bash
-python -m uvicorn backend.api.api:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn backend.api.api:app --reload --host 127.0.0.1 --port 8090
 ```
 
 ## Endpoints
@@ -35,14 +35,14 @@ python -m uvicorn backend.api.api:app --reload --host 127.0.0.1 --port 8000
 
 ### Create a page
 ```bash
-curl -X POST http://127.0.0.1:8000/api/pages \
+curl -X POST http://127.0.0.1:8090/api/pages \
   -H "Content-Type: application/json" \
   -d '{"raw_text": "Sample text"}'
 ```
 
 ### Create a structured page
 ```bash
-curl -X POST http://127.0.0.1:8000/api/structured-pages \
+curl -X POST http://127.0.0.1:8090/api/structured-pages \
   -H "Content-Type: application/json" \
   -d '{
     "raw_text": "Einstein developed relativity",
@@ -52,7 +52,7 @@ curl -X POST http://127.0.0.1:8000/api/structured-pages \
 
 ### Create an unstructured page
 ```bash
-curl -X POST http://127.0.0.1:8000/api/unstructured-pages \
+curl -X POST http://127.0.0.1:8090/api/unstructured-pages \
   -H "Content-Type: application/json" \
   -d '{
     "raw_text": "Signal text",
@@ -63,7 +63,7 @@ curl -X POST http://127.0.0.1:8000/api/unstructured-pages \
 
 ### Create a wiki page
 ```bash
-curl -X POST http://127.0.0.1:8000/api/wiki-pages \
+curl -X POST http://127.0.0.1:8090/api/wiki-pages \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Ada Lovelace",
@@ -75,15 +75,15 @@ curl -X POST http://127.0.0.1:8000/api/wiki-pages \
 
 ### Update a page
 ```bash
-curl -X PUT http://127.0.0.1:8000/api/pages/{page_id} \
+curl -X PUT http://127.0.0.1:8090/api/pages/{page_id} \
   -H "Content-Type: application/json" \
   -d '{"raw_text": "Updated text"}'
 ```
 
 ## API docs
 
-- Swagger UI: http://127.0.0.1:8000/docs
-- ReDoc: http://127.0.0.1:8000/redoc
+- Swagger UI: http://127.0.0.1:8090/docs
+- ReDoc: http://127.0.0.1:8090/redoc
 
 ---
 

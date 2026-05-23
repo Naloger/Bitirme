@@ -25,6 +25,7 @@ class PageBase(SQLModel):
     creation_timestamp: float = Field(nullable=False)
     raw_text: str = Field(default="")
 
+
 class StructuredPageModel(PageBase, table=True):
     __tablename__ = "structured_pages"
 
@@ -51,17 +52,27 @@ class WikiPageModel(SQLModel, table=True):
     title: str = Field(default="", max_length=512)
     body: str = Field(default="", sa_column=Column(Text))
 
-    sections: List[Dict[str, str]] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
+    sections: List[Dict[str, str]] = Field(
+        default_factory=list, sa_column=Column(SQLITE_JSON)
+    )
     categories: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
     infobox: Dict[str, str] = Field(default_factory=dict, sa_column=Column(SQLITE_JSON))
 
     wikilinks: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
-    interwiki_links: Dict[str, str] = Field(default_factory=dict, sa_column=Column(SQLITE_JSON))
-    external_links: List[Dict[str, str]] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
+    interwiki_links: Dict[str, str] = Field(
+        default_factory=dict, sa_column=Column(SQLITE_JSON)
+    )
+    external_links: List[Dict[str, str]] = Field(
+        default_factory=list, sa_column=Column(SQLITE_JSON)
+    )
     see_also: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
 
-    references: List[Dict[str, str]] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
+    references: List[Dict[str, str]] = Field(
+        default_factory=list, sa_column=Column(SQLITE_JSON)
+    )
     templates: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
-    disambiguation: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
+    disambiguation: List[str] = Field(
+        default_factory=list, sa_column=Column(SQLITE_JSON)
+    )
 
     wikified_at: float = Field(nullable=False)
