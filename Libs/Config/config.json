@@ -1,5 +1,8 @@
 {
-    "database": {
+    "database_page": {
         "path": "../../../backend/data/pages.db"
+    },
+    "database_keyword": {
+        "path": "../../../backend/data/keywords.db"
     }
 }

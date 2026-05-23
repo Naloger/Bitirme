@@ -17,7 +17,7 @@ from backend.api.api_data_schemas import (
     WikiPageCreate,
     WikiPageUpdate,
 )
-from backend.database.orm_schema import (
+from backend.database.orm_schema_pages import (
     StructuredPageModel,
     UnstructuredPageModel,
     WikiPageModel,
@@ -37,7 +37,7 @@ def create_structured_page(
         id=str(uuid.uuid4()),
         creation_timestamp=time.time(),
         raw_text=payload.raw_text,
-        triplets=payload.triplets,
+        keywords=payload.keywords,
         structured_at=payload.structured_at or time.time(),
     )
     session.add(structured_page)

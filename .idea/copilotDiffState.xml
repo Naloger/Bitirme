@@ -30,6 +30,15 @@
             </PendingDiffInfo>
           </value>
         </entry>
+        <entry key="/orm_schema_keywords (snapshot).py">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/orm_schema_keywords (snapshot).py" />
+              <option name="originalContent" value="&quot;&quot;&quot;Simple SQLModel ORM schema for Keywords dataclasses.&#10;&#10;The schema keeps lists/dicts in JSON columns for simplicity.&#10;&quot;&quot;&quot;&#10;from sqlmodel import Field, SQLModel&#10;&#10;class PageBase(SQLModel):&#10;    id: str = Field(primary_key=True, index=True, max_length=36)&#10;    creation_timestamp: float = Field(nullable=False)&#10;    raw_text: str = Field(default=&quot;&quot;)&#10;" />
+              <option name="updatedContent" value="&quot;&quot;&quot;Simple SQLModel ORM schema for Keywords dataclasses.&#10;&#10;The schema keeps lists/dicts in JSON columns for simplicity.&#10;&quot;&quot;&quot;&#10;from sqlalchemy import Column, MetaData, Text&#10;from sqlalchemy.dialects.sqlite import JSON as SQLITE_JSON&#10;from sqlmodel import Field, SQLModel&#10;from typing import List&#10;&#10;KEYWORD_METADATA = MetaData()&#10;&#10;&#10;class KeywordSQLModel(SQLModel):&#10;    __abstract__ = True&#10;    metadata = KEYWORD_METADATA&#10;&#10;&#10;class KeywordModel(KeywordSQLModel, table=True):&#10;    __tablename__ = &quot;keywords&quot;&#10;&#10;    id: str = Field(primary_key=True, index=True, max_length=36)&#10;    creation_timestamp: float = Field(nullable=False)&#10;    raw_text: str = Field(default=&quot;&quot;, sa_column=Column(Text))&#10;    keywords: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
         <entry key="/setup_db (snapshot).py">
           <value>
             <PendingDiffInfo>

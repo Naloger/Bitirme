@@ -7,4 +7,5 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 with open(CONFIG_FILE) as f:
     _config = json.load(f)
 
-DATABASE_PATH = (CONFIG_DIR / _config["database"]["path"]).resolve()
+PAGE_DATABASE_PATH = (CONFIG_DIR / _config["database_page"]["path"]).resolve()
+KEYWORD_DATABASE_PATH = (CONFIG_DIR / _config["database_keyword"]["path"]).resolve()

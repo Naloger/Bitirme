@@ -14,13 +14,20 @@ Usage:
 The schema keeps lists/dicts in JSON columns for simplicity.
 """
 
-from sqlalchemy import Column, Text
+from sqlalchemy import Column, MetaData, Text
 from sqlalchemy.dialects.sqlite import JSON as SQLITE_JSON
 from sqlmodel import Field, SQLModel
 from typing import Dict, List
 
+PAGES_METADATA = MetaData()
 
-class PageBase(SQLModel):
+
+class PageSQLModel(SQLModel):
+    __abstract__ = True
+    metadata = PAGES_METADATA
+
+
+class PageBase(PageSQLModel):
     id: str = Field(primary_key=True, index=True, max_length=36)
     creation_timestamp: float = Field(nullable=False)
     raw_text: str = Field(default="")
@@ -43,7 +50,7 @@ class UnstructuredPageModel(PageBase, table=True):
     prediction_error: float = Field(default=0.0)
 
 
-class WikiPageModel(SQLModel, table=True):
+class WikiPageModel(PageSQLModel, table=True):
     __tablename__ = "wikified_pages"
 
     id: str = Field(primary_key=True, index=True, max_length=36)

@@ -2,15 +2,18 @@ from typing import List, Optional, Dict
 from sqlmodel import SQLModel, Field
 
 
+# ==================== Page  ====================
+
 class StructuredPageCreate(SQLModel):
     raw_text: str = ""
-    triplets: List[List[str]] = Field(default_factory=list)
+    # each triplet is expected to be [str, int, str]
+    keywords: List[str] = Field(default_factory=list)
     structured_at: Optional[float] = None
 
 
 class StructuredPageUpdate(SQLModel):
     raw_text: Optional[str] = None
-    triplets: Optional[List[List[str]]] = None
+    keywords: Optional[List[str]] = None
     structured_at: Optional[float] = None
 
 
@@ -18,7 +21,7 @@ class StructuredPageRead(SQLModel):
     id: str
     creation_timestamp: float
     raw_text: str
-    triplets: List[List[str]]
+    keywords: List[str]
     structured_at: float
 
 
@@ -93,3 +96,5 @@ class WikiPageRead(SQLModel):
     templates: List[str]
     disambiguation: List[str]
     wikified_at: float
+
+# ==================== Keyword  ====================

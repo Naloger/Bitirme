@@ -13,5 +13,5 @@ class StructuredPage(Page):
     toplamak suretiyle oluşturulur.
     """
 
-    triplets: List[Tuple[str, str, str]] = field(default_factory=list)
+    triplets: List[Tuple[str, int , str]] = field(default_factory=list)
     structured_at: float = field(default_factory=time.time)
