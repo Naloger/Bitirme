@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import re
-
 import stanza
-
 from .normalize_output import normalize_lemmatized_output
 
 
@@ -14,7 +12,7 @@ try:
     _stanza_tr = stanza.Pipeline(
         lang="tr",
         processors="tokenize,mwt,pos,lemma",
-        use_gpu=False,
+        use_gpu=True,
         verbose=False,
     )
 except Exception:

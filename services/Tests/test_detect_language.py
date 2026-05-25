@@ -2,11 +2,13 @@
 """Tests for detect_language module with logging instrumentation."""
 import sys
 from pathlib import Path
-from services.Libs.Lemmatizer.detect_language import detect_text_language
 import logging
 
-# Add services directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add the inner services package root to path so direct script execution works.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from services.Libs.Lemmatizer.detect_language import detect_text_language
+from services.Tests.test_helpers import trace_call
 
 # Configure logging for test output
 logging.basicConfig(
@@ -20,8 +22,7 @@ def test_english_text():
     """Test detection of English text."""
     text = "Hello world, this is a test."
     logger.info(f"Testing English text detection: {text}")
-    result = detect_text_language(text)
-    logger.info(f"Language detected: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -34,8 +35,7 @@ def test_turkish_text():
     """Test detection of Turkish text."""
     text = "Merhaba dünya, bu bir testtir."
     logger.info(f"Testing Turkish text detection: {text}")
-    result = detect_text_language(text)
-    logger.info(f"Turkish text detected: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -48,8 +48,7 @@ def test_empty_string():
     """Test with empty string returns English by default."""
     text = ""
     logger.info("Testing empty string detection")
-    result = detect_text_language(text)
-    logger.info(f"Empty string handled, defaulted to: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result != "en":
         raise AssertionError(f"Expected 'en', got {result}")
@@ -60,8 +59,7 @@ def test_whitespace_only():
     """Test with whitespace-only string returns English by default."""
     text = "   \n\t  "
     logger.info("Testing whitespace-only string detection")
-    result = detect_text_language(text)
-    logger.info(f"Whitespace-only handled, defaulted to: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result != "en":
         raise AssertionError(f"Expected 'en', got {result}")
@@ -72,8 +70,7 @@ def test_short_english_text():
     """Test with short English text."""
     text = "Hi"
     logger.info(f"Testing short English text: {text}")
-    result = detect_text_language(text)
-    logger.info(f"Short text detected: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -84,8 +81,7 @@ def test_mixed_text():
     """Test with mixed English and Turkish text."""
     text = "Hello merhaba world dünya."
     logger.info(f"Testing mixed language text: {text}")
-    result = detect_text_language(text)
-    logger.info(f"Mixed language detected: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -96,8 +92,7 @@ def test_punctuation_text():
     """Test with text containing punctuation."""
     text = "What?! Yes! Amazing!!!"
     logger.info(f"Testing punctuation text: {text}")
-    result = detect_text_language(text)
-    logger.info(f"Punctuation text detected: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -108,8 +103,7 @@ def test_multiline_text():
     """Test with multiline text."""
     text = "First line.\nSecond line.\nThird line."
     logger.info("Testing multiline text detection")
-    result = detect_text_language(text)
-    logger.info(f"Multiline text detected: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -120,8 +114,7 @@ def test_numbers_only():
     """Test with numbers only."""
     text = "123 456 789"
     logger.info("Testing numbers-only text detection")
-    result = detect_text_language(text)
-    logger.info(f"Numbers-only text handled: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -132,8 +125,7 @@ def test_special_characters():
     """Test with special characters."""
     text = "@#$%^&*()"
     logger.info("Testing special characters detection")
-    result = detect_text_language(text)
-    logger.info(f"Special characters handled: {result}")
+    result = trace_call(detect_text_language, text)
     
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
@@ -145,7 +137,7 @@ def test_output_type():
     texts = ["test", "sınav", ""]
     logger.info("Testing output type validation")
     for i, text in enumerate(texts):
-        result = detect_text_language(text)
+        result = trace_call(detect_text_language, text, label=f"detect_text_language[{i}]")
         if not isinstance(result, str):
             raise AssertionError(f"Expected str, got {result}")
         if len(result) == 0:

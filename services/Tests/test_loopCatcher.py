@@ -2,10 +2,13 @@
 """Basic I/O tests for loopCatcher module."""
 import sys
 from pathlib import Path
-from services.Config import config
 import json
-# Add services directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Add the inner services package root to path so direct script execution works.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from services.Config import config
+from services.Tests.test_helpers import trace_call
 
 
 # Import config module using absolute import. Tests add the package root to
@@ -76,9 +79,9 @@ def test_config_max_tokens_positive():
 
 def test_loop_safe_response_structure():
     """Test LoopSafeResponse structure."""
-    from ..AgentMiddlewares.LoopCatcherMiddleware.loopCatcher import LoopSafeResponse
+    from services.AgentMiddlewares.LoopCatcherMiddleware.loopCatcher import LoopSafeResponse
 
-    response = LoopSafeResponse(conclusion="Test conclusion")
+    response = trace_call(LoopSafeResponse, conclusion="Test conclusion")
     assert response.conclusion == "Test conclusion"
     assert isinstance(response, LoopSafeResponse)
     print("✓ test_loop_safe_response_structure passed")
@@ -86,11 +89,11 @@ def test_loop_safe_response_structure():
 
 def test_loop_safe_response_validation():
     """Test LoopSafeResponse validation."""
-    from ..AgentMiddlewares.LoopCatcherMiddleware.loopCatcher import LoopSafeResponse
+    from services.AgentMiddlewares.LoopCatcherMiddleware.loopCatcher import LoopSafeResponse
 
     
     # Valid response
-    response = LoopSafeResponse(conclusion="This is a valid conclusion.")
+    response = trace_call(LoopSafeResponse, conclusion="This is a valid conclusion.")
     assert response.conclusion == "This is a valid conclusion."
     print("✓ test_loop_safe_response_validation passed")
 

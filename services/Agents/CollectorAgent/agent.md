@@ -31,3 +31,37 @@ wiki like page yapılarıyla ilgili olaylar burda
 content delta
 
 Bilgi toplama sürecini simüle eder. Dış dünyadan ham veri akışını (Se — Extraverted Sensing) ve olasılıkları (Ne — Extraverted Intuition) tarayarak sistemin "gözlem" yeteneğini oluşturur. İçsel olarak, geçmiş deneyimlerden örüntü çıkarımı (Si — Introverted Sensing, Ni — Introverted Intuition) yapar.
+
+---
+
+
+| Modül | Açıklama | Ajan Karşılığı |
+|-------|----------|----------------|
+| **Query Decomposition (QD)** | Karmaşık sorguyu atomik alt-sorgulara parçalar | Collector Agent |
+| **Context Refinement (CR)** | Alakasız bilgileri filtreler | Reflector Agent |
+| **Query Grounding (QG)** | Önceki cevaplarla sorguyu zenginleştirir | Reflector Agent |
+| **Logic Drafting (LD)** | Kanıtları mantıksal bir zincire dönüştürür | Organizer Agent |
+| **Evidence Verification (EV)** | Kanıtların yeterliliğini kontrol eder | Reflector Agent |
+| **Query Expansion (QE)** | Eksik kanıtlar için yeni sorgular üretir | Collector Agent |
+
+
+---
+
+- Collector Agent → Ham veri ve belgeleri toplar
+- Organizer Agent → Graf yapısını oluşturur, Louvain ile kümeler
+- Reflector Agent → Tutarsızlıkları tespit eder, güven hesaplar
+- Grader → LLM ile belge alaka değerlendirmesi yapar
+- Integrator Agent → Nihai yanıtı üretir
+- Bu entegrasyon, Jung'un "bilinçdışı verinin bilince entegrasyonu" sürecini taklit eder:
+
+- Shadow (Gölge): Yüksek prediction error → Alakasız/Tutarsız veri
+- Persona: Organizasyon ve indeksleme
+- Self: Nihai entegrasyon ve yanıt
+
+---
+
+Jung'un Algılama (Perception S/N) fonksiyonlarını implement eder.
+- Extraverted Sensing (Se): Dış dünyadan ham veri akışı
+- Introverted Sensing (Si): Geçmiş deneyimlerden örüntü çıkarımı
+- Extraverted Intuition (Ne): Olasılık tarama
+- Introverted Intuition (Ni): İçsel örüntü tanıma

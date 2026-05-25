@@ -4,13 +4,14 @@ import sys
 from pathlib import Path
 import logging as logging
 
-# Add services directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add the inner services package root to path so direct script execution works.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from services.Libs.Lemmatizer.segment_by_language import (
     segment_by_language,
     mark_text_by_language,
 )
+from services.Tests.test_helpers import trace_call
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,9 +24,8 @@ def test_english_text():
     """Test segmentation of English text."""
     text = "Hello world. This is English."
     logger.info(f"Testing English text segmentation: {text}")
-    result = segment_by_language(text)
-    logger.info(f"English text segmented, segment count: {len(result)}, result: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
@@ -44,9 +44,8 @@ def test_turkish_text():
     """Test segmentation of Turkish text."""
     text = "Merhaba dünya. Bu Türkçe."
     logger.info(f"Testing Turkish text segmentation: {text}")
-    result = segment_by_language(text)
-    logger.info(f"Turkish text segmented, segment count: {len(result)}, result: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
@@ -61,9 +60,8 @@ def test_empty_string():
     """Test with empty string."""
     text = ""
     logger.info("Testing with empty string")
-    result = segment_by_language(text)
-    logger.info(f"Empty string handled: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_empty_string passed")
@@ -73,10 +71,10 @@ def test_mixed_language_text():
     """Test with mixed language text."""
     text = "Hello world. Merhaba dünya."
     logger.info(f"Testing mixed language text: {text}")
-    result = segment_by_language(text)
+    result = trace_call(segment_by_language, text)
     languages = [seg["language"] for seg in result]
-    logger.info(f"Mixed language segmented, languages: {languages}, segment count: {len(result)}, result: {result}")
-    
+    logger.info(f"Mixed language segmented, languages: {languages}")
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if not ("en" in languages or "tr" in languages):
@@ -88,9 +86,8 @@ def test_single_word():
     """Test with single word."""
     text = "hello"
     logger.info(f"Testing with single word: {text}")
-    result = segment_by_language(text)
-    logger.info(f"Single word segmented: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_single_word passed")
@@ -100,9 +97,8 @@ def test_punctuation_handling():
     """Test proper punctuation handling."""
     text = "Hello! How are you? I'm fine."
     logger.info(f"Testing punctuation handling: {text}")
-    result = segment_by_language(text)
-    logger.info(f"Punctuation handled, segment count: {len(result)}, result: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     for segment in result:
@@ -115,9 +111,8 @@ def test_newline_separation():
     """Test text with newlines."""
     text = "First line.\nSecond line.\nThird line."
     logger.info("Testing newline-separated text")
-    result = segment_by_language(text)
-    logger.info(f"Newline separation handled, segment count: {len(result)}, result: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_newline_separation passed")
@@ -127,9 +122,8 @@ def test_multiple_punctuation():
     """Test with multiple consecutive punctuation marks."""
     text = "What?! Really?! Yes!!!"
     logger.info(f"Testing multiple punctuation: {text}")
-    result = segment_by_language(text)
-    logger.info(f"Multiple punctuation handled, segment count: {len(result)}, result: {result}")
-    
+    result = trace_call(segment_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_multiple_punctuation passed")
@@ -139,7 +133,7 @@ def test_segment_structure():
     """Test that each segment has required structure."""
     text = "Hello. Merhaba."
     logger.info("Testing segment structure validation")
-    result = segment_by_language(text)
+    result = trace_call(segment_by_language, text)
     for i, segment in enumerate(result):
         logger.info(f"Checking structure for segment {i}")
         if not isinstance(segment, dict):
@@ -160,9 +154,8 @@ def test_english_marking():
     """Test marking of English text."""
     text = "Hello world."
     logger.info(f"Testing English marking: {text}")
-    result = mark_text_by_language(text)
-    logger.info(f"English text marked, result count: {len(result)}, result: {result}")
-    
+    result = trace_call(mark_text_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
@@ -176,9 +169,8 @@ def test_turkish_marking():
     """Test marking of Turkish text."""
     text = "Merhaba dünya."
     logger.info(f"Testing Turkish marking: {text}")
-    result = mark_text_by_language(text)
-    logger.info(f"Turkish text marked, result count: {len(result)}, result: {result}")
-    
+    result = trace_call(mark_text_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if not all(isinstance(item, str) for item in result):
@@ -190,9 +182,8 @@ def test_mixed_marking():
     """Test marking of mixed language text."""
     text = "Hello. Merhaba."
     logger.info(f"Testing mixed language marking: {text}")
-    result = mark_text_by_language(text)
-    logger.info(f"Mixed language marked, result count: {len(result)}, result: {result}")
-    
+    result = trace_call(mark_text_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     for line in result:
@@ -205,9 +196,8 @@ def test_empty_string_marking():
     """Test with empty string."""
     text = ""
     logger.info("Testing with empty string")
-    result = mark_text_by_language(text)
-    logger.info(f"Empty string marked: {result}")
-    
+    result = trace_call(mark_text_by_language, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_empty_string_marking passed")
@@ -217,7 +207,7 @@ def test_format_structure():
     """Test that output format is [language] text."""
     text = "Hello world."
     logger.info("Testing format structure")
-    result = mark_text_by_language(text)
+    result = trace_call(mark_text_by_language, text)
     for i, line in enumerate(result):
         logger.info(f"Checking format for line {i}: {line}")
         if "[" not in line or "]" not in line:
@@ -231,7 +221,7 @@ def test_return_type():
     texts = ["hello", "merhaba", "hello merhaba", ""]
     for i, text in enumerate(texts):
         logger.info(f"Checking return type for text index {i}: {text}")
-        result = mark_text_by_language(text)
+        result = trace_call(mark_text_by_language, text, label=f"mark_text_by_language[{i}]")
         if not isinstance(result, list):
             raise AssertionError(f"Expected list for text[{i}], got {result}")
         if not all(isinstance(item, str) for item in result):

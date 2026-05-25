@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import re
 
-
 MIN_WORD_LENGTH = 2
 """Minimum character length for a lemmatized token to be kept."""
 

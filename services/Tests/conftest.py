@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Pytest configuration for tests."""
+"""Path bootstrap helper for test scripts."""
 import sys
 from pathlib import Path
 
-# Add services directory to sys.path so pytest can find modules
-services_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(services_dir))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+	sys.path.insert(0, str(PROJECT_ROOT))

@@ -33,7 +33,7 @@ def _get_stanza_langid_pipeline() -> Any | None:
             lang_id_config={"langid_lang_subset": ["en", "tr"]},
             processors="tokenize",
             restrict=True,
-            use_gpu=False,
+            use_gpu=True,
             download_method=DownloadMethod.REUSE_RESOURCES,
         )
     except (RuntimeError, OSError):

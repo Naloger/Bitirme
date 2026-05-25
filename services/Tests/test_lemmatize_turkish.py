@@ -3,12 +3,12 @@
 import sys
 from pathlib import Path
 import logging
+
+# Add the inner services package root to path so direct script execution works.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from services.Libs.Lemmatizer.lemmatize_turkish import lemmatize_turkish_text
-
-# Add services directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-
+from services.Tests.test_helpers import trace_call
 
 
 # Configure logging for test output
@@ -23,9 +23,8 @@ def test_simple_sentence():
     """Test lemmatization of simple Turkish sentence."""
     text = "Kediler hızlı koşuyorlar."
     logger.info(f"Testing simple Turkish sentence: {text}")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish sentence lemmatized: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
@@ -39,9 +38,8 @@ def test_empty_string():
     """Test with empty string."""
     text = ""
     logger.info("Testing empty Turkish string")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Empty Turkish text handled: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if result:
@@ -53,9 +51,8 @@ def test_single_word():
     """Test with single word."""
     text = "koşuyor"
     logger.info(f"Testing single Turkish word: {text}")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Single Turkish word result: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_single_word passed")
@@ -65,9 +62,8 @@ def test_multiple_sentences():
     """Test with multiple sentences."""
     text = "Ben koşuyorum. Sen yürüyorsun. Onlar atlıyorlar."
     logger.info("Testing multiple Turkish sentences")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Multiple Turkish sentences processed: {len(result)} items")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     if len(result) < 1:
@@ -79,9 +75,8 @@ def test_with_punctuation():
     """Test text with various punctuation marks."""
     text = "Ne yapıyorsun? Ben koşuyorum, atlıyorum ve yürüyorum!"
     logger.info("Testing Turkish text with punctuation")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish punctuation handled: {len(result)} items")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_with_punctuation passed")
@@ -91,9 +86,8 @@ def test_verb_forms():
     """Test lemmatization of various verb forms."""
     text = "koşuyor koşuyorum koştum koşacak."
     logger.info("Testing Turkish verb forms")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish verb forms lemmatized: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_verb_forms passed")
@@ -103,9 +97,8 @@ def test_mixed_case():
     """Test with mixed case text."""
     text = "KOŞUYOR hızlı Koşuyor yavaş koşuyor daha hızlı."
     logger.info("Testing Turkish mixed case text")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish mixed case handled: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_mixed_case passed")
@@ -115,9 +108,8 @@ def test_with_numbers():
     """Test text containing numbers."""
     text = "Benim 3 kedim ve 5 köpeğim var."
     logger.info("Testing Turkish text with numbers")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish numbers handled: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_with_numbers passed")
@@ -128,7 +120,7 @@ def test_return_type():
     texts = ["merhaba dünya", "sınav", "", "Türk dilinde cümle"]
     logger.info("Testing Turkish return type validation")
     for i, text in enumerate(texts):
-        result = lemmatize_turkish_text(text)
+        result = trace_call(lemmatize_turkish_text, text, label=f"lemmatize_turkish_text[{i}]")
         if not isinstance(result, list):
             raise AssertionError(f"Expected list for text[{i}], got {result}")
         if not all(isinstance(item, str) for item in result):
@@ -141,9 +133,8 @@ def test_newline_separated_sentences():
     """Test with newline-separated sentences."""
     text = "İlk cümle.\nİkinci cümle.\nÜçüncü cümle."
     logger.info("Testing Turkish newline-separated sentences")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish newline handling complete: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_newline_separated_sentences passed")
@@ -153,9 +144,8 @@ def test_turkish_diacritics():
     """Test handling of Turkish diacritics."""
     text = "Türkçe karakterler: ç, ğ, ı, ö, ş, ü"
     logger.info("Testing Turkish diacritics handling")
-    result = lemmatize_turkish_text(text)
-    logger.info(f"Turkish diacritics handled: {result}")
-    
+    result = trace_call(lemmatize_turkish_text, text)
+
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     print("✓ test_turkish_diacritics passed")
