@@ -8,16 +8,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import logging
 
-try:
-    from ..Libs.Lemmatizer.normalize_output import (
-        normalize_lemmatized_output,
-        normalize_lemmatized_text,
-    )
-except ImportError:
-    from Libs.Lemmatizer.normalize_output import (
-        normalize_lemmatized_output,
-        normalize_lemmatized_text,
-    )
+# Use absolute imports relative to the `services` package root that was added
+# to sys.path above. Relative imports ("..") fail during pytest collection
+# because test modules are not regular packages.
+from Libs.Lemmatizer.normalize_output import (
+    normalize_lemmatized_output,
+    normalize_lemmatized_text,
+)
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,7 +34,7 @@ def test_normal_tokens():
     if len(result) != 3:
         raise AssertionError(f"Expected 3 items, got {len(result)}")
     if not all(isinstance(t, str) for t in result):
-        raise AssertionError(f"Expected all items to be strings")
+        raise AssertionError("Expected all items to be strings")
     print("✓ test_normal_tokens passed")
 
 
@@ -60,11 +58,11 @@ def test_single_char_filtered():
     logger.info(f"Single chars filtered, input count: {len(tokens)}, output count: {len(result)}, filtered out: [a, be]")
     
     if "a" in result:
-        raise AssertionError(f"'a' should be filtered")
+        raise AssertionError("'a' should be filtered")
     if "be" in result:
-        raise AssertionError(f"'be' should be filtered")
+        raise AssertionError("'be' should be filtered")
     if "run" not in result:
-        raise AssertionError(f"'run' should be in result")
+        raise AssertionError("'run' should be in result")
     print("✓ test_single_char_filtered passed")
 
 
@@ -76,7 +74,7 @@ def test_stopword_patterns_filtered():
     logger.info(f"Stopwords filtered, input count: {len(tokens)}, output count: {len(result)}, result: {result}")
     
     if "test" not in result:
-        raise AssertionError(f"'test' should be in result")
+        raise AssertionError("'test' should be in result")
     for token in result:
         if token in ["a", "m", "be"]:
             raise AssertionError(f"'{token}' should be filtered")
@@ -91,11 +89,11 @@ def test_punctuation_tokens_filtered():
     logger.info(f"Punctuation filtered, input count: {len(tokens)}, output count: {len(result)}, result: {result}")
     
     if "hello" not in result:
-        raise AssertionError(f"'hello' should be in result")
+        raise AssertionError("'hello' should be in result")
     if "world" not in result:
-        raise AssertionError(f"'world' should be in result")
+        raise AssertionError("'world' should be in result")
     if any("." in t or "," in t for t in result):
-        raise AssertionError(f"Punctuation should be filtered")
+        raise AssertionError("Punctuation should be filtered")
     print("✓ test_punctuation_tokens_filtered passed")
 
 
@@ -119,7 +117,7 @@ def test_short_tokens_filtered():
     logger.info(f"Short tokens filtered, input count: {len(tokens)}, output count: {len(result)}, result: {result}")
     
     if not all(len(t) >= 2 for t in result):
-        raise AssertionError(f"All tokens should have length >= 2")
+        raise AssertionError("All tokens should have length >= 2")
     print("✓ test_short_tokens_filtered passed")
 
 
@@ -133,9 +131,9 @@ def test_mixed_tokens():
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {type(result)}")
     if not all(isinstance(t, str) for t in result):
-        raise AssertionError(f"Expected all items to be strings")
+        raise AssertionError("Expected all items to be strings")
     if not all(len(t) >= 2 for t in result):
-        raise AssertionError(f"All tokens should have length >= 2")
+        raise AssertionError("All tokens should have length >= 2")
     print("✓ test_mixed_tokens passed")
 
 
@@ -147,7 +145,7 @@ def test_case_preservation():
     logger.info(f"Case preserved: {result}")
     
     if len(result) == 0:
-        raise AssertionError(f"Expected non-empty result")
+        raise AssertionError("Expected non-empty result")
     print("✓ test_case_preservation passed")
 
 
@@ -161,7 +159,7 @@ def test_normal_text():
     if not isinstance(result, str):
         raise AssertionError(f"Expected str, got {type(result)}")
     if len(result) == 0:
-        raise AssertionError(f"Expected non-empty result")
+        raise AssertionError("Expected non-empty result")
     print("✓ test_normal_text passed")
 
 
@@ -211,7 +209,7 @@ def test_stopwords_filtered_in_text():
     if not isinstance(result, str):
         raise AssertionError(f"Expected str, got {type(result)}")
     if not ("hello" in result or "world" in result or "test" in result):
-        raise AssertionError(f"Expected at least one meaningful word in result")
+        raise AssertionError("Expected at least one meaningful word in result")
     print("✓ test_stopwords_filtered_in_text passed")
 
 
@@ -236,7 +234,7 @@ def test_whitespace_handling():
     parts = result.split()
     
     if not all(isinstance(p, str) for p in parts):
-        raise AssertionError(f"Expected all parts to be strings")
+        raise AssertionError("Expected all parts to be strings")
     print("✓ test_whitespace_handling passed")
 
 

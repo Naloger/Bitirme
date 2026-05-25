@@ -6,12 +6,7 @@ from typing import Dict, Any, Iterable
 
 # Prefer httpx for streaming requests (supports sync and async). If httpx
 # is not available fall back to the stdlib urllib implementation used earlier.
-try:
-    import httpx  # type: ignore
-    _HAS_HTTPX = True
-except Exception:
-    httpx = None  # type: ignore
-    _HAS_HTTPX = False
+import httpx  # type: ignore
 
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -38,41 +33,36 @@ def _stream_chat_once(
 
     # If httpx is available we prefer it for streaming support. If it fails
     # with a 404 we fall back to the urllib implementation below.
-    if _HAS_HTTPX:
-        try:
-            with httpx.Client(timeout=timeout_s) as client:
-                with client.stream("POST", endpoint, json=payload) as response:
-                    response.raise_for_status()
-                    for chunk in response.iter_text():
-                        if not chunk:
+    try:
+        with httpx.Client(timeout=timeout_s) as client:
+            with client.stream("POST", endpoint, json=payload) as response:
+                response.raise_for_status()
+                for chunk in response.iter_text():
+                    if not chunk:
+                        continue
+                    for line in chunk.splitlines():
+                        line = line.strip()
+                        if not line:
                             continue
-                        for line in chunk.splitlines():
-                            line = line.strip()
-                            if not line:
-                                continue
-                            try:
-                                parsed = json.loads(line)
-                            except json.JSONDecodeError:
-                                continue
-                            if isinstance(parsed, dict):
-                                yield parsed
-                    return
-        except Exception as err:
-            # If it's an HTTPStatusError with 404, fall through to urllib
-            try:
-                code = err.response.status_code  # type: ignore[attr-defined]
-            except Exception:
-                code = None
-            if code != 404:
-                raise
-            logging.getLogger(__name__).debug("httpx returned 404, falling back to urllib")
+                        try:
+                            parsed = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if isinstance(parsed, dict):
+                            yield parsed
+                return
+    except Exception as err:
+        # If it's an HTTPStatusError with 404, fall through to urllib
+        try:
+            code = err.response.status_code  # type: ignore[attr-defined]
+        except Exception:
+            code = None
+        if code != 404:
+            raise
+        logging.getLogger(__name__).debug("httpx returned 404, falling back to urllib")
 
-    req = Request(
-        endpoint,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    # No-op: we construct Request objects on demand in _open();
+    # the previous assignment was unused and caused a linter error.
 
     # Try the computed endpoint and, on 404, attempt a couple of reasonable
     # alternatives derived from the host (e.g., stripping a '/v1' segment).

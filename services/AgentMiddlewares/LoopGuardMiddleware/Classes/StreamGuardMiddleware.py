@@ -35,7 +35,7 @@ from services.AgentMiddlewares.LoopGuardMiddleware.Functions._stream_chat_once i
 from services.AgentMiddlewares.LoopGuardMiddleware.state import (
     StreamGuardState
 )
-from services.Config.config import AppConfig
+from services.Config import config as default_config
 
 
 class StreamGuardMiddleware(AgentMiddleware):
@@ -52,39 +52,36 @@ class StreamGuardMiddleware(AgentMiddleware):
 
     state_schema = StreamGuardState
 
-    def __init__(self, config: Optional[AppConfig] = None, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the middleware with optional configuration overrides.
 
-        Accept either an AppConfig instance or a path to a JSON config file.
         Middleware-specific tuning values may be supplied via kwargs.
         """
         super().__init__()
 
-        # Accept AppConfig or construct a default one
-        if isinstance(config, AppConfig):
-            self.app_config = config
-        elif isinstance(config, str):
-            try:
-                self.app_config = AppConfig.from_json_file(config)
-            except Exception:
-                self.app_config = AppConfig()
-        else:
-            self.app_config = AppConfig()
+        # Get connection and model parameters from kwargs, falling back to default_config values
+        self.provider = kwargs.get("provider", getattr(default_config, "provider", ""))
+        self.model = kwargs.get("model", getattr(default_config, "model", ""))
+        self.api_key = kwargs.get("api_key", getattr(default_config, "api_key", None))
+        self.base_url = kwargs.get("base_url", getattr(default_config, "base_url", None))
+        self.temperature = float(kwargs.get("temperature", getattr(default_config, "temperature", 0.7)))
+        self.max_tokens = int(kwargs.get("max_tokens", getattr(default_config, "max_tokens", 8000)))
+        self.timeout = float(kwargs.get("timeout", getattr(default_config, "timeout", 60.0)))
+        self.max_loops = int(kwargs.get("max_loops", getattr(default_config, "max_loops", 3)))
 
-        # Shorthand to nested api config and keep legacy attribute name
-        self.api_config = self.app_config.api_config
-        # Provide a `config` attribute for backwards compatibility used elsewhere
+        # For backwards compatibility with direct attribute checks on self.api_config
+        self.api_config = self
         self.config = self
 
         # Middleware-tunable parameters (kwargs override defaults)
         self.system_prompt: Optional[str] = kwargs.get("system_prompt")
         self.top_p: Optional[float] = kwargs.get("top_p")
         self.repeat_penalty: Optional[float] = kwargs.get("repeat_penalty")
-        self.num_ctx: int = kwargs.get("num_ctx", getattr(self.api_config, "max_tokens", 4096))
+        self.num_ctx: int = kwargs.get("num_ctx", self.max_tokens)
         self.max_repeated_chunk: int = kwargs.get("max_repeated_chunk", 6)
         self.repetition_window: int = kwargs.get("repetition_window", 8)
         self.pre_content_chunk_limit: int = kwargs.get("pre_content_chunk_limit", 6)
-        self.timeout_seconds: float = kwargs.get("timeout_seconds", getattr(self.api_config, "timeout", 60.0))
+        self.timeout_seconds: float = kwargs.get("timeout_seconds", self.timeout)
 
     def _build_ollama_payload(
         self,

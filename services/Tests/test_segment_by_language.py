@@ -2,22 +2,15 @@
 """Tests for segment_by_language module."""
 import sys
 from pathlib import Path
+import logging as logging
 
 # Add services directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import logging
-
-try:
-    from ..Libs.Lemmatizer.segment_by_language import (
-        segment_by_language,
-        mark_text_by_language,
-    )
-except ImportError:
-    from Libs.Lemmatizer.segment_by_language import (
-        segment_by_language,
-        mark_text_by_language,
-    )
+from services.Libs.Lemmatizer.segment_by_language import (
+    segment_by_language,
+    mark_text_by_language,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,14 +27,14 @@ def test_english_text():
     logger.info(f"English text segmented, segment count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
-        raise AssertionError(f"Expected non-empty list")
+        raise AssertionError("Expected non-empty list")
     for segment in result:
         if "language" not in segment:
-            raise AssertionError(f"Missing 'language' in segment")
+            raise AssertionError("Missing 'language' in segment")
         if "text" not in segment:
-            raise AssertionError(f"Missing 'text' in segment")
+            raise AssertionError("Missing 'text' in segment")
         if segment["language"] not in ["en", "tr"]:
             raise AssertionError(f"Invalid language: {segment['language']}")
     print("✓ test_english_text passed")
@@ -55,12 +48,12 @@ def test_turkish_text():
     logger.info(f"Turkish text segmented, segment count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
-        raise AssertionError(f"Expected non-empty list")
+        raise AssertionError("Expected non-empty list")
     for segment in result:
         if not isinstance(segment, dict):
-            raise AssertionError(f"Expected dict, got {type(segment)}")
+            raise AssertionError(f"Expected dict, got {segment}")
     print("✓ test_turkish_text passed")
 
 
@@ -72,7 +65,7 @@ def test_empty_string():
     logger.info(f"Empty string handled: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_empty_string passed")
 
 
@@ -85,7 +78,7 @@ def test_mixed_language_text():
     logger.info(f"Mixed language segmented, languages: {languages}, segment count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if not ("en" in languages or "tr" in languages):
         raise AssertionError(f"Expected 'en' or 'tr' in languages, got {languages}")
     print("✓ test_mixed_language_text passed")
@@ -99,7 +92,7 @@ def test_single_word():
     logger.info(f"Single word segmented: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_single_word passed")
 
 
@@ -111,10 +104,10 @@ def test_punctuation_handling():
     logger.info(f"Punctuation handled, segment count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     for segment in result:
         if not isinstance(segment, dict):
-            raise AssertionError(f"Expected dict, got {type(segment)}")
+            raise AssertionError(f"Expected dict, got {segment}")
     print("✓ test_punctuation_handling passed")
 
 
@@ -126,7 +119,7 @@ def test_newline_separation():
     logger.info(f"Newline separation handled, segment count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_newline_separation passed")
 
 
@@ -138,7 +131,7 @@ def test_multiple_punctuation():
     logger.info(f"Multiple punctuation handled, segment count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_multiple_punctuation passed")
 
 
@@ -150,7 +143,7 @@ def test_segment_structure():
     for i, segment in enumerate(result):
         logger.info(f"Checking structure for segment {i}")
         if not isinstance(segment, dict):
-            raise AssertionError(f"Expected dict, got {type(segment)}")
+            raise AssertionError(f"Expected dict, got {segment}")
         if "language" not in segment:
             raise AssertionError(f"Missing 'language' in segment {i}")
         if "text" not in segment:
@@ -171,11 +164,11 @@ def test_english_marking():
     logger.info(f"English text marked, result count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
-        raise AssertionError(f"Expected non-empty list")
+        raise AssertionError("Expected non-empty list")
     if not all(isinstance(item, str) for item in result):
-        raise AssertionError(f"Expected all items to be strings")
+        raise AssertionError("Expected all items to be strings")
     print("✓ test_english_marking passed")
 
 
@@ -187,9 +180,9 @@ def test_turkish_marking():
     logger.info(f"Turkish text marked, result count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if not all(isinstance(item, str) for item in result):
-        raise AssertionError(f"Expected all items to be strings")
+        raise AssertionError("Expected all items to be strings")
     print("✓ test_turkish_marking passed")
 
 
@@ -201,7 +194,7 @@ def test_mixed_marking():
     logger.info(f"Mixed language marked, result count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     for line in result:
         if not ("[en]" in line or "[tr]" in line):
             raise AssertionError(f"Expected '[en]' or '[tr]' in line: {line}")
@@ -216,7 +209,7 @@ def test_empty_string_marking():
     logger.info(f"Empty string marked: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_empty_string_marking passed")
 
 
@@ -240,7 +233,7 @@ def test_return_type():
         logger.info(f"Checking return type for text index {i}: {text}")
         result = mark_text_by_language(text)
         if not isinstance(result, list):
-            raise AssertionError(f"Expected list for text[{i}], got {type(result)}")
+            raise AssertionError(f"Expected list for text[{i}], got {result}")
         if not all(isinstance(item, str) for item in result):
             raise AssertionError(f"Expected all items to be strings for text[{i}]")
         logger.info(f"Return type valid, text index: {i}, result count: {len(result)}")

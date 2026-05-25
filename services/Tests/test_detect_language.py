@@ -2,16 +2,11 @@
 """Tests for detect_language module with logging instrumentation."""
 import sys
 from pathlib import Path
+from services.Libs.Lemmatizer.detect_language import detect_text_language
+import logging
 
 # Add services directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-import logging
-
-try:
-    from ..Libs.Lemmatizer.detect_language import detect_text_language
-except ImportError:
-    from Libs.Lemmatizer.detect_language import detect_text_language
 
 # Configure logging for test output
 logging.basicConfig(
@@ -31,7 +26,7 @@ def test_english_text():
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
     if not isinstance(result, str):
-        raise AssertionError(f"Expected str, got {type(result)}")
+        raise AssertionError(f"Expected str, got {result}")
     print("✓ test_english_text passed")
 
 
@@ -45,7 +40,7 @@ def test_turkish_text():
     if result not in ["en", "tr"]:
         raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
     if not isinstance(result, str):
-        raise AssertionError(f"Expected str, got {type(result)}")
+        raise AssertionError(f"Expected str, got {result}")
     print("✓ test_turkish_text passed")
 
 
@@ -152,9 +147,9 @@ def test_output_type():
     for i, text in enumerate(texts):
         result = detect_text_language(text)
         if not isinstance(result, str):
-            raise AssertionError(f"Expected str, got {type(result)}")
+            raise AssertionError(f"Expected str, got {result}")
         if len(result) == 0:
-            raise AssertionError(f"Expected non-empty string")
+            raise AssertionError("Expected non-empty string")
         logger.info(f"Output type valid for text[{i}]: {type(result).__name__} = {result}")
     print("✓ test_output_type passed")
 

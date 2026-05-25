@@ -1,29 +1,24 @@
 import json
-from typing import Optional
-from pydantic import BaseModel, Field 
+from pathlib import Path
 
+# Path to the JSON configuration file
+_config_path = Path(__file__).with_name("config.json")
 
+# Load and parse JSON
+try:
+    with open(_config_path, "r", encoding="utf-8") as _f:
+        _data = json.load(_f)
+except Exception:
+        _data = {}
 
-class APILLMConfig(BaseModel):
-    provider: str = ""
-    model: str = ""
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    temperature: float = 0.7
-    max_tokens: int = 8000
-    timeout: float = 60.0
-    max_loops: int = 3
+_llm = _data.get("llm_config", {})
 
-
-class AppConfig(BaseModel):
-    api_config: APILLMConfig = Field(default_factory=APILLMConfig)
-
-    @classmethod
-    def from_json_file(cls, file_path: str) -> "AppConfig":
-        try:
-            with open(file_path, "r") as f:
-                # Pydantic handles nested dictionary parsing automatically
-                return cls.model_validate(json.load(f))
-        except FileNotFoundError:
-            print(f"! Config file {file_path} not found.")
-            return cls()
+# Expose config values as module-level variables
+PROVIDER = str(_llm.get("provider", ""))
+MODEL = str(_llm.get("model", ""))
+API_KEY = _llm.get("api_key")
+BASE_URL = _llm.get("base_url")
+TEMPERATURE = float(_llm.get("temperature", 0.7))
+MAX_TOKENS = int(_llm.get("max_tokens", 8000))
+TIMEOUT = float(_llm.get("timeout", 60.0))
+MAX_LOOPS = int(_llm.get("max_loops", 3))

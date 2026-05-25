@@ -2,16 +2,14 @@
 """Tests for lemmatize_english module."""
 import sys
 from pathlib import Path
+import logging
+from services.Libs.Lemmatizer.lemmatize_english import lemmatize_english_text
 
 # Add services directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import logging
 
-try:
-    from ..Libs.Lemmatizer.lemmatize_english import lemmatize_english_text
-except ImportError:
-    from Libs.Lemmatizer.lemmatize_english import lemmatize_english_text
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,11 +26,11 @@ def test_simple_sentence():
     logger.info(f"Result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if len(result) == 0:
-        raise AssertionError(f"Expected non-empty list")
+        raise AssertionError("Expected non-empty list")
     if not all(isinstance(item, str) for item in result):
-        raise AssertionError(f"Expected all items to be strings")
+        raise AssertionError("Expected all items to be strings")
     print("✓ test_simple_sentence passed")
 
 
@@ -44,8 +42,8 @@ def test_empty_string():
     logger.info(f"Empty result handled: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
-    if result != []:
+        raise AssertionError(f"Expected list, got {result}")
+    if result:
         raise AssertionError(f"Expected empty list, got {result}")
     print("✓ test_empty_string passed")
 
@@ -58,7 +56,7 @@ def test_single_word():
     logger.info(f"Result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_single_word passed")
 
 
@@ -70,7 +68,7 @@ def test_multiple_sentences():
     logger.info(f"Multiple sentences processed, count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     if len(result) < 1:
         raise AssertionError(f"Expected at least 1 item, got {len(result)}")
     print("✓ test_multiple_sentences passed")
@@ -84,7 +82,7 @@ def test_with_punctuation():
     logger.info(f"Punctuation handled, result count: {len(result)}, result: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_with_punctuation passed")
 
 
@@ -96,7 +94,7 @@ def test_verb_forms():
     logger.info(f"Verb forms lemmatized: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_verb_forms passed")
 
 
@@ -108,7 +106,7 @@ def test_mixed_case():
     logger.info(f"Mixed case handled: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_mixed_case passed")
 
 
@@ -120,7 +118,7 @@ def test_with_numbers():
     logger.info(f"Numbers handled: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_with_numbers passed")
 
 
@@ -131,7 +129,7 @@ def test_return_type():
         logger.info(f"Checking return type for text index {i}: {text}")
         result = lemmatize_english_text(text)
         if not isinstance(result, list):
-            raise AssertionError(f"Expected list for text[{i}], got {type(result)}")
+            raise AssertionError(f"Expected list for text[{i}], got {result}")
         if not all(isinstance(item, str) for item in result):
             raise AssertionError(f"Expected all items to be strings for text[{i}]")
         logger.info(f"Return type valid for text index {i}, result length: {len(result)}")
@@ -141,12 +139,12 @@ def test_return_type():
 def test_newline_separated_sentences():
     """Test with newline-separated sentences."""
     text = "First sentence.\nSecond sentence.\nThird sentence."
-    logger.info(f"Testing newline-separated sentences")
+    logger.info("Testing newline-separated sentences")
     result = lemmatize_english_text(text)
     logger.info(f"Newline handling complete: {result}")
     
     if not isinstance(result, list):
-        raise AssertionError(f"Expected list, got {type(result)}")
+        raise AssertionError(f"Expected list, got {result}")
     print("✓ test_newline_separated_sentences passed")
 
 

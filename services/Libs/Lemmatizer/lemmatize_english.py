@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 import re
-
 import spacy
 from nltk.stem import WordNetLemmatizer
-
 from .normalize_output import normalize_lemmatized_output
-
 
 ENGLISH_MODEL_NAME = "en_core_web_sm"
 

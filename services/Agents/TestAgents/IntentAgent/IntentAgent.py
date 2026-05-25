@@ -1,41 +1,78 @@
+import asyncio
 from pydantic import BaseModel, Field
-import httpx, json
+from pydantic_ai import Agent
+from pydantic_ai.models.ollama import OllamaModel
+from pydantic_ai.providers.ollama import OllamaProvider
 
+from services.Config import config as cfg
 
 class IntentResult(BaseModel):
-    X: str
-    K: str
-    Y: str = Field(description="Mesaj sahibi")
-    Z: str = Field(description="Çıkarımlar")
-    T: str = Field(description="Beklenen tepki")
+    X: str = Field(
+        description="Analiz edilen orijinal mesaj metni. Değiştirilmeden aktarılır."
+    )
+    K: str = Field(
+        description="Mesajla birlikte sağlanan bağlam bilgisi (kaynak sistem, kanal, kişi vb.). Sağlanmadıysa boş string."
+    )
+    Y: str = Field(
+        description=(
+            "Mesajı gönderen kişi, sistem veya bot. "
+            "Önce K'dan çıkar; K yoksa X'teki ipuçlarına göre tahmin et. "
+            "Belirlenemiyorsa 'Belirlenemedi' yaz."
+        )
+    )
+    Z: str = Field(
+        description=(
+            "Mesaj sahibi ve mevcut durum hakkında çıkarımlar. "
+            "Kesin olmayan bilgileri 'olası:' önekiyle işaretle. "
+            "Birden fazla çıkarım varsa '; ' ile ayır. "
+            "Hiçbir çıkarım yapılamazsa 'Belirlenemedi' yaz."
+        )
+    )
+    T: str = Field(
+        description=(
+            "Duruma uygun önerilen aksiyon. "
+            "Şu kategorilerden birini seç: bilgilendirme | müdahale | onay | eskalasyon | göz ardı. "
+            "Kısa gerekçesiyle birlikte tek cümle yaz."
+        )
+    )
+
+SYSTEM_PROMPT = """Sen bir mesaj niyet ayrıştırma uzmanısın.
+Teknik sistemlerden, kullanıcılardan veya botlardan gelen mesajları analiz ederek yapılandırılmış çıktı üretirsin.
+
+Girdi:
+  X — analiz edilecek ham mesaj
+  K — ek bağlam (kaynak, ortam, kişi bilgisi; boş olabilir)
+
+Çıktı kuralları:
+  - Yalnızca tek bir JSON nesnesi döndür: {"Y": "...", "Z": "...", "T": "..."}
+  - Markdown, açıklama veya ek metin ekleme.
+  - Varsayım yapmak zorundaysan yap; belirsizliği her zaman "olası:" önekiyle işaretle.
+  - Hiçbir çıkarım yapılamazsa ilgili alana "Belirlenemedi" yaz.
+
+Alan kılavuzu:
+  Y — Kaynağı belirle. K'ya öncelik ver; K boşsa X'teki ipuçlarını kullan.
+  Z — Kaynak ve durum hakkında nesnel gözlemler. Birden fazlaysa "; " ile ayır.
+  T — Tek cümle, gerekçeli aksiyon önerisi. Kategori: bilgilendirme | müdahale | onay | eskalasyon | göz ardı."""
+
+_agent = Agent(
+    model=OllamaModel(
+        cfg.MODEL,
+        provider=OllamaProvider(base_url=cfg.BASE_URL),
+    ),
+    system_prompt=SYSTEM_PROMPT,
+    output_type=IntentResult,
+)
 
 
-SYSTEM_PROMPT = """Sen bir niyet ayrıştırma uzmanısın.
-Girdi: X (mesaj), K (bağlam, boş olabilir)
-Çıktı: Yalnızca JSON → {"Y": "...", "Z": "...", "T": "..."}
-Y: Mesaj sahibi (K'da varsa kullan, yoksa X'ten çıkar)
-Z: Sahip hakkında bilgi/çıkarım (kesin olmayanları "olası" ile işaretle)
-T: Beklenen tepki/aksiyon (bilgilendirme, müdahale, onay vb.)
-Bilgi yoksa çıkarım yap; çıkarım da yapılamıyorsa "Belirlenemedi" yaz."""
+async def _analyze(x: str, k: str) -> IntentResult:
+    _prompt = f"X: {x}" + (f"\nK: {k}" if k else "")
+    _result = await _agent.run(_prompt)
+    _partial: IntentResult = _result.output
+    return IntentResult(X=x, K=k, Y=_partial.Y, Z=_partial.Z, T=_partial.T)
 
 
-def analyze(x: str, k: str = "", model: str = "gemma4:e4b", base_url: str = "http://localhost:11434") -> IntentResult:
-    prompt = f"X: {x}" + (f"\nK: {k}" if k else "")
-
-    resp = httpx.post(f"{base_url}/api/chat", json={
-        "model": model,
-        "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
-        "stream": False,
-    }, timeout=120)
-    resp.raise_for_status()
-
-    raw = resp.json()["message"]["content"]
-    s, e = raw.find("{"), raw.rfind("}") + 1
-    if s == -1 or e <= s:
-        raise RuntimeError(f"JSON bulunamadı.\nYanıt: {raw}")
-
-    data = json.loads(raw[s:e])
-    return IntentResult(X=x, K=k, **data)
+def analyze(x: str, k: str = "") -> IntentResult:
+    return asyncio.run(_analyze(x, k))
 
 
 if __name__ == "__main__":

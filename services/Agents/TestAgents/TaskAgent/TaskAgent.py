@@ -52,9 +52,9 @@ def call_ollama(prompt_text: str, model: str = "gemma4:e2b") -> str:
                         return ch["text"]
             # fallback to raw text
             return resp.text
-        except ValueError as json_error:
+        except ValueError as _json_error:
             # not json, return raw text
-            sys.stderr.write(f"Warning: Could not parse JSON response: {json_error}\n")
+            sys.stderr.write(f"Warning: Could not parse JSON response: {_json_error}\n")
             return resp.text
     except (requests.RequestException, requests.Timeout) as http_error:
         # Fallback to CLI invocation. Different versions of the ollama CLI accept the

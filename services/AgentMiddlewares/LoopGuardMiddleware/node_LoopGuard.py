@@ -4,7 +4,7 @@ import sys
 import logging
 import importlib
 from langchain.agents.middleware.tool_selection import logger
-from services.Config.config import AppConfig
+from services.Config.config import base_url, max_loops, model, temperature, max_tokens
 # Ensure the repository root (outer 'services' folder) is on sys.path so
 # package-style imports (e.g. 'services.Config.config') work when this file is
 # executed directly as a script.
@@ -26,16 +26,6 @@ if __name__ == "__main__":
     input_file = base_path / "Input.txt"
     output_file = base_path / "Output.txt"
 
-    # Try to load AppConfig from the project's Config/config.json if present
-    project_root = Path(__file__).resolve().parents[2]
-    config_file = project_root / "Config" / "config.json"
-
-    config = (
-        AppConfig.from_json_file(str(config_file))
-        if config_file.exists()
-        else AppConfig()
-    )
-    api = config.api_config
     create_stream_guard_middleware = importlib.import_module(
         "services.AgentMiddlewares.LoopGuardMiddleware.Functions.create_stream_guard_middleware"
     ).create_stream_guard_middleware
@@ -43,14 +33,14 @@ if __name__ == "__main__":
     if input_file.exists():
         prompt = input_file.read_text(encoding="utf-8").strip()
         middleware = create_stream_guard_middleware(
-            model=api.model,
-            base_url=api.base_url,
-            max_loops=api.max_loops,
+            model=model,
+            base_url=base_url,
+            max_loops=max_loops,
         )
         output_text, thinking_text, loop_restarts, success = (
             middleware._execute_stream_with_guard(
                 ollama_messages=[{"role": "user", "content": prompt}],
-                options={"temperature": api.temperature, "num_ctx": api.max_tokens},
+                options={"temperature": temperature, "num_ctx": max_tokens},
             )
         )
         report = [
