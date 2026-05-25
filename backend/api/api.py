@@ -2,19 +2,23 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any
-from backend.database import init_pages_db
+
+from Libs.Config.config import PAGE_DATABASE_PATH
+from backend.database import  init_db
+from backend.database.orm_schema_pages import PAGES_METADATA
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Executes prior to the first incoming request
-    init_db.init_db()
+    init_db.init_db(db_path=PAGE_DATABASE_PATH,metadata=PAGES_METADATA)
     yield
     # Execute cleanup procedures here (e.g., engine disposal)
 
 
 def get_session():
     if init_db.SessionLocal is None:
-        init_db.init_db()
+        init_db.init_db(db_path=PAGE_DATABASE_PATH,metadata=PAGES_METADATA)
     session_factory: Any | None = init_db.SessionLocal
     if session_factory is None:
         raise RuntimeError("SessionLocal is not initialized")

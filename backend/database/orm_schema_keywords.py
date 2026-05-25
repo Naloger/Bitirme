@@ -14,7 +14,7 @@ class KeywordSQLModel(SQLModel):
     __abstract__ = True
     metadata = KEYWORDS_METADATA
 
-
+# Blast radius keyword search'e çevir
 class KeywordModel(KeywordSQLModel, table=True):
     __tablename__ = "keywords"
 
