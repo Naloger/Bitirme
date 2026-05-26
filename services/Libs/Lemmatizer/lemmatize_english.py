@@ -10,7 +10,7 @@ ENGLISH_MODEL_NAME = "en_core_web_sm"
 
 try:
     _spacy_en = spacy.load(ENGLISH_MODEL_NAME)
-except Exception:
+except (OSError, ValueError):
     _spacy_en = None
 
 

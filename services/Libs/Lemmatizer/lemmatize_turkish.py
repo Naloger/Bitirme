@@ -15,7 +15,7 @@ try:
         use_gpu=True,
         verbose=False,
     )
-except Exception:
+except (OSError, ValueError):
     _stanza_tr = None
 
 

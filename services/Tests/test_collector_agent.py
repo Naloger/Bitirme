@@ -12,6 +12,7 @@ from services.Tests.test_helpers import trace_call
 
 
 def _patch_tokenizer(fake):
+    # noinspection PyProtectedMember
     original = collector_agent._tokenize_and_lemmatize
     collector_agent._tokenize_and_lemmatize = fake
     return original
@@ -53,7 +54,7 @@ def test_build_resource_graph_counts_weights():
 def test_collect_multiple_texts_use_distinct_resource_nodes():
     """Each text input should be assigned its own resource node UUID."""
 
-    def fake_tokenize(text: str, config):
+    def fake_tokenize(text: str, _config):
         if text == "first":
             return [["alpha", "beta"]]
         if text == "second":

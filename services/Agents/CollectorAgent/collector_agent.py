@@ -231,18 +231,18 @@ class CoOccurrenceEdge(BaseModel):
 class ResourceGraph(BaseModel):
 	"""Container for one processed text input and its co-occurrence graph."""
 
-	# resource_node: UUID = Field(default_factory=uuid4, description="UUID for this text input.")
-	# source_text: str = Field(default="", description="Original text that was processed.")
-	# lemmatized_tokens: list[str] = Field(
-	# 	default_factory=list,
-	# 	description="Flat list of normalized tokens used to build the graph.",
-	# )
+	resource_node: UUID = Field(default_factory=uuid4, description="UUID for this text input.")
+	source_text: str = Field(default="", description="Original text that was processed.")
+	lemmatized_tokens: list[str] = Field(
+		default_factory=list,
+		description="Flat list of normalized tokens used to build the graph.",
+	)
 	edges: list[CoOccurrenceEdge] = Field(
 		default_factory=list,
 		description="Weighted co-occurrence edges, sorted by descending weight.",
 	)
-	# tokenizer_config: TokenizerConfig = Field(default_factory=TokenizerConfig)
-	# counting_config: CountingConfig = Field(default_factory=CountingConfig)
+	tokenizer_config: TokenizerConfig = Field(default_factory=TokenizerConfig)
+	counting_config: CountingConfig = Field(default_factory=CountingConfig)
 
 
 # ── Tokenization pipeline ──────────────────────────────────────────────────────
@@ -345,12 +345,12 @@ def build_resource_graph(
 	]
 
 	return ResourceGraph(
-		# resource_node=resource_id,
-		# source_text=text,
-		# lemmatized_tokens=[token for sentence in sentences for token in sentence],
+		resource_node=resource_id,
+		source_text=text,
+		lemmatized_tokens=[token for sentence in sentences for token in sentence],
 		edges=edges,
-		# tokenizer_config=tok_cfg,
-		# counting_config=cnt_cfg,
+		tokenizer_config=tok_cfg,
+		counting_config=cnt_cfg,
 	)
 
 
@@ -396,6 +396,7 @@ def main() -> None:
 		"The cats are chasing the mice. "
 		"The mice are running away from the cats. "
 		"Chasing and running define their relationship."
+		"Elma yemek ister misin?"
 	)
 
 	# Nouns + verbs only, distance-weighted, directed, no cross-sentence pairs.
