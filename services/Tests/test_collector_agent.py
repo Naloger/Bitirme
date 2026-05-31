@@ -7,7 +7,7 @@ from uuid import UUID
 # Add the inner services package root to path so direct script execution works.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from services.Agents.CollectorAgent import collector_agent
+from services.Libs.GraphBuilder.v1 import collector_agent
 from services.Tests.test_helpers import trace_call
 
 

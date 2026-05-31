@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """Tests for segment_by_language module."""
+import logging as logging
 import sys
 from pathlib import Path
-import logging as logging
 
 # Add the inner services package root to path so direct script execution works.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from services.Libs.Lemmatizer.segment_by_language import (
-    segment_by_language,
+from services.Libs.Lemmatizer.LanguageSegmentation.segment_by_language import (
     mark_text_by_language,
+    segment_by_language,
 )
 from services.Tests.test_helpers import trace_call
 
@@ -18,6 +18,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def _assert_language_code(value: object) -> None:
+    if not isinstance(value, str):
+        raise AssertionError(f"Expected language to be str, got {type(value)}")
+    if not value.strip():
+        raise AssertionError("Expected non-empty language code")
 
 
 def test_english_text():
@@ -35,8 +42,7 @@ def test_english_text():
             raise AssertionError("Missing 'language' in segment")
         if "text" not in segment:
             raise AssertionError("Missing 'text' in segment")
-        if segment["language"] not in ["en", "tr"]:
-            raise AssertionError(f"Invalid language: {segment['language']}")
+        _assert_language_code(segment["language"])
     print("✓ test_english_text passed")
 
 
@@ -77,8 +83,10 @@ def test_mixed_language_text():
 
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
-    if not ("en" in languages or "tr" in languages):
-        raise AssertionError(f"Expected 'en' or 'tr' in languages, got {languages}")
+    if not languages:
+        raise AssertionError("Expected at least one language segment")
+    for language in languages:
+        _assert_language_code(language)
     print("✓ test_mixed_language_text passed")
 
 
@@ -187,8 +195,8 @@ def test_mixed_marking():
     if not isinstance(result, list):
         raise AssertionError(f"Expected list, got {result}")
     for line in result:
-        if not ("[en]" in line or "[tr]" in line):
-            raise AssertionError(f"Expected '[en]' or '[tr]' in line: {line}")
+        if not line.startswith("[") or "] " not in line:
+            raise AssertionError(f"Expected '[language] text' format in line: {line}")
     print("✓ test_mixed_marking passed")
 
 

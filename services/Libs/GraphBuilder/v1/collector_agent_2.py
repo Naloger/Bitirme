@@ -12,7 +12,10 @@ from typing import Any, cast
 
 import networkx as nx
 from sentence_transformers import SentenceTransformer, util
-from services.Libs.Lemmatizer.segment_by_language import segment_by_language
+
+from services.Libs.Lemmatizer.LanguageSegmentation.segment_by_language import (
+    segment_by_language,
+)
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(_PROJECT_ROOT) not in sys.path:

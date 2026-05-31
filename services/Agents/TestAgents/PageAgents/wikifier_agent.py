@@ -31,7 +31,7 @@ class WikiReference(BaseModel):
     text: str = ""
     url: str = ""
 
-# ✅ give it the same treatment as references
+#  give it the same treatment as references
 class ExternalLink(BaseModel):
     text: str = ""
     url: str = ""
@@ -308,7 +308,7 @@ def render_markdown(wiki: WikiPage) -> str:
     lines.append("---")
     lines.append("")
     lines.append(f"*Source:* {wiki.page.url}")
-    lines.append(f"*Wikified at:* {wiki.wikified_at.strftime('%Y-%m-%d')}")  # ✅ fix 3: was '%d%m%y'
+    lines.append(f"*Wikified at:* {wiki.wikified_at.strftime('%Y-%m-%d %H:%M:%S')}")  #  fix 3: was '%d%m%y'
     return "\n".join(lines).strip() + "\n"
 
 
@@ -321,10 +321,8 @@ def main():
         Python (programming language)
         Python is a high-level, general-purpose programming language.
 
-        == History ==
         Conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands.[1]
 
-        == Categories ==
         Programming languages, Object-oriented programming languages.
 
         [1] "Python 3.13.1 is now available". Python Software Foundation. December 2024. https://python.org

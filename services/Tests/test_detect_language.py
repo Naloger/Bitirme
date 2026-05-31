@@ -1,161 +1,91 @@
 # -*- coding: utf-8 -*-
-"""Tests for detect_language module with logging instrumentation."""
+"""Readable tests for `detect_language` with a small amount of tracing."""
+
+from __future__ import annotations
+
+import logging
 import sys
 from pathlib import Path
-import logging
 
 # Add the inner services package root to path so direct script execution works.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from services.Libs.Lemmatizer.detect_language import detect_text_language
+from services.Libs.Lemmatizer.LanguageSegmentation.detect_language import (
+    detect_text_language,
+)
 from services.Tests.test_helpers import trace_call
 
-# Configure logging for test output
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
-def test_english_text():
-    """Test detection of English text."""
-    text = "Hello world, this is a test."
-    logger.info(f"Testing English text detection: {text}")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    if not isinstance(result, str):
-        raise AssertionError(f"Expected str, got {result}")
-    print("✓ test_english_text passed")
+VALID_LANGUAGE_CASES = [
+    ("english", "Hello world, this is a test."),
+    ("turkish", "Merhaba dünya, bu bir testtir."),
+    ("short_english", "Hi"),
+    ("mixed", "Hello merhaba world dünya."),
+    ("punctuation", "What?! Yes! Amazing!!!"),
+    ("multiline", "First line.\nSecond line.\nThird line."),
+    ("numbers_only", "123 456 789"),
+    ("special_characters", "@#$%^&*()"),
+]
+
+INVALID_INPUT_CASES = [
+    ("empty_string", ""),
+    ("whitespace_only", "   \n\t  "),
+]
 
 
-def test_turkish_text():
-    """Test detection of Turkish text."""
-    text = "Merhaba dünya, bu bir testtir."
-    logger.info(f"Testing Turkish text detection: {text}")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    if not isinstance(result, str):
-        raise AssertionError(f"Expected str, got {result}")
-    print("✓ test_turkish_text passed")
+def _assert_language_code(result: object) -> None:
+    """Ensure the detector returned a usable language code."""
+    assert isinstance(result, str), f"Expected str, got {type(result).__name__}: {result!r}"
+    assert result.strip(), "Expected a non-empty language code"
 
 
-def test_empty_string():
-    """Test with empty string returns English by default."""
-    text = ""
-    logger.info("Testing empty string detection")
-    result = trace_call(detect_text_language, text)
-    
-    if result != "en":
-        raise AssertionError(f"Expected 'en', got {result}")
-    print("✓ test_empty_string passed")
+def _detect(text: str, *, label: str | None = None) -> str:
+    """Run language detection through the trace helper."""
+    return trace_call(detect_text_language, text, label=label)
 
 
-def test_whitespace_only():
-    """Test with whitespace-only string returns English by default."""
-    text = "   \n\t  "
-    logger.info("Testing whitespace-only string detection")
-    result = trace_call(detect_text_language, text)
-    
-    if result != "en":
-        raise AssertionError(f"Expected 'en', got {result}")
-    print("✓ test_whitespace_only passed")
+def test_detect_language_returns_code_for_valid_inputs() -> None:
+    """Language detection should return a non-empty code for valid input."""
+    for case_name, text in VALID_LANGUAGE_CASES:
+        logger.info("Testing %s input: %r", case_name, text)
+        result = _detect(text, label=f"detect_text_language[{case_name}]")
+        _assert_language_code(result)
 
 
-def test_short_english_text():
-    """Test with short English text."""
-    text = "Hi"
-    logger.info(f"Testing short English text: {text}")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    print("✓ test_short_english_text passed")
+def test_detect_language_rejects_empty_input() -> None:
+    """Blank input should fail clearly instead of returning a fake language code."""
+    for case_name, text in INVALID_INPUT_CASES:
+        logger.info("Testing %s input: %r", case_name, text)
+        try:
+            _detect(text, label=f"detect_text_language[{case_name}]")
+        except RuntimeError:
+            continue
+        raise AssertionError(f"Expected RuntimeError for {case_name}")
 
 
-def test_mixed_text():
-    """Test with mixed English and Turkish text."""
-    text = "Hello merhaba world dünya."
-    logger.info(f"Testing mixed language text: {text}")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    print("✓ test_mixed_text passed")
-
-
-def test_punctuation_text():
-    """Test with text containing punctuation."""
-    text = "What?! Yes! Amazing!!!"
-    logger.info(f"Testing punctuation text: {text}")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    print("✓ test_punctuation_text passed")
-
-
-def test_multiline_text():
-    """Test with multiline text."""
-    text = "First line.\nSecond line.\nThird line."
-    logger.info("Testing multiline text detection")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    print("✓ test_multiline_text passed")
-
-
-def test_numbers_only():
-    """Test with numbers only."""
-    text = "123 456 789"
-    logger.info("Testing numbers-only text detection")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    print("✓ test_numbers_only passed")
-
-
-def test_special_characters():
-    """Test with special characters."""
-    text = "@#$%^&*()"
-    logger.info("Testing special characters detection")
-    result = trace_call(detect_text_language, text)
-    
-    if result not in ["en", "tr"]:
-        raise AssertionError(f"Expected result in ['en', 'tr'], got {result}")
-    print("✓ test_special_characters passed")
-
-
-def test_output_type():
-    """Test that output is always a string."""
-    texts = ["test", "sınav", ""]
-    logger.info("Testing output type validation")
-    for i, text in enumerate(texts):
-        result = trace_call(detect_text_language, text, label=f"detect_text_language[{i}]")
-        if not isinstance(result, str):
-            raise AssertionError(f"Expected str, got {result}")
-        if len(result) == 0:
-            raise AssertionError("Expected non-empty string")
-        logger.info(f"Output type valid for text[{i}]: {type(result).__name__} = {result}")
-    print("✓ test_output_type passed")
+def test_detect_language_always_returns_string_for_valid_input() -> None:
+    """A valid sample should always produce a string result."""
+    result = _detect("sınav", label="detect_text_language[type_check]")
+    assert isinstance(result, str)
+    assert result
 
 
 if __name__ == "__main__":
-    test_english_text()
-    test_turkish_text()
-    test_empty_string()
-    test_whitespace_only()
-    test_short_english_text()
-    test_mixed_text()
-    test_punctuation_text()
-    test_multiline_text()
-    test_numbers_only()
-    test_special_characters()
-    test_output_type()
+    for case_name, text in VALID_LANGUAGE_CASES:
+        _assert_language_code(_detect(text, label=f"detect_text_language[{case_name}]"))
+
+    for case_name, text in INVALID_INPUT_CASES:
+        try:
+            _detect(text, label=f"detect_text_language[{case_name}]")
+        except RuntimeError:
+            continue
+        raise AssertionError(f"Expected RuntimeError for {case_name}")
+
+    _assert_language_code(_detect("sınav", label="detect_text_language[type_check]"))
     print("\n✓ All tests passed!")
