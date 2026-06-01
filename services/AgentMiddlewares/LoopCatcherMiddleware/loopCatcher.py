@@ -1,3 +1,5 @@
+import logging
+
 from pydantic import BaseModel, field_validator
 from pydantic_ai import Agent, ModelRetry
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -5,6 +7,8 @@ from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from services.Config import config
+
+logger = logging.getLogger(__name__)
 
 class LoopSafeResponse(BaseModel):
     conclusion: str
@@ -59,16 +63,16 @@ def build_agent() -> Agent:
 
 
 def generate_with_protection(prompt: str) -> str:
-    print("--- Starting Generation ---")
+    logger.info("--- Starting Generation ---")
     try:
         agent = build_agent()
         # Pydantic AI handles the execution, validation, and retries natively
         result = agent.run_sync(prompt)
-        print("\n[Success] Final Output:\n", result.output.conclusion)
+        logger.info("[Success] Final Output:\n%s", result.output.conclusion)
         return result.output.conclusion
 
-    except Exception as e:
+    except (AttributeError, LookupError, OSError, RuntimeError, TypeError, ValueError) as e:
         # If it still loops after max_retries, Pydantic AI throws a ValidationError
-        print("\n\n[System Matrix Break]: Loop persisting after max retries. Hard aborting.")
-        print(f"Error Details: {e}")
+        logger.exception("\n\n[System Matrix Break]: Loop persisting after max retries. Hard aborting.")
+        logger.error("Error Details: %s", e)
         raise

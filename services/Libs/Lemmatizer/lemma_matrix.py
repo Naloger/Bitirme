@@ -1,42 +1,39 @@
 """Multilingual lemmatization with language detection and segmentation.
 
-This module builds co-occurrence matrices for multilingual text using advanced
-language detection (Stanza) and intelligent text segmentation.
-
 Supported Languages:
     - English (en): Uses spaCy (en_core_web_sm)
     - Turkish (tr): Uses Stanza + optional Zemberek
 
 Adding a New Language:
-    1. Create lemmatize_<lang>.py in LemmatizeByLanguage/ with function:
-       def lemmatize(text: str) -> list[str]:
-           # Return list of normalized lemmas
+    1. Create lemmatize_<lang>.py in LemmatizeByLanguage/ with:
+           def lemmatize(text: str) -> list[str]: ...
 
-    2. Import it in this file:
-       from services.Libs.Lemmatizer.LemmatizeByLanguage.lemmatize_<lang> import lemmatize as lemmatize_<lang>
+    2. Import and register it here:
+           from services.Libs.Lemmatizer.LemmatizeByLanguage.lemmatize_<lang> import lemmatize as lemmatize_<lang>
+           LANGUAGE_TO_LEMMATIZER["<lang>"] = lemmatize_<lang>
 
-    3. Add to LANGUAGE_TO_LEMMATIZER dict:
-       LANGUAGE_TO_LEMMATIZER["<lang>"] = lemmatize_<lang>
-
-    The language code ("<lang>") should match the ISO 639-1 standard (e.g., 'fr' for French).
+    Language codes follow ISO 639-1 (e.g. 'fr' for French).
 """
 
 from __future__ import annotations
 
+import logging
+from typing import Callable
+
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 
-from services.Libs.Lemmatizer.LemmaNormalization.shared_normalization import (
-    DEFAULT_FORBIDDEN,
-    clean_forbidden,
-    normalize_lemmatized_output,
-)
 from services.Libs.Lemmatizer.LanguageSegmentation.detect_language import (
     detect_text_language,
 )
 from services.Libs.Lemmatizer.LanguageSegmentation.segment_by_language import (
-    segment_by_language,
     LanguageSegment,
+    segment_by_language,
+)
+from services.Libs.Lemmatizer.LemmaNormalization.shared_normalization import (
+    DEFAULT_FORBIDDEN,
+    clean_forbidden,
+    normalize_lemmatized_output,
 )
 from services.Libs.Lemmatizer.LemmatizeByLanguage.lemmatize_english import (
     lemmatize as lemmatize_english,
@@ -45,120 +42,134 @@ from services.Libs.Lemmatizer.LemmatizeByLanguage.lemmatize_turkish import (
     lemmatize as lemmatize_turkish,
 )
 
-ENGLISH_MODEL_NAME = "en_core_web_sm"
-
-# Language to lemmatizer mapping - easily extensible for additional languages
-# To add support for a new language (e.g., 'lemmatize_xlanguage'):
-# 1. Create LemmatizeByLanguage/lemmatize_xlanguage.py with a lemmatize(text: str) -> list[str] function
-# 2. Import it: from services.Libs.Lemmatizer.LemmatizeByLanguage.lemmatize_xlanguage import lemmatize as lemmatize_xlanguage
-# 3. Add to dict: "xl": lemmatize_xlanguage
-LANGUAGE_TO_LEMMATIZER = {
+LANGUAGE_TO_LEMMATIZER: dict[str, Callable[[str], list[str]]] = {
     "en": lemmatize_english,
     "tr": lemmatize_turkish,
-    # "xl": lemmatize_xlanguage,  # Uncomment when ready to add xlanguage support
 }
 
-# Multilingual corpus with examples in English and Turkish
-multilingual_corpus = [
-    "The cats are chasing mice.",
-    "A cat chasing a mouse is normal.",
-    "Merhaba ulan merhaba diyorum adam olun.",
-]
+logger = logging.getLogger(__name__)
 
+class LemmaMatrixBuilder:
+    """Build multilingual co-occurrence matrices with language-aware lemmatization."""
 
+    def __init__(
+        self,
+        language_to_lemmatizer: dict[str, Callable[[str], list[str]]] | None = None,
+        default_language: str = "en",
+    ) -> None:
+        self.language_to_lemmatizer = language_to_lemmatizer or LANGUAGE_TO_LEMMATIZER
+        self.default_language = default_language
 
-def _multilingual_lemmatize_tokenizer(text: str) -> list[str]:
-    """Automatically segment by language and lemmatize the input text.
-
-    Uses advanced Stanza-based language detection and segmentation for multilingual texts.
-    Supports English, Turkish, and can be extended for additional languages.
-
-    Process:
-        1. Segment text into language-specific chunks using detect_text_language
-        2. Lemmatize each segment with its language-appropriate lemmatizer
-        3. Apply shared normalizations and filter stopwords
-
-    Returns a list of cleaned tokens suitable for CountVectorizer.
-    """
-    cleaned = text.strip()
-    if not cleaned:
-        return []
-
-    try:
-        segments: list[LanguageSegment] = segment_by_language(cleaned)
-    except Exception:
+    def _segment_text(self, text: str) -> list[LanguageSegment]:
+        """Split text into language-specific segments, with fallback to whole-text detection."""
         try:
-            lang = detect_text_language(cleaned)
-        except Exception:
-            lang = "en"
-        segments = [{"language": lang, "text": cleaned}]
-
-    all_lemmas: list[str] = []
-
-    # Process each language segment
-    for segment in segments:
-        lang = segment["language"]
-        segment_text = segment["text"]
-
-        # Get the appropriate lemmatizer function
-        # Default to English if language not supported
-        lemmatizer = LANGUAGE_TO_LEMMATIZER.get(lang, lemmatize_english)
+            return segment_by_language(text)
+        except (LookupError, RuntimeError, ValueError) as e:
+            logger.debug("segment_by_language failed, falling back to single language detection: %s", e)
 
         try:
-            lemmas = lemmatizer(segment_text)
-            if lemmas:
-                all_lemmas.extend(lemmas)
-        except Exception:
-            # Skip this segment if lemmatization fails
-            # but continue processing other segments
-            continue
+            lang = detect_text_language(text)
+        except (LookupError, RuntimeError, ValueError) as e:
+            logger.warning("detect_text_language failed, using default language '%s': %s", self.default_language, e)
+            lang = self.default_language
 
-    # Filter and normalize lemma tokens (strips, removes short/non-alpha tokens, stop patterns)
-    normalized = normalize_lemmatized_output(all_lemmas)
-    # Remove common forbidden words (stopwords) defined by the project
-    cleaned = clean_forbidden(normalized, DEFAULT_FORBIDDEN)
-    return cleaned
+        return [{"language": lang, "text": text}]
 
+    def _lemmatize_segment(self, segment: LanguageSegment) -> list[str]:
+        """Lemmatize one language segment using the appropriate lemmatizer."""
+        lemmatizer = self.language_to_lemmatizer.get(segment["language"], lemmatize_english)
+        try:
+            return lemmatizer(segment["text"]) or []
+        except (LookupError, RuntimeError, ValueError) as e:
+            logger.error(
+                "Lemmatizer failed for language '%s': %s. Returning empty list.",
+                segment["language"],
+                e
+            )
+            return []
 
-def build_cooccurrence_matrix(texts: list[str]):
-    """Build the vectorizer and co-occurrence matrix for a list of texts.
+    def tokenize(self, text: str) -> list[str]:
+        """Segment by language, lemmatize, and normalize the input text."""
+        cleaned = text.strip()
+        if not cleaned:
+            return []
 
-    Automatically detects the language of each text and applies appropriate lemmatization.
-    Supports English and Turkish.
-    """
-    vectorizer = CountVectorizer(
-        tokenizer=_multilingual_lemmatize_tokenizer, lowercase=False, token_pattern=None
-    )
-    term_doc_matrix = vectorizer.fit_transform(texts)
+        lemmas: list[str] = []
+        for segment in self._segment_text(cleaned):
+            lemmas.extend(self._lemmatize_segment(segment))
 
-    co_occurrence = term_doc_matrix.T * term_doc_matrix
-    co_occurrence.setdiag(0)  # Zero out self-co-occurrence
-    return vectorizer, co_occurrence
+        return clean_forbidden(normalize_lemmatized_output(lemmas), DEFAULT_FORBIDDEN)
 
+    def build_cooccurrence_matrix(self, texts: list[str]):
+        """Build and return a (vectorizer, co-occurrence matrix) pair for the given texts."""
+        vectorizer = CountVectorizer(
+            tokenizer=self.tokenize, lowercase=False, token_pattern=None
+        )
+        term_doc = vectorizer.fit_transform(texts)
+        co_occurrence = term_doc.T * term_doc
+        co_occurrence.setdiag(0)
+        return vectorizer, co_occurrence
 
-# 4. Print Matrix Function
-def print_co_occurrence_matrix(matrix, vectorizer):
-    # Get the feature names (the lemmas) to use as labels
-    words = vectorizer.get_feature_names_out()
+    @staticmethod
+    def print_cooccurrence_matrix(matrix, vectorizer) -> None:
+        """Pretty-print a co-occurrence matrix as a pandas DataFrame."""
+        try:
+            words = vectorizer.get_feature_names_out()
+            df = pd.DataFrame(matrix.toarray(), columns=words, index=words)
+            matrix_text = df.to_string()
+            logger.info("Word Co-occurrence Matrix:\n%s", matrix_text)
+            print("\n"+"="*70)
+            print("\n--- Word Co-occurrence Matrix ---")
+            print(matrix_text)
+            print("\n"+"="*70)
+        except (ValueError, AttributeError, RuntimeError, TypeError) as e:
+            logger.error("Failed to print cooccurrence matrix: %s", e)
 
-    # Convert the sparse matrix to a dense pandas DataFrame
-    df = pd.DataFrame(matrix.toarray(), columns=words, index=words)
+    @staticmethod
+    def extract_matrix_pairs(matrix, vectorizer) -> list[dict[str, str | int]]:
+        """
+        Extract word pairs and their weights, printing them and returning
+        the data in a structured format suitable for SQL/DB insertion.
+        """
+        pairs = []
 
-    print("\n--- Word Co-occurrence Matrix ---")
-    print(df)
+        try:
+            words = vectorizer.get_feature_names_out()
+            # Convert to COOrdinate format for highly efficient iteration over non-zero elements
+            coo = matrix.tocoo()
 
+            # We filter for i < j because the co-occurrence matrix is symmetric.
+            # This prevents duplicate pairs (e.g., A-B and B-A).
+            for i, j, weight in zip(coo.row, coo.col, coo.data):
+                if i < j:
+                    pairs.append({
+                        "word1": words[i],
+                        "word2": words[j],
+                        "weight": int(weight)
+                    })
 
-def main() -> None:
-    """Build and print the demo co-occurrence matrix with multilingual support."""
-    try:
-        vectorizer, co_occurrence = build_cooccurrence_matrix(multilingual_corpus)
-    except RuntimeError as exc:
-        print(f"Cannot build the demo co-occurrence matrix: {exc}")
-        print(f"Install the spaCy model first: python -m spacy download {ENGLISH_MODEL_NAME}")
-        return
+            return pairs
 
-    print_co_occurrence_matrix(co_occurrence, vectorizer)
+        except (ValueError, AttributeError, RuntimeError, TypeError) as e:
+            logger.error("Failed to extract and print co-occurrence pairs: %s", e)
+            return []
 
+    @staticmethod
+    def print_matrix_pairs(matrix, vectorizer):
+        # FIX: Replaced MatrixProcessor with the actual class name
+        pairs = LemmaMatrixBuilder.extract_matrix_pairs(matrix, vectorizer)
 
-if __name__ == "__main__":
-    main()
+        if not pairs:
+            print("No pairs extracted or an error occurred.")
+            return []
+
+        # Sort the pairs by weight (highest frequency first)
+        pairs.sort(key=lambda x: x["weight"], reverse=True)
+
+        print("=" * 70)
+        print("--- Extracted Word Pairs & Weights ---")
+        for pair in pairs:
+            print(f"{pair['word1']} <-> {pair['word2']} : {pair['weight']}")
+        print("=" * 70)
+
+        return pairs

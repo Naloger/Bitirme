@@ -21,6 +21,8 @@ dependencies = [
     "python-louvain>=0.16",
     "requests>=2.34.1",
     "scikit-learn",
+    "scipy>=1.17.1",
+    "scipy-stubs~=1.17.1",
     "sentence-transformers>=5.5.1",
     "spacy>=3.8.14",
     "stanza>=1.12.0",
