@@ -7,7 +7,7 @@ from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
 
-from services.Libs.GraphBuilder.v1.config import TokenizerConfig
+from services.GraphBuilder.legacy.v1.config import TokenizerConfig
 from services.Libs.Lemmatizer.LanguageSegmentation.segment_by_language import (
 	segment_by_language,
 )

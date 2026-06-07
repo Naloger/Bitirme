@@ -16,7 +16,7 @@ Pydantic-based text collector that:
 ## Example
 
 ```python
-from services.Libs.GraphBuilder.v1.collector_agent import build_resource_graph
+from services.GraphBuilder.legacy.v1.collector_agent import build_resource_graph
 
 graph = build_resource_graph("The cats are running. The cats are sleeping.")
 print(graph.resource_node)

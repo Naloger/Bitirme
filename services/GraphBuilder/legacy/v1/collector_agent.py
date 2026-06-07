@@ -3,16 +3,16 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from services.Libs.GraphBuilder.v1.config import CountingConfig, TokenizerConfig
-from services.Libs.GraphBuilder.v2.counting import _count_pairs as _count_pairs_impl
-from services.Libs.GraphBuilder.v2.models import CoOccurrenceEdge, ResourceGraph
-from services.Libs.GraphBuilder.v2.pipeline import (
+from services.GraphBuilder.legacy.v1.config import CountingConfig, TokenizerConfig
+from services.GraphBuilder.legacy.v2.counting import _count_pairs as _count_pairs_impl
+from services.GraphBuilder.legacy.v2.models import CoOccurrenceEdge, ResourceGraph
+from services.GraphBuilder.legacy.v2.pipeline import (
 	build_resource_graph as _build_resource_graph_impl,
 )
-from services.Libs.GraphBuilder.v2.pipeline import (
+from services.GraphBuilder.legacy.v2.pipeline import (
 	collect_cooccurrence_edges as _collect_cooccurrence_edges_impl,
 )
-from services.Libs.GraphBuilder.v2.pipeline import (
+from services.GraphBuilder.legacy.v2.pipeline import (
 	collect_cooccurrence_edges_for_texts as _collect_cooccurrence_edges_for_texts_impl,
 )
 from services.Libs.Lemmatizer.LanguageSegmentation.segment_by_language import (

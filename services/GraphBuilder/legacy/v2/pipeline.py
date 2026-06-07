@@ -4,9 +4,11 @@ from collections import Counter
 from collections.abc import Callable, Sequence
 from uuid import UUID, uuid4
 
-from services.Libs.GraphBuilder.v1.config import CountingConfig, TokenizerConfig
-from services.Libs.GraphBuilder.v2.counting import _count_pairs as _count_pairs_default
-from services.Libs.GraphBuilder.v2.models import CoOccurrenceEdge, ResourceGraph
+from services.GraphBuilder.legacy.v1.config import CountingConfig, TokenizerConfig
+from services.GraphBuilder.legacy.v2.counting import (
+	_count_pairs as _count_pairs_default,
+)
+from services.GraphBuilder.legacy.v2.models import CoOccurrenceEdge, ResourceGraph
 from services.Libs.Lemmatizer.LemmaNormalization.tokenization import (
 	_tokenize_and_lemmatize as _tokenize_and_lemmatize_default,
 )

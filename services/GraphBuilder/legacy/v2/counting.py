@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from services.Libs.GraphBuilder.v1.config import CountingConfig
+from services.GraphBuilder.legacy.v1.config import CountingConfig
 
 
 def _count_pairs(

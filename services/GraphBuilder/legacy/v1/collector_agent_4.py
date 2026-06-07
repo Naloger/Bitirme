@@ -37,7 +37,7 @@ import numpy as np
 import spacy
 from pydantic import BaseModel
 
-from services.Libs.GraphBuilder.v2.api_models import (
+from services.GraphBuilder.legacy.v2.api_models import (
     KeywordRecord,
     KeywordsPayload,
     PpmiPairRecord,

@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from services.Libs.GraphBuilder.v1.config import CountingConfig, TokenizerConfig
+from services.GraphBuilder.legacy.v1.config import CountingConfig, TokenizerConfig
 
 
 class CoOccurrenceEdge(BaseModel):

@@ -1,4 +1,4 @@
-from services.Libs.GraphBuilder.v1.collector_agent import (
+from services.GraphBuilder.legacy.v1.collector_agent import (
 	CoOccurrenceEdge,
 	CountingConfig,
 	ResourceGraph,

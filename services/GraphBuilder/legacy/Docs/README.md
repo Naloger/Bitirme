@@ -16,7 +16,7 @@ This package is split into reusable pieces:
 ## Quick usage
 
 ```python
-from services.Libs.GraphBuilder import build_resource_graph, TokenizerConfig, CountingConfig
+from services.GraphBuilder import build_resource_graph, TokenizerConfig, CountingConfig
 
 graph = build_resource_graph(
     "Hello world",
