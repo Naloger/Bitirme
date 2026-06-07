@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 from fastapi.testclient import TestClient
-from backend.api.api import app
+from backend.api.api_init import app
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:

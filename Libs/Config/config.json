@@ -2,7 +2,7 @@
     "database_page": {
         "path": "../../../backend/data/pages.db"
     },
-    "database_keyword": {
-        "path": "../../../backend/data/keywords.db"
+    "database_lemma": {
+        "path": "../../../backend/data/lemmas.db"
     }
 }

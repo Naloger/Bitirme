@@ -5,8 +5,8 @@ import uuid
 from fastapi import Depends, Query, HTTPException
 from sqlmodel import Session, select
 
-from backend.api.api import app, get_session
-from backend.api.api_data_schemas import (
+from backend.api.api_init import app, get_session
+from backend.api.api_data_schemas_page import (
     StructuredPageRead,
     StructuredPageCreate,
     StructuredPageUpdate,
@@ -25,7 +25,7 @@ from backend.database.orm_schema_pages import (
 
 
 @app.post(
-    "/api/structured-pages",
+    "/api/page/structured-pages",
     response_model=StructuredPageRead,
     tags=["StructuredPages"],
 )
@@ -47,7 +47,7 @@ def create_structured_page(
 
 
 @app.get(
-    "/api/structured-pages",
+    "/api/page/structured-pages",
     response_model=list[StructuredPageRead],
     tags=["StructuredPages"],
 )
@@ -61,7 +61,7 @@ def get_all_structured_pages(
 
 
 @app.get(
-    "/api/structured-pages/{page_id}",
+    "/api/page/structured-pages/{page_id}",
     response_model=StructuredPageRead,
     tags=["StructuredPages"],
 )
@@ -73,7 +73,7 @@ def get_structured_page(page_id: str, session: Session = Depends(get_session)):
 
 
 @app.put(
-    "/api/structured-pages/{page_id}",
+    "/api/page/structured-pages/{page_id}",
     response_model=StructuredPageRead,
     tags=["StructuredPages"],
 )
@@ -98,7 +98,7 @@ def update_structured_page(
 
 
 @app.post(
-    "/api/unstructured-pages",
+    "/api/page/unstructured-pages",
     response_model=UnstructuredPageRead,
     tags=["UnstructuredPages"],
 )
@@ -120,7 +120,7 @@ def create_unstructured_page(
 
 
 @app.get(
-    "/api/unstructured-pages",
+    "/api/page/unstructured-pages",
     response_model=list[UnstructuredPageRead],
     tags=["UnstructuredPages"],
 )
@@ -134,7 +134,7 @@ def get_all_unstructured_pages(
 
 
 @app.get(
-    "/api/unstructured-pages/{page_id}",
+    "/api/page/unstructured-pages/{page_id}",
     response_model=UnstructuredPageRead,
     tags=["UnstructuredPages"],
 )
@@ -146,7 +146,7 @@ def get_unstructured_page(page_id: str, session: Session = Depends(get_session))
 
 
 @app.put(
-    "/api/unstructured-pages/{page_id}",
+    "/api/page/unstructured-pages/{page_id}",
     response_model=UnstructuredPageRead,
     tags=["UnstructuredPages"],
 )
@@ -170,7 +170,7 @@ def update_unstructured_page(
 # ==================== WikiPage Endpoints ====================
 
 
-@app.post("/api/wiki-pages", response_model=WikiPageRead, tags=["WikiPages"])
+@app.post("/api/page/wiki-pages", response_model=WikiPageRead, tags=["WikiPages"])
 def create_wiki_page(
     payload: WikiPageCreate,
     session: Session = Depends(get_session),
@@ -198,7 +198,7 @@ def create_wiki_page(
     return wiki_page
 
 
-@app.get("/api/wiki-pages", response_model=list[WikiPageRead], tags=["WikiPages"])
+@app.get("/api/page/wiki-pages", response_model=list[WikiPageRead], tags=["WikiPages"])
 def get_all_wiki_pages(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
@@ -208,7 +208,7 @@ def get_all_wiki_pages(
     return session.exec(statement).all()
 
 
-@app.get("/api/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
+@app.get("/api/page/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
 def get_wiki_page(wiki_id: str, session: Session = Depends(get_session)):
     wiki_page = session.get(WikiPageModel, wiki_id)
     if not wiki_page:
@@ -216,7 +216,7 @@ def get_wiki_page(wiki_id: str, session: Session = Depends(get_session)):
     return wiki_page
 
 
-@app.put("/api/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
+@app.put("/api/page/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
 def update_wiki_page(
     wiki_id: str,
     payload: WikiPageUpdate,
@@ -234,11 +234,4 @@ def update_wiki_page(
     return wiki_page
 
 
-# ==================== Health Endpoints ====================
 
-
-# Health check
-@app.get("/health", tags=["Health"])
-def health_check():
-    """Health check endpoint."""
-    return {"status": "ok"}

@@ -4,14 +4,9 @@ from sqlmodel import Session, create_engine
 import os
 import sys
 
-ENGINE = None
-SessionLocal = None
-
 
 def init_db(db_path, metadata, echo: bool = False):
     """Initialize the database engine, session factory, and create tables."""
-    global ENGINE, SessionLocal
-
     # Normalize pathlib.Path to string and ensure SQLite scheme
     if isinstance(db_path, Path):
         resolved_path = db_path
@@ -32,13 +27,13 @@ def init_db(db_path, metadata, echo: bool = False):
     connection_url = f"sqlite:///{resolved_path.as_posix()}"
 
     try:
-        ENGINE = create_engine(connection_url, echo=echo)
-        SessionLocal = sessionmaker(
-            bind=ENGINE, class_=Session, autoflush=False, autocommit=False
+        engine = create_engine(connection_url, echo=echo)
+        session_local = sessionmaker(
+            bind=engine, class_=Session, autoflush=False, autocommit=False
         )
-        metadata.create_all(bind=ENGINE)
+        metadata.create_all(bind=engine)
         print(f"Database initialized successfully at: {resolved_path}", file=sys.stdout)
-        return ENGINE, SessionLocal
+        return engine, session_local
     except Exception as exc:
         print(f"Database initialization failed: {exc}", file=sys.stderr)
         # Additional diagnostic output

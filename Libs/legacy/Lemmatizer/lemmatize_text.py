@@ -1,6 +1,6 @@
-from Libs.Lemmatizer.lemmatize_english import lemmatize_english_text
-from Libs.Lemmatizer.lemmatize_turkish import lemmatize_turkish_text
-from Libs.Lemmatizer.segment_by_language import segment_by_language
+from Libs.legacy.Lemmatizer.lemmatize_english import lemmatize_english_text
+from Libs.legacy.Lemmatizer.lemmatize_turkish import lemmatize_turkish_text
+from Libs.legacy.Lemmatizer.segment_by_language import segment_by_language
 
 
 def lemmatize_text(text: str) -> list[str]:
