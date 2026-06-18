@@ -9,3 +9,4 @@ with open(CONFIG_FILE) as f:
 
 PAGE_DATABASE_PATH = (CONFIG_DIR / _config["database_page"]["path"]).resolve()
 LEMMA_DATABASE_PATH = (CONFIG_DIR / _config["database_lemma"]["path"]).resolve()
+LEMMA_MATRIX_DATABASE_PATH = (CONFIG_DIR / _config["database_lemma_matrix"]["path"]).resolve()

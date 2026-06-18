@@ -4,5 +4,8 @@
     },
     "database_lemma": {
         "path": "../../../backend/data/lemmas.db"
+    },
+    "database_lemma_matrix" : {
+        "path": "../../../backend/data/lemma_matrix.db"
     }
 }

@@ -3,7 +3,7 @@
 The schema keeps lists/dicts in JSON columns for simplicity.
 """
 
-from sqlalchemy import Column, MetaData, Text, Index
+from sqlalchemy import Column, MetaData, Text
 from sqlalchemy.dialects.sqlite import JSON as SQLITE_JSON
 from sqlmodel import Field, SQLModel
 from typing import List
@@ -23,22 +23,6 @@ class DocumentModel(LemmaSQLModel, table=True):
     id: str = Field(primary_key=True, index=True, max_length=36)
     timestamp: float = Field(default_factory=time.time, nullable=False)
     raw_text: str = Field(default="", sa_column=Column(Text))
-
     # Document'in bağlı olduğu lemma/keyword listesi (JSON array)
     lemmas: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
-
-
-# Ayrı olarak tutulan Lemma (Keyword) Matrisi
-# Graph-style connections between tokens (word1, word2, weight)
-class LemmaMatrixModel(LemmaSQLModel, table=True):
-    __tablename__ = "lemma_matrix"
-
-    # Graph kenarları (edges) için integer primary key
-    id: int = Field(default=None, primary_key=True)
-
-    word1: str = Field(sa_column=Column(Text, nullable=False))
-    word2: str = Field(sa_column=Column(Text, nullable=False))
-    weight: int = Field(default=0, nullable=False)
-
-# Sorgu performansını artırmak için Index tanımlamaları (İsteğe bağlı)
-Index("ix_lemma_matrix_words", LemmaMatrixModel.word1, LemmaMatrixModel.word2)
+    transformed_to_matrix : bool = Field(default=False, sa_column=Column(SQLITE_JSON))
