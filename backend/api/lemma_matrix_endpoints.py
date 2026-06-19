@@ -26,12 +26,11 @@ def _next_matrix_id(session: Session) -> int:
 	tags=["LemmaConnections"],
 )
 def save_connections(payload: List[LemmaConnectionCreate], session: Session = Depends(get_lemma_matrix_session)):
-	"""Receives a list of (owner_id, word1, word2, weight) rows and bulk-inserts them into the lemma matrix DB."""
+	"""Receives a list of ( word1, word2, weight) rows and bulk-inserts them into the lemma matrix DB."""
 	next_id = _next_matrix_id(session)
 	db_records = [
 		LemmaMatrixModel(
 			id=next_id + index,
-			owner_id=item.owner_id or 0,
 			word1=item.word1,
 			word2=item.word2,
 			weight=item.weight,

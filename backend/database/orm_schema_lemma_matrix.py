@@ -12,7 +12,6 @@ class LemmaMatrixModel(LemmaMatrixSQLModel, table=True):
 
     # Graph kenarları (edges) için integer primary key
     id: int = Field(default=None, primary_key=True)
-    owner_id: int = Field(default=None, primary_key=False,nullable=False)
     word1: str = Field(sa_column=Column(Text, primary_key=True, nullable=False))
     word2: str = Field(sa_column=Column(Text, primary_key=True, nullable=False))
     weight: int = Field(default=0, nullable=False)
