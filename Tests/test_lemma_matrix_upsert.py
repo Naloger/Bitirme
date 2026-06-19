@@ -381,4 +381,74 @@ def test_build_upsert_endpoint_lenient_json():
 	assert "processed" in body.get("message", "")
 
 
+def test_sliding_window_cooccurrence():
+	"""Verify that co-occurrences are only counted within the sliding window, not document-wide."""
+	from Libs.Lemmatizer.lemma_matrix import LemmaMatrixBuilder
+
+	builder = LemmaMatrixBuilder(window_size=2)
+	
+	# simple text: "apple banana cherry date elderberry"
+	text = "apple banana cherry date elderberry"
+	
+	vectorizer, matrix = builder.build_cooccurrence_matrix([text])
+	pairs = builder.extract_matrix_pairs(matrix, vectorizer)
+	
+	# Collect all words "apple" co-occurs with
+	apple_pairs = [p for p in pairs if p["word1"] == "apple" or p["word2"] == "apple"]
+	cooc_words = set()
+	for p in apple_pairs:
+		cooc_words.add(p["word1"])
+		cooc_words.add(p["word2"])
+	cooc_words.discard("apple")
+	
+	# Should co-occur with words within window_size=2
+	assert "banana" in cooc_words
+	assert "cherry" in cooc_words
+	# Should NOT co-occur with words outside window_size=2
+	assert "date" not in cooc_words
+	assert "elderberry" not in cooc_words
+
+
+def test_overwrite_and_clear_endpoints():
+	"""Verify overwrite=True overwrites instead of accumulating weight, and DELETE endpoint clears data."""
+	client = TestClient(app)
+	
+	# Clean database
+	resp_del = client.delete("/api/lemma_matrix/connections")
+	assert resp_del.status_code == 200
+	
+	text = "apple banana"
+	
+	# First build: weight is 1
+	resp1 = client.post("/api/lemma_matrix/build_and_upsert", json={"text": text, "window_size": 1})
+	assert resp1.status_code == 200
+	
+	# Query connections and verify weight is 1
+	resp_get1 = client.get("/api/lemma_matrix/connections")
+	assert resp_get1.status_code == 200
+	conns1 = resp_get1.json()
+	assert len(conns1) == 1
+	assert conns1[0]["weight"] == 1
+	
+	# Second build without overwrite: weight accumulates to 2
+	resp2 = client.post("/api/lemma_matrix/build_and_upsert", json={"text": text, "window_size": 1, "overwrite": False})
+	assert resp2.status_code == 200
+	conns2 = client.get("/api/lemma_matrix/connections").json()
+	assert conns2[0]["weight"] == 2
+	
+	# Third build with overwrite=True: weight goes back to 1
+	resp3 = client.post("/api/lemma_matrix/build_and_upsert", json={"text": text, "window_size": 1, "overwrite": True})
+	assert resp3.status_code == 200
+	conns3 = client.get("/api/lemma_matrix/connections").json()
+	assert conns3[0]["weight"] == 1
+	
+	# Clear database via DELETE and verify it's empty
+	resp_clear = client.delete("/api/lemma_matrix/connections")
+	assert resp_clear.status_code == 200
+	conns_empty = client.get("/api/lemma_matrix/connections").json()
+	assert len(conns_empty) == 0
+
+
+
+
 

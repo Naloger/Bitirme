@@ -55,7 +55,7 @@ def _next_matrix_id(session: Session) -> int:
 	return int(max_id or 0) + 1
 
 
-def _upsert_pairs(session: Session, pairs: list[dict]) -> tuple[int, int]:
+def _upsert_pairs(session: Session, pairs: list[dict], overwrite: bool = False) -> tuple[int, int]:
 	"""Upsert a list of {'word1','word2','weight'} dicts into the DB.
 	Normalizes words (lowercase + trim) and validates weights (non-negative int).
 	Returns (created_count, updated_count).
@@ -85,7 +85,10 @@ def _upsert_pairs(session: Session, pairs: list[dict]) -> tuple[int, int]:
 		).first()
 
 		if existing:
-			existing.weight = int(existing.weight or 0) + weight
+			if overwrite:
+				existing.weight = weight
+			else:
+				existing.weight = int(existing.weight or 0) + weight
 			session.add(existing)
 			updated += 1
 		else:
@@ -166,11 +169,30 @@ def update_connection(conn_id: int, payload: LemmaConnectionUpdate, session: Ses
 	return conn
 
 
+@router.delete(
+	"/connections",
+	response_model=dict,
+	tags=["LemmaConnections"],
+)
+def clear_all_connections(session: Session = Depends(get_lemma_matrix_session)):
+	"""Delete all connections from the lemma matrix database."""
+	from sqlmodel import delete
+	try:
+		session.exec(delete(LemmaMatrixModel))
+		session.commit()
+		return {"message": "Successfully cleared all connections from the database."}
+	except Exception as e:
+		session.rollback()
+		raise HTTPException(status_code=500, detail=f"Failed to clear database: {e}")
+
+
 # Payload model for building matrix from text(s)
 class TextsPayload(BaseModel):
 	text: Optional[str] = None
 	texts: Optional[list[str]] = None
-	min_weight: int = 1
+	min_weight: int = 0
+	window_size: Optional[int] = None
+	overwrite: bool = False
 
 	@model_validator(mode="after")
 	def at_least_one(self):
@@ -215,7 +237,22 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 
 	text = payload_dict.get("text")
 	texts = payload_dict.get("texts")
-	min_weight = payload_dict.get("min_weight", 1)
+	min_weight = payload_dict.get("min_weight", 0)
+	window_size = payload_dict.get("window_size", None)
+	overwrite = payload_dict.get("overwrite", False)
+
+	if not isinstance(overwrite, bool):
+		overwrite = str(overwrite).lower() in ("true", "1", "yes")
+
+	if "window_size" not in payload_dict:
+		window_match = re.search(r'"window_size"\s*:\s*(\d+)', body_str)
+		if window_match:
+			window_size = int(window_match.group(1))
+
+	if "overwrite" not in payload_dict:
+		overwrite_match = re.search(r'"overwrite"\s*:\s*(true|false)', body_str, re.IGNORECASE)
+		if overwrite_match:
+			overwrite = overwrite_match.group(1).lower() == "true"
 
 	if not text and not texts:
 		raise HTTPException(status_code=400, detail="Either 'text' or 'texts' must be provided")
@@ -230,18 +267,18 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 			texts_list.append(texts)
 
 	builder = LemmaMatrixBuilder()
-	vectorizer, matrix = builder.build_cooccurrence_matrix(texts_list)
+	vectorizer, matrix = builder.build_cooccurrence_matrix(texts_list, window_size=window_size)
 	pairs = builder.extract_matrix_pairs(matrix, vectorizer)
 
 	# Optionally filter by min_weight
-	if min_weight and min_weight > 1:
+	if min_weight and min_weight >= 0:
 		pairs = [p for p in pairs if p["weight"] >= min_weight]
 
 	if not pairs:
 		return {"message": "No co-occurrence pairs found for the provided text(s)."}
 
-	# Upsert using helper
-	created, updated = _upsert_pairs(session, pairs)
+	# Upsert using helper (with overwrite option)
+	created, updated = _upsert_pairs(session, pairs, overwrite=overwrite)
 
 	return {"message": f"Successfully built matrix: {len(pairs)} processed ({created} created, {updated} updated)."}
 
@@ -259,7 +296,9 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 						"properties": {
 							"text": {"type": "string", "example": "Sol is the personification of the Sun and a god in ancient Roman religion."},
 							"texts": {"type": "array", "items": {"type": "string"}},
-							"min_weight": {"type": "integer", "default": 1}
+							"min_weight": {"type": "integer", "default": 0},
+							"window_size": {"type": "integer", "default": 1},
+							"overwrite": {"type": "boolean", "default": False}
 						}
 					}
 				}
@@ -287,7 +326,9 @@ async def build_matrix_from_text(request: Request, session: Session = Depends(ge
 						"properties": {
 							"text": {"type": "string", "example": "Sol is the personification of the Sun and a god in ancient Roman religion."},
 							"texts": {"type": "array", "items": {"type": "string"}},
-							"min_weight": {"type": "integer", "default": 1}
+							"min_weight": {"type": "integer", "default": 0},
+							"window_size": {"type": "integer", "default": 1},
+							"overwrite": {"type": "boolean", "default": False}
 						}
 					}
 				}

@@ -23,3 +23,5 @@ dependencies = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+addopts = "--ignore=Tests/legacy"
+

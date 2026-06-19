@@ -56,9 +56,11 @@ class LemmaMatrixBuilder:
         self,
         language_to_lemmatizer: dict[str, Callable[[str], list[str]]] | None = None,
         default_language: str = "en",
+        window_size: int = 1,
     ) -> None:
         self.language_to_lemmatizer = language_to_lemmatizer or LANGUAGE_TO_LEMMATIZER
         self.default_language = default_language
+        self.window_size = window_size
 
     def _segment_text(self, text: str) -> list[LanguageSegment]:
         """Split text into language-specific segments, with fallback to whole-text detection."""
@@ -106,14 +108,65 @@ class LemmaMatrixBuilder:
         filtered = [l for l in normalized if l != "gibberish"]
         return clean_forbidden(filtered, DEFAULT_FORBIDDEN)
 
-    def build_cooccurrence_matrix(self, texts: list[str]):
-        """Build and return a (vectorizer, co-occurrence matrix) pair for the given texts."""
-        vectorizer = CountVectorizer(
-            tokenizer=self.tokenize, lowercase=False, token_pattern=None
-        )
-        term_doc = vectorizer.fit_transform(texts)
-        co_occurrence = term_doc.T * term_doc
+    def build_cooccurrence_matrix(self, texts: list[str], window_size: int | None = None):
+        """Build and return a (vectorizer, co-occurrence matrix) pair for the given texts.
+        
+        Uses a sliding window approach to calculate co-occurrence. If window_size is None,
+        uses the instance default (self.window_size).
+        """
+        if window_size is None:
+            window_size = getattr(self, "window_size", 1)
+
+        # Pre-tokenize all texts to avoid tokenizing multiple times
+        tokenized_texts = [self.tokenize(text) for text in texts]
+
+        # Use CountVectorizer to build vocabulary and get feature names
+        vectorizer = CountVectorizer(analyzer=lambda x: x, lowercase=False)
+        vectorizer.fit(tokenized_texts)
+        vocab = vectorizer.vocabulary_
+        vocab_size = len(vocab)
+
+        import scipy.sparse as sp
+        if vocab_size == 0:
+            return vectorizer, sp.csr_matrix((0, 0), dtype=int)
+
+        from collections import Counter
+        cooc_counts = Counter()
+
+        for tokens in tokenized_texts:
+            n = len(tokens)
+            for i in range(n):
+                w1 = tokens[i]
+                if w1 not in vocab:
+                    continue
+                idx1 = vocab[w1]
+
+                # Context words within the window
+                start = max(0, i - window_size)
+                end = min(n, i + window_size + 1)
+                for j in range(start, end):
+                    if j == i:
+                        continue
+                    w2 = tokens[j]
+                    if w2 not in vocab:
+                        continue
+                    idx2 = vocab[w2]
+
+                    cooc_counts[(idx1, idx2)] += 1
+
+        rows = []
+        cols = []
+        data = []
+        for (r, c), val in cooc_counts.items():
+            rows.append(r)
+            cols.append(c)
+            data.append(val)
+
+        co_occurrence = sp.coo_matrix(
+            (data, (rows, cols)), shape=(vocab_size, vocab_size), dtype=int
+        ).tocsr()
         co_occurrence.setdiag(0)
+
         return vectorizer, co_occurrence
 
     @staticmethod
