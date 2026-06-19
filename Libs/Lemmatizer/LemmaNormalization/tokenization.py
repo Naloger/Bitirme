@@ -153,6 +153,10 @@ def _tokenize_and_lemmatize(text: str, config: TokenizerConfig) -> list[list[str
 		language = segment["language"]
 		if language == "tr":
 			result.extend(_tokenize_turkish_segment(segment_text, config))
+		elif language == "gibberish":
+			words = segment_text.split()
+			if words:
+				result.append(["gibberish"] * len(words))
 		else:
 			result.extend(_tokenize_english_segment(segment_text, config))
 	return result
@@ -165,6 +169,8 @@ def lemmatize_text(text: str) -> list[str]:
 		segment_text = segment["text"]
 		if segment["language"] == "tr":
 			lines.extend(lemmatize_turkish_text(segment_text))
+		elif segment["language"] == "gibberish":
+			lines.extend(["gibberish"] * len(segment_text.split()))
 		else:
 			lines.extend(lemmatize_english_text(segment_text))
 	return lines

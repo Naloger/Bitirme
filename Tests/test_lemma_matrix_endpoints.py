@@ -7,21 +7,22 @@ def test_post_and_get_matrix_connections():
     client = TestClient(app)
 
     unique = str(uuid.uuid4())[:8]
-    a = f"alpha-{unique}"
-    b = f"beta-{unique}"
-    c = f"gamma-{unique}"
+    alpha_unique = "".join(c for c in unique if c.isalpha())
+    a = f"alpha{alpha_unique}"
+    b = f"beta{alpha_unique}"
+    c = f"gamma{alpha_unique}"
 
     payload = [
         {"word1": a, "word2": b, "weight": 3},
         {"word1": b, "word2": c, "weight": 1},
     ]
 
-    post_resp = client.post("/api/lemma/connections", json=payload)
+    post_resp = client.post("/api/lemma_matrix/connections", json=payload)
     assert post_resp.status_code == 200
     body = post_resp.json()
     assert isinstance(body, dict) and "Successfully" in body.get("message", "")
 
-    list_resp = client.get("/api/lemma/connections?skip=0&limit=500")
+    list_resp = client.get("/api/lemma_matrix/connections?skip=0&limit=500")
     assert list_resp.status_code == 200
     data = list_resp.json()
     assert isinstance(data, list)
@@ -35,7 +36,7 @@ def test_post_and_get_matrix_connections():
     # Fetch single connection by id and verify
     conn = pair_ab[0]
     conn_id = conn["id"]
-    get_resp = client.get(f"/api/lemma/connections/{conn_id}")
+    get_resp = client.get(f"/api/lemma_matrix/connections/{conn_id}")
     assert get_resp.status_code == 200
     single = get_resp.json()
     assert single["word1"] == a and single["word2"] == b and single["weight"] == 3

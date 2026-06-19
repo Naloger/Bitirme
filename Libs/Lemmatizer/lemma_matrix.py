@@ -64,29 +64,33 @@ class LemmaMatrixBuilder:
         """Split text into language-specific segments, with fallback to whole-text detection."""
         try:
             return segment_by_language(text)
-        except (LookupError, RuntimeError, ValueError) as e:
+        except Exception as e:
             logger.debug("segment_by_language failed, falling back to single language detection: %s", e)
 
         try:
             lang = detect_text_language(text)
-        except (LookupError, RuntimeError, ValueError) as e:
-            logger.warning("detect_text_language failed, using default language '%s': %s", self.default_language, e)
-            lang = self.default_language
+        except Exception as e:
+            logger.warning("detect_text_language failed, using 'gibberish' as fallback: %s", e)
+            lang = "gibberish"
 
         return [{"language": lang, "text": text}]
 
     def _lemmatize_segment(self, segment: LanguageSegment) -> list[str]:
         """Lemmatize one language segment using the appropriate lemmatizer."""
-        lemmatizer = self.language_to_lemmatizer.get(segment["language"], lemmatize_english)
+        lang = segment["language"]
+        if lang == "gibberish":
+            return ["gibberish"] * len(segment["text"].split())
+
+        lemmatizer = self.language_to_lemmatizer.get(lang, lemmatize_english)
         try:
             return lemmatizer(segment["text"]) or []
-        except (LookupError, RuntimeError, ValueError) as e:
+        except Exception as e:
             logger.error(
-                "Lemmatizer failed for language '%s': %s. Returning empty list.",
-                segment["language"],
+                "Lemmatizer failed for language '%s': %s. Returning gibberish.",
+                lang,
                 e
             )
-            return []
+            return ["gibberish"] * len(segment["text"].split())
 
     def tokenize(self, text: str) -> list[str]:
         """Segment by language, lemmatize, and normalize the input text."""
@@ -98,7 +102,9 @@ class LemmaMatrixBuilder:
         for segment in self._segment_text(cleaned):
             lemmas.extend(self._lemmatize_segment(segment))
 
-        return clean_forbidden(normalize_lemmatized_output(lemmas), DEFAULT_FORBIDDEN)
+        normalized = normalize_lemmatized_output(lemmas)
+        filtered = [l for l in normalized if l != "gibberish"]
+        return clean_forbidden(filtered, DEFAULT_FORBIDDEN)
 
     def build_cooccurrence_matrix(self, texts: list[str]):
         """Build and return a (vectorizer, co-occurrence matrix) pair for the given texts."""

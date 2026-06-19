@@ -10,10 +10,10 @@ from pathlib import Path
 # Add the inner services package root to path so direct script execution works.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from services.Libs.Lemmatizer.LanguageSegmentation.detect_language import (
+from Libs.Lemmatizer.LanguageSegmentation.detect_language import (
     detect_text_language,
 )
-from services.Tests.test_helpers import trace_call
+from Tests.test_helpers import trace_call
 
 logging.basicConfig(
     level=logging.INFO,

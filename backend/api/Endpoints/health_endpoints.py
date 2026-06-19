@@ -1,9 +1,12 @@
 # ==================== Health Endpoints ====================
-from backend.api.api_init import app
+from fastapi import APIRouter
+
+
+router = APIRouter()
 
 
 # Health check
-@app.get("/health", tags=["Health"])
+@router.get("/health", tags=["Health"])
 def health_check():
     """Health check endpoint."""
     return {"status": "ok"}

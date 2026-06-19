@@ -7,8 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import logging
-from services.Libs.Lemmatizer.lemmatize_text import lemmatize_text
-from services.Tests.test_helpers import trace_call
+from Libs.Lemmatizer.lemmatize_text import lemmatize_text
+from Tests.test_helpers import trace_call
 
 
 logging.basicConfig(

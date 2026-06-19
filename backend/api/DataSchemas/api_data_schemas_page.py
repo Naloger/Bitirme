@@ -5,37 +5,38 @@ from sqlmodel import SQLModel, Field
 # ==================== Page  ====================
 
 class StructuredPageCreate(SQLModel):
-    raw_text: str = ""
+    unstructured_page_id: int
     # each triplet is expected to be [str, int, str]
     keywords: List[str] = Field(default_factory=list)
     structured_at: Optional[float] = None
-
+    transformed_to_graph: bool = False
 
 class StructuredPageUpdate(SQLModel):
-    raw_text: Optional[str] = None
+    unstructured_page_id: int = None
     keywords: Optional[List[str]] = None
     structured_at: Optional[float] = None
-
+    transformed_to_graph: Optional[bool] = None
 
 class StructuredPageRead(SQLModel):
     id: str
     creation_timestamp: float
-    raw_text: str
+    unstructured_page_id: int
     keywords: List[str]
     structured_at: float
-
+    transformed_to_graph: bool
 
 class UnstructuredPageCreate(SQLModel):
     raw_text: str = ""
     predicted_output: str = ""
     prediction_error: float = 0.0
+    transformed_to_matrix: bool = False
 
 
 class UnstructuredPageUpdate(SQLModel):
     raw_text: Optional[str] = None
     predicted_output: Optional[str] = None
     prediction_error: Optional[float] = None
-
+    transformed_to_matrix: Optional[bool] = None
 
 class UnstructuredPageRead(SQLModel):
     id: str
@@ -43,6 +44,7 @@ class UnstructuredPageRead(SQLModel):
     raw_text: str
     predicted_output: str
     prediction_error: float
+    transformed_to_matrix: bool
 
 
 class WikiPageCreate(SQLModel):

@@ -30,17 +30,16 @@ class PageSQLModel(SQLModel):
 class PageBase(PageSQLModel):
     id: str = Field(primary_key=True, index=True, max_length=36)
     creation_timestamp: float = Field(nullable=False)
-    raw_text: str = Field(default="")
 
-
+# it should be made from a structured page
 class StructuredPageModel(PageBase, table=True):
     __tablename__ = "structured_pages"
 
-    raw_text: str = Field(default="", sa_column=Column(Text))
+    unstructured_page_id: str = Field(default="", sa_column=Column(Text))
     # store list of triplets [[s,p,o], ...]
     triplets: list = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
     structured_at: float = Field(nullable=False)
-
+    transformed_to_graph: bool = False
 
 class UnstructuredPageModel(PageBase, table=True):
     __tablename__ = "unstructured_pages"
@@ -48,7 +47,7 @@ class UnstructuredPageModel(PageBase, table=True):
     raw_text: str = Field(default="", sa_column=Column(Text))
     predicted_output: str = Field(default="", sa_column=Column(Text))
     prediction_error: float = Field(default=0.0)
-
+    transformed_to_matrix: bool = Field(default=False, nullable=False)
 
 class WikiPageModel(PageSQLModel, table=True):
     __tablename__ = "wikified_pages"

@@ -150,8 +150,8 @@ class TestSegmentText:
         builder = LemmaMatrixBuilder(default_language="en")
         text = "Hello world"
 
-        with patch('services.Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
-            with patch('services.Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
+        with patch('Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
+            with patch('Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
                 mock_segment.side_effect = RuntimeError("Segmentation failed")
                 mock_detect.return_value = "en"
 
@@ -172,8 +172,8 @@ class TestSegmentText:
         builder = LemmaMatrixBuilder(default_language="tr")
         text = "Test text"
 
-        with patch('services.Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
-            with patch('services.Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
+        with patch('Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
+            with patch('Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
                 mock_segment.side_effect = RuntimeError("Segmentation failed")
                 mock_detect.side_effect = ValueError("Detection failed")
 
@@ -185,15 +185,15 @@ class TestSegmentText:
 
                 assert isinstance(result, list), f"Expected list, got {type(result).__name__}"
                 assert len(result) == 1, "Expected single segment"
-                assert result[0]["language"] == "tr", f"Expected default language 'tr', got '{result[0]['language']}'"
+                assert result[0]["language"] == "gibberish", f"Expected fallback language 'gibberish', got '{result[0]['language']}'"
                 logger.info("[PASS] test_segment_text_fallback_on_detection_error passed")
 
     def test_segment_text_empty_string(self):
         logger.info("Testing segment_text with empty string")
         builder = LemmaMatrixBuilder()
 
-        with patch('services.Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
-            with patch('services.Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
+        with patch('Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
+            with patch('Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
                 mock_segment.return_value = []
                 mock_detect.return_value = "en"
 
@@ -242,7 +242,7 @@ class TestLemmatizeSegment:
         )
 
         assert isinstance(result, list), f"Expected list, got {type(result).__name__}"
-        assert result == [], f"Expected empty list on error, got {result}"
+        assert result == ["gibberish"], f"Expected ['gibberish'] on error, got {result}"
         logger.info("[PASS] test_lemmatize_segment_error_returns_empty_list passed")
 
     def test_lemmatize_segment_unknown_language_uses_default(self):
@@ -538,8 +538,8 @@ class TestExceptionHandling:
         logger.info("Testing segment_text error logging")
         builder = LemmaMatrixBuilder()
 
-        with patch('services.Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
-            with patch('services.Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
+        with patch('Libs.Lemmatizer.lemma_matrix.segment_by_language') as mock_segment:
+            with patch('Libs.Lemmatizer.lemma_matrix.detect_text_language') as mock_detect:
                 mock_segment.side_effect = LookupError("Model not found")
                 mock_detect.return_value = "en"
 
@@ -559,7 +559,7 @@ class TestExceptionHandling:
         segment: LanguageSegment = {"language": "en", "text": "test"}
 
         result = builder._lemmatize_segment(segment)
-        assert result == [], "Should return empty list on error"
+        assert result == ["gibberish"], "Should return gibberish list on error"
         logger.info("[PASS] test_lemmatize_segment_logs_on_error passed")
 
 

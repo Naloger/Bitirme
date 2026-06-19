@@ -21,6 +21,8 @@ def _pick_lemmatizer(language: str | None, text: str):
         return lemmatize_turkish
     if lang == "en":
         return lemmatize_english
+    if lang == "gibberish":
+        return lambda t: ["gibberish"] * len(t.split())
     if _TURKISH_HINT_RE.search(text):
         return lemmatize_turkish
     return lemmatize_english

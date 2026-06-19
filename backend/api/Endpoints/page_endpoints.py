@@ -2,11 +2,11 @@
 import time
 import uuid
 
-from fastapi import Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlmodel import Session, select
 
-from backend.api.api_init import app, get_session
-from backend.api.api_data_schemas_page import (
+from backend.api.api_init import get_session
+from backend.api.DataSchemas.api_data_schemas_page import (
     StructuredPageRead,
     StructuredPageCreate,
     StructuredPageUpdate,
@@ -17,14 +17,17 @@ from backend.api.api_data_schemas_page import (
     WikiPageCreate,
     WikiPageUpdate,
 )
-from backend.database.orm_schema_pages import (
+from backend.database.ORMSchemas.orm_schema_pages import (
     StructuredPageModel,
     UnstructuredPageModel,
     WikiPageModel,
 )
 
 
-@app.post(
+router = APIRouter()
+
+
+@router.post(
     "/api/page/structured-pages",
     response_model=StructuredPageRead,
     tags=["StructuredPages"],
@@ -36,7 +39,7 @@ def create_structured_page(
     structured_page = StructuredPageModel(
         id=str(uuid.uuid4()),
         creation_timestamp=time.time(),
-        raw_text=payload.raw_text,
+        unstructured_page_id=payload.unstructured_page_id,
         keywords=payload.keywords,
         structured_at=payload.structured_at or time.time(),
     )
@@ -46,7 +49,7 @@ def create_structured_page(
     return structured_page
 
 
-@app.get(
+@router.get(
     "/api/page/structured-pages",
     response_model=list[StructuredPageRead],
     tags=["StructuredPages"],
@@ -60,7 +63,7 @@ def get_all_structured_pages(
     return session.exec(statement).all()
 
 
-@app.get(
+@router.get(
     "/api/page/structured-pages/{page_id}",
     response_model=StructuredPageRead,
     tags=["StructuredPages"],
@@ -72,7 +75,7 @@ def get_structured_page(page_id: str, session: Session = Depends(get_session)):
     return structured_page
 
 
-@app.put(
+@router.put(
     "/api/page/structured-pages/{page_id}",
     response_model=StructuredPageRead,
     tags=["StructuredPages"],
@@ -97,7 +100,7 @@ def update_structured_page(
 # ==================== UnstructuredPage Endpoints ====================
 
 
-@app.post(
+@router.post(
     "/api/page/unstructured-pages",
     response_model=UnstructuredPageRead,
     tags=["UnstructuredPages"],
@@ -119,7 +122,7 @@ def create_unstructured_page(
     return unstructured_page
 
 
-@app.get(
+@router.get(
     "/api/page/unstructured-pages",
     response_model=list[UnstructuredPageRead],
     tags=["UnstructuredPages"],
@@ -133,7 +136,7 @@ def get_all_unstructured_pages(
     return session.exec(statement).all()
 
 
-@app.get(
+@router.get(
     "/api/page/unstructured-pages/{page_id}",
     response_model=UnstructuredPageRead,
     tags=["UnstructuredPages"],
@@ -145,7 +148,7 @@ def get_unstructured_page(page_id: str, session: Session = Depends(get_session))
     return unstructured_page
 
 
-@app.put(
+@router.put(
     "/api/page/unstructured-pages/{page_id}",
     response_model=UnstructuredPageRead,
     tags=["UnstructuredPages"],
@@ -170,7 +173,7 @@ def update_unstructured_page(
 # ==================== WikiPage Endpoints ====================
 
 
-@app.post("/api/page/wiki-pages", response_model=WikiPageRead, tags=["WikiPages"])
+@router.post("/api/page/wiki-pages", response_model=WikiPageRead, tags=["WikiPages"])
 def create_wiki_page(
     payload: WikiPageCreate,
     session: Session = Depends(get_session),
@@ -198,7 +201,7 @@ def create_wiki_page(
     return wiki_page
 
 
-@app.get("/api/page/wiki-pages", response_model=list[WikiPageRead], tags=["WikiPages"])
+@router.get("/api/page/wiki-pages", response_model=list[WikiPageRead], tags=["WikiPages"])
 def get_all_wiki_pages(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
@@ -208,7 +211,7 @@ def get_all_wiki_pages(
     return session.exec(statement).all()
 
 
-@app.get("/api/page/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
+@router.get("/api/page/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
 def get_wiki_page(wiki_id: str, session: Session = Depends(get_session)):
     wiki_page = session.get(WikiPageModel, wiki_id)
     if not wiki_page:
@@ -216,7 +219,7 @@ def get_wiki_page(wiki_id: str, session: Session = Depends(get_session)):
     return wiki_page
 
 
-@app.put("/api/page/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
+@router.put("/api/page/wiki-pages/{wiki_id}", response_model=WikiPageRead, tags=["WikiPages"])
 def update_wiki_page(
     wiki_id: str,
     payload: WikiPageUpdate,
