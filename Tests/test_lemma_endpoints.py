@@ -50,3 +50,28 @@ def test_update_connection():
     updated = put_resp.json()
     assert updated["weight"] == 99
 
+
+def test_build_matrix_endpoint():
+    client = TestClient(app)
+    unique = str(uuid.uuid4())[:8]
+
+    # craft a small text with a unique token pair so we can find it in DB
+    a = f"alpha-{unique}"
+    b = f"beta-{unique}"
+    text = f"{a} {b} {a}"
+
+    resp = client.post("/api/lemma/build", json={"text": text})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert isinstance(body, dict) and "Successfully" in body.get("message", "")
+
+    # ensure pair exists in connections list
+    list_resp = client.get("/api/lemma/connections?skip=0&limit=500")
+    assert list_resp.status_code == 200
+    data = list_resp.json()
+    assert isinstance(data, list)
+
+    found = [d for d in data if {d.get("word1"), d.get("word2")} == {a, b} and d.get("weight", 0) >= 1]
+    assert len(found) >= 1, f"Expected to find at least one connection for {a} <-> {b}, got: {data}"
+
+

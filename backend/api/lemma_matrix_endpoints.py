@@ -13,6 +13,11 @@ from backend.api.api_data_schemas_lemma_matrix import (
 )
 from backend.api.api_init import app, get_lemma_matrix_session
 from backend.database.orm_schema_lemma_matrix import LemmaMatrixModel
+from pydantic import BaseModel, model_validator
+from typing import Optional
+
+# Lemmatizer
+from Libs.Lemmatizer.lemma_matrix import LemmaMatrixBuilder
 
 
 def _next_matrix_id(session: Session) -> int:
@@ -21,7 +26,7 @@ def _next_matrix_id(session: Session) -> int:
 
 
 @app.post(
-	"/api/lemma/connections",
+	"/api/lemma_matrix/connections",
 	response_model=dict,
 	tags=["LemmaConnections"],
 )
@@ -45,7 +50,7 @@ def save_connections(payload: List[LemmaConnectionCreate], session: Session = De
 
 
 @app.get(
-	"/api/lemma/connections",
+	"/api/lemma_matrix/connections",
 	response_model=list[LemmaConnectionRead],
 	tags=["LemmaConnections"],
 )
@@ -59,7 +64,7 @@ def get_all_connections(
 
 
 @app.get(
-	"/api/lemma/connections/{conn_id}",
+	"/api/lemma_matrix/connections/{conn_id}",
 	response_model=LemmaConnectionRead,
 	tags=["LemmaConnections"],
 )
@@ -71,7 +76,7 @@ def get_connection(conn_id: int, session: Session = Depends(get_lemma_matrix_ses
 
 
 @app.put(
-	"/api/lemma/connections/{conn_id}",
+	"/api/lemma_matrix/connections/{conn_id}",
 	response_model=LemmaConnectionRead,
 	tags=["LemmaConnections"],
 )
@@ -89,3 +94,67 @@ def update_connection(conn_id: int, payload: LemmaConnectionUpdate, session: Ses
 	session.refresh(conn)
 
 	return conn
+
+
+# Payload model for building matrix from text(s)
+class TextsPayload(BaseModel):
+	text: Optional[str] = None
+	texts: Optional[list[str]] = None
+	min_weight: int = 1
+
+	@model_validator(mode="after")
+	def at_least_one(self):
+		# Instance-level validator: ensure at least one of text/texts provided
+		if not self.text and not self.texts:
+			raise ValueError("Either 'text' or 'texts' must be provided")
+		return self
+
+
+@app.post(
+	"/api/lemma_matrix/build",
+	response_model=dict,
+	tags=["LemmaConnections"],
+)
+def build_matrix_from_text(payload: TextsPayload, session: Session = Depends(get_lemma_matrix_session)):
+	"""Accepts a single text or a list of texts, builds a lemmatized co-occurrence matrix,
+	extracts word pairs and stores them into the lemma matrix database.
+	"""
+	# Prepare texts list
+	texts: list[str] = []
+	if payload.text:
+		texts.append(payload.text)
+	if payload.texts:
+		texts.extend(payload.texts)
+
+	if not texts:
+		raise HTTPException(status_code=400, detail="No text provided")
+
+	builder = LemmaMatrixBuilder()
+	vectorizer, matrix = builder.build_cooccurrence_matrix(texts)
+	pairs = builder.extract_matrix_pairs(matrix, vectorizer)
+
+	# Optionally filter by min_weight
+	if payload.min_weight and payload.min_weight > 1:
+		pairs = [p for p in pairs if p["weight"] >= payload.min_weight]
+
+	if not pairs:
+		return {"message": "No co-occurrence pairs found for the provided text(s)."}
+
+	# Persist to DB with incremental ids
+	next_id = _next_matrix_id(session)
+	db_records = []
+	for index, item in enumerate(pairs):
+		db_records.append(
+			LemmaMatrixModel(
+				id=next_id + index,
+				word1=item["word1"],
+				word2=item["word2"],
+				weight=item["weight"],
+			)
+		)
+
+	session.add_all(db_records)
+	session.commit()
+
+	return {"message": f"Successfully built and saved {len(db_records)} connections to the matrix database!"}
+
