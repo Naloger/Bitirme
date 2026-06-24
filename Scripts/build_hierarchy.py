@@ -18,7 +18,7 @@ import igraph as ig
 import leidenalg as la
 from sqlmodel import  select, delete
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH
+from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_HIERARCHY_MAX_LEVELS
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 	LEMMA_MATRIX_METADATA,
@@ -75,8 +75,9 @@ def _find_leader_and_scores(
 	return leader, node_scores
 
 
-def build_taxonomy_hierarchy(max_levels: int = 5, db_path: str | None = None) -> None:
+def build_taxonomy_hierarchy(max_levels: int | None = None, db_path: str | None = None) -> None:
 	"""Rebuild concepts and concept_connections recursively by clustering connections."""
+	target_max_levels = max_levels if max_levels is not None else BUILD_HIERARCHY_MAX_LEVELS
 	target_db_path = db_path or LEMMA_MATRIX_DATABASE_PATH
 
 	print(f"Connecting to database at: {target_db_path}")
@@ -145,7 +146,7 @@ def build_taxonomy_hierarchy(max_levels: int = 5, db_path: str | None = None) ->
 			concept_id_sequence = max(cast(list[int], [c.id for c in level_0_concepts if c.id is not None])) + 1
 			concept_conn_id_sequence = 1
 
-			while current_level < max_levels:
+			while current_level < target_max_levels:
 				print(f"\n======================================")
 				print(f"Starting Clustering Level {current_level} -> {current_level + 1}")
 				print(f"======================================")
@@ -317,5 +318,5 @@ def build_taxonomy_hierarchy(max_levels: int = 5, db_path: str | None = None) ->
 
 
 if __name__ == "__main__":
-	# Default max hierarchy levels = 5
-	build_taxonomy_hierarchy(max_levels=5)
+	# Default max hierarchy levels from config
+	build_taxonomy_hierarchy()

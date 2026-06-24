@@ -7,5 +7,19 @@
     },
     "database_lemma_matrix" : {
         "path": "../../../backend/data/lemma_matrix.db"
+    },
+    "start_api": {
+        "host": "127.0.0.1",
+        "port": 8090,
+        "reload": true
+    },
+    "build_hierarchy": {
+        "max_levels": 10
+    },
+    "build_ppmi_table": {
+        "threshold": 0.0
+    },
+    "visualize_hierarchy": {
+        "force_ascii": false
     }
 }

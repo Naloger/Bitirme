@@ -19,6 +19,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from Scripts.build_hierarchy import build_taxonomy_hierarchy
 from Scripts.build_ppmi_table import rebuild_ppmi_table
 from Scripts.visualize_hierarchy import visualize_database_hierarchy
+from Libs.Config.config import BUILD_HIERARCHY_MAX_LEVELS, BUILD_PPMI_THRESHOLD
 
 
 def main() -> None:
@@ -34,15 +35,15 @@ def main() -> None:
         "--threshold",
         "-t",
         type=float,
-        default=0.0,
-        help="PPMI score threshold filter (default: 0.0).",
+        default=BUILD_PPMI_THRESHOLD,
+        help=f"PPMI score threshold filter (default: {BUILD_PPMI_THRESHOLD}).",
     )
     parser.add_argument(
         "--max-levels",
         "-m",
         type=int,
-        default=5,
-        help="Maximum levels for hierarchical taxonomy collapse (default: 5).",
+        default=BUILD_HIERARCHY_MAX_LEVELS,
+        help=f"Maximum levels for hierarchical taxonomy collapse (default: {BUILD_HIERARCHY_MAX_LEVELS}).",
     )
     parser.add_argument(
         "--no-visualize",

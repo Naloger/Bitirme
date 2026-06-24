@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from sqlmodel import  select, delete
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH
+from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_PPMI_THRESHOLD
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 	LEMMA_MATRIX_METADATA,
@@ -22,8 +22,9 @@ from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 )
 
 
-def rebuild_ppmi_table(threshold: float = 0.0, db_path: str | None = None) -> None:
+def rebuild_ppmi_table(threshold: float | None = None, db_path: str | None = None) -> None:
 	"""Read lemma_matrix table, calculate PPMI scores, and populate ppmi_lemma_matrix table."""
+	target_threshold = threshold if threshold is not None else BUILD_PPMI_THRESHOLD
 	target_db_path = db_path or LEMMA_MATRIX_DATABASE_PATH
 
 	print(f"Initializing database connection to: {target_db_path}")
@@ -55,7 +56,7 @@ def rebuild_ppmi_table(threshold: float = 0.0, db_path: str | None = None) -> No
 			print(f"Total undirected co-occurrence sum (N): {total_edge_weight:.2f}")
 			print(f"Symmetric total sum (T): {T:.2f}")
 
-			print(f"Calculating PPMI scores (threshold >= {threshold})...")
+			print(f"Calculating PPMI scores (threshold >= {target_threshold})...")
 			ppmi_records: list[PPMILemmaMatrixModel] = []
 			next_ppmi_id = 1
 
@@ -72,7 +73,7 @@ def rebuild_ppmi_table(threshold: float = 0.0, db_path: str | None = None) -> No
 				else:
 					ppmi = 0.0
 
-				if ppmi >= threshold:
+				if ppmi >= target_threshold:
 					ppmi_records.append(
 						PPMILemmaMatrixModel(
 							id=next_ppmi_id,
@@ -106,5 +107,5 @@ def rebuild_ppmi_table(threshold: float = 0.0, db_path: str | None = None) -> No
 
 
 if __name__ == "__main__":
-	# Default execution parameters: threshold = 0.0
-	rebuild_ppmi_table(threshold=0.0)
+	# Default execution parameters from config
+	rebuild_ppmi_table()

@@ -18,7 +18,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from sqlmodel import select
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH
+from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, VISUALIZE_HIERARCHY_FORCE_ASCII
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
     LEMMA_MATRIX_METADATA,
@@ -75,8 +75,9 @@ def print_tree(
         )
 
 
-def visualize_database_hierarchy(db_path: str | None = None, force_ascii: bool = False) -> None:
+def visualize_database_hierarchy(db_path: str | None = None, force_ascii: bool | None = None) -> None:
     """Query the concepts table and print the hierarchical taxonomy tree."""
+    target_force_ascii = force_ascii if force_ascii is not None else VISUALIZE_HIERARCHY_FORCE_ASCII
     target_db_path = db_path or LEMMA_MATRIX_DATABASE_PATH
 
     print(f"Connecting to database at: {target_db_path}")
@@ -117,7 +118,7 @@ def visualize_database_hierarchy(db_path: str | None = None, force_ascii: bool =
             print("======================================================================")
 
             try:
-                if force_ascii:
+                if target_force_ascii:
                     raise UnicodeEncodeError("forced", "", 0, 1, "forced ascii option")
                 for i, root_id in enumerate(roots):
                     print_tree(
@@ -158,7 +159,8 @@ def main() -> None:
         "--ascii",
         "-a",
         action="store_true",
-        help="Force using standard ASCII characters for output rendering.",
+        default=VISUALIZE_HIERARCHY_FORCE_ASCII,
+        help=f"Force using standard ASCII characters for output rendering (default: {VISUALIZE_HIERARCHY_FORCE_ASCII}).",
     )
     args = parser.parse_args()
     visualize_database_hierarchy(db_path=args.db, force_ascii=args.ascii)

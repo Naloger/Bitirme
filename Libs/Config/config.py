@@ -10,3 +10,15 @@ with open(CONFIG_FILE) as f:
 PAGE_DATABASE_PATH = (CONFIG_DIR / _config["database_page"]["path"]).resolve()
 LEMMA_DATABASE_PATH = (CONFIG_DIR / _config["database_lemma"]["path"]).resolve()
 LEMMA_MATRIX_DATABASE_PATH = (CONFIG_DIR / _config["database_lemma_matrix"]["path"]).resolve()
+
+# Scripts configuration settings
+START_API_HOST = _config.get("start_api", {}).get("host", "127.0.0.1")
+START_API_PORT = int(_config.get("start_api", {}).get("port", 8090))
+START_API_RELOAD = bool(_config.get("start_api", {}).get("reload", True))
+
+BUILD_HIERARCHY_MAX_LEVELS = int(_config.get("build_hierarchy", {}).get("max_levels", 5))
+
+BUILD_PPMI_THRESHOLD = float(_config.get("build_ppmi_table", {}).get("threshold", 0.0))
+
+VISUALIZE_HIERARCHY_FORCE_ASCII = bool(_config.get("visualize_hierarchy", {}).get("force_ascii", False))
+
