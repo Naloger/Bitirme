@@ -18,7 +18,6 @@ filtering.
 from __future__ import annotations
 
 import logging
-import math
 from typing import Tuple
 
 import numpy as np
@@ -99,41 +98,45 @@ def build_ppmi_matrix_from_cooccurrence(
 		empty = sp.csr_matrix(cooccurrence.shape, dtype=float)
 		return vectorizer, empty
 
-	rows = []
-	cols = []
-	data = []
+	# Vectorized filtering of diagonal and non-positive entries
+	valid_mask = (coo.row != coo.col) & (coo.data > 0)
+	filtered_rows = coo.row[valid_mask]
+	filtered_cols = coo.col[valid_mask]
+	filtered_data = coo.data[valid_mask]
 
-	# Small epsilon to avoid log(0) when numeric noise occurs; we still check counts
-	for i, j, v in zip(coo.row, coo.col, coo.data):
-		# skip zero or diagonal
-		if i == j:
-			continue
-		if v <= 0:
-			continue
-
-		p_ij = v / total
-		p_i = row_sum[i] / total
-		p_j = row_sum[j] / total
-
-		# Only valid if marginals are positive
-		if p_ij <= 0 or p_i <= 0 or p_j <= 0:
-			continue
-
-		pmi = math.log2(p_ij / (p_i * p_j))
-		ppmi = pmi if pmi > 0 else 0.0
-
-		if ppmi >= threshold:
-			rows.append(i)
-			cols.append(j)
-			data.append(ppmi)
-
-	if not data:
-		# No values passed threshold, return empty matrix
+	if filtered_data.size == 0:
 		logger.info("No PPMI values passed the threshold=%s; returning empty matrix.", threshold)
 		empty = sp.csr_matrix(cooccurrence.shape, dtype=float)
 		return vectorizer, empty
 
-	ppmi_coo = sp.coo_matrix((np.array(data, dtype=float), (np.array(rows), np.array(cols))), shape=cooccurrence.shape)
+	# Vectorized PPMI calculation
+	# pmi = log2( (v / total) / ((row_sum[i] / total) * (row_sum[j] / total)) )
+	# pmi = log2( (v * total) / (row_sum[i] * row_sum[j]) )
+	p_i = row_sum[filtered_rows]
+	p_j = row_sum[filtered_cols]
+
+	# Compute PMI and clip negative values to 0 to get PPMI.
+	# We use np.errstate to suppress warnings for division-by-zero or log2(<=0)
+	# and clean any NaNs or infinite values to 0.0.
+	with np.errstate(divide='ignore', invalid='ignore'):
+		ratio = (filtered_data * total) / (p_i * p_j)
+		pmi = np.log2(ratio)
+	
+	pmi = np.nan_to_num(pmi, nan=0.0, posinf=0.0, neginf=0.0)
+	ppmi = np.maximum(pmi, 0.0)
+
+	# Filter based on threshold
+	threshold_mask = ppmi >= threshold
+	final_rows = filtered_rows[threshold_mask]
+	final_cols = filtered_cols[threshold_mask]
+	final_ppmi = ppmi[threshold_mask]
+
+	if final_ppmi.size == 0:
+		logger.info("No PPMI values passed the threshold=%s; returning empty matrix.", threshold)
+		empty = sp.csr_matrix(cooccurrence.shape, dtype=float)
+		return vectorizer, empty
+
+	ppmi_coo = sp.coo_matrix((final_ppmi, (final_rows, final_cols)), shape=cooccurrence.shape)
 
 	# Ensure symmetry: if only one triangle was populated, mirror it.
 	# We add the transpose and divide by 2 to keep values consistent when duplicates exist.
