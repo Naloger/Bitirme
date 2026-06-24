@@ -1,11 +1,18 @@
 import pytest
 from backend.api.api_init import  get_lemma_matrix_session, get_session
-from backend.database.ORMSchemas.orm_schema_lemma_matrix import LemmaMatrixModel
+from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
+    LemmaMatrixModel,
+    VocabularyModel,
+    PPMILemmaMatrixModel,
+    ConceptsModel,
+    ConceptConnectionsModel,
+)
 from backend.database.ORMSchemas.orm_schema_pages import (
     StructuredPageModel,
     UnstructuredPageModel,
     WikiPageModel,
 )
+from sqlmodel import delete
 
 @pytest.fixture(autouse=True)
 def clean_databases():
@@ -13,7 +20,11 @@ def clean_databases():
     session_gen = get_lemma_matrix_session()
     session = next(session_gen)
     try:
-        session.query(LemmaMatrixModel).delete()
+        session.exec(delete(LemmaMatrixModel))
+        session.exec(delete(PPMILemmaMatrixModel))
+        session.exec(delete(ConceptConnectionsModel))
+        session.exec(delete(ConceptsModel))
+        session.exec(delete(VocabularyModel))
         session.commit()
     except Exception:
         session.rollback()

@@ -1,11 +1,13 @@
 """Lemma matrix Endpoints: store graph-edge triples with owner IDs."""
 
-from typing import List
-import re
 import json
+import re
+from typing import Any, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, model_validator
 from sqlalchemy import func
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, select
 
 from backend.api.DataSchemas.api_data_schemas_lemma_matrix import (
@@ -14,15 +16,13 @@ from backend.api.DataSchemas.api_data_schemas_lemma_matrix import (
 	LemmaConnectionUpdate,
 )
 from backend.api.api_init import get_lemma_matrix_session
-from backend.database.ORMSchemas.orm_schema_lemma_matrix import LemmaMatrixModel
-
+from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
+	LemmaMatrixModel,
+	VocabularyModel,
+)
+from Libs.Lemmatizer.lemma_matrix import LemmaMatrixBuilder
 
 router = APIRouter()
-from pydantic import BaseModel, model_validator
-from typing import Optional
-
-# Lemmatizer
-from Libs.Lemmatizer.lemma_matrix import LemmaMatrixBuilder
 
 
 def _normalize_word(word: str) -> str:
@@ -50,6 +50,30 @@ def _validate_weight(weight: int | None) -> int:
 		return 0
 
 
+def _get_or_create_vocab_id(session: Session, word: str) -> int:
+	"""Get vocabulary ID for a normalized word, creating it if it does not exist."""
+	normalized = _normalize_word(word)
+	if not normalized:
+		raise ValueError("Normalized word cannot be empty")
+	
+	existing = session.exec(select(VocabularyModel).where(cast(Any, VocabularyModel.word == normalized))).first()
+	if existing is not None:
+		existing_vocab = cast(VocabularyModel, existing)
+		vocab_id = existing_vocab.id
+		if vocab_id is not None:
+			return vocab_id
+		raise ValueError("Database integrity error: Vocabulary ID is None")
+	
+	new_vocab = VocabularyModel(word=normalized)
+	session.add(new_vocab)
+	session.flush()
+	
+	vocab_id = new_vocab.id
+	if vocab_id is not None:
+		return vocab_id
+	raise ValueError("Failed to retrieve ID for newly created vocabulary")
+
+
 def _next_matrix_id(session: Session) -> int:
 	max_id = session.exec(select(func.max(LemmaMatrixModel.id))).one()
 	return int(max_id or 0) + 1
@@ -67,8 +91,10 @@ def _upsert_pairs(session: Session, pairs: list[dict], overwrite: bool = False) 
 
 	for item in pairs:
 		# Normalize words: lowercase and strip whitespace
-		word1 = _normalize_word(item.get("word1", ""))
-		word2 = _normalize_word(item.get("word2", ""))
+		w1 = item.get("word1")
+		w2 = item.get("word2")
+		word1 = _normalize_word(str(w1) if w1 is not None else "")
+		word2 = _normalize_word(str(w2) if w2 is not None else "")
 
 		# Skip if either word is empty after normalization
 		if not word1 or not word2:
@@ -77,29 +103,33 @@ def _upsert_pairs(session: Session, pairs: list[dict], overwrite: bool = False) 
 		# Validate and ensure weight is a non-negative int
 		weight = _validate_weight(item.get("weight"))
 
+		# Resolve vocabulary IDs
+		vocab1_id = _get_or_create_vocab_id(session, word1)
+		vocab2_id = _get_or_create_vocab_id(session, word2)
+
 		existing = session.exec(
 			select(LemmaMatrixModel).where(
-				LemmaMatrixModel.word1 == word1,
-				LemmaMatrixModel.word2 == word2,
+				cast(Any, LemmaMatrixModel.vocab1_id == vocab1_id),
+				cast(Any, LemmaMatrixModel.vocab2_id == vocab2_id),
 			)
 		).first()
 
-		if existing:
+		if existing is not None:
+			existing_matrix = cast(LemmaMatrixModel, existing)
 			if overwrite:
-				existing.weight = weight
+				existing_matrix.weight = weight
 			else:
-				existing.weight = int(existing.weight or 0) + weight
-			session.add(existing)
+				existing_matrix.weight = int(existing_matrix.weight or 0) + weight
+			session.add(existing_matrix)
 			updated += 1
 		else:
 			new_rec = LemmaMatrixModel(
 				id=current_id,
-				word1=word1,
-				word2=word2,
+				vocab1_id=vocab1_id,
+				vocab2_id=vocab2_id,
 				weight=weight,
 			)
 			session.add(new_rec)
-			# Flush to make the new record visible to subsequent queries in this batch
 			session.flush()
 			current_id += 1
 			created += 1
@@ -132,8 +162,33 @@ def get_all_connections(
 	limit: int = Query(100, ge=1, le=500),
 	session: Session = Depends(get_lemma_matrix_session),
 ):
-	statement = select(LemmaMatrixModel).offset(skip).limit(limit)
-	return session.exec(statement).all()
+	v1 = aliased(VocabularyModel)
+	v2 = aliased(VocabularyModel)
+	
+	statement = (
+		select(
+			LemmaMatrixModel.id,
+			cast(Any, v1.word).label("word1"),
+			cast(Any, v2.word).label("word2"),
+			LemmaMatrixModel.weight
+		)
+		.join(cast(Any, v1), onclause=cast(Any, LemmaMatrixModel.vocab1_id == v1.id))
+		.join(cast(Any, v2), onclause=cast(Any, LemmaMatrixModel.vocab2_id == v2.id))
+		.offset(skip)
+		.limit(limit)
+	)
+	results = session.exec(statement).all()
+	connections = []
+	for r in results:
+		if r is not None:
+			r_tuple = cast(tuple, r)
+			connections.append({
+				"id": int(r_tuple[0]) if r_tuple[0] is not None else 0,
+				"word1": str(r_tuple[1]),
+				"word2": str(r_tuple[2]),
+				"weight": int(r_tuple[3])
+			})
+	return connections
 
 
 @router.get(
@@ -142,10 +197,30 @@ def get_all_connections(
 	tags=["LemmaConnections"],
 )
 def get_connection(conn_id: int, session: Session = Depends(get_lemma_matrix_session)):
-	conn = session.exec(select(LemmaMatrixModel).where(LemmaMatrixModel.id == conn_id)).first()
-	if not conn:
+	v1 = aliased(VocabularyModel)
+	v2 = aliased(VocabularyModel)
+	
+	statement = (
+		select(
+			LemmaMatrixModel.id,
+			cast(Any, v1.word).label("word1"),
+			cast(Any, v2.word).label("word2"),
+			LemmaMatrixModel.weight
+		)
+		.join(cast(Any, v1), onclause=cast(Any, LemmaMatrixModel.vocab1_id == v1.id))
+		.join(cast(Any, v2), onclause=cast(Any, LemmaMatrixModel.vocab2_id == v2.id))
+		.where(cast(Any, LemmaMatrixModel.id == conn_id))
+	)
+	r = session.exec(statement).first()
+	if r is None:
 		raise HTTPException(status_code=404, detail="Connection not found")
-	return conn
+	r_tuple = cast(tuple, r)
+	return {
+		"id": int(r_tuple[0]) if r_tuple[0] is not None else 0,
+		"word1": str(r_tuple[1]),
+		"word2": str(r_tuple[2]),
+		"weight": int(r_tuple[3])
+	}
 
 
 @router.put(
@@ -154,19 +229,46 @@ def get_connection(conn_id: int, session: Session = Depends(get_lemma_matrix_ses
 	tags=["LemmaConnections"],
 )
 def update_connection(conn_id: int, payload: LemmaConnectionUpdate, session: Session = Depends(get_lemma_matrix_session)):
-	conn = session.exec(select(LemmaMatrixModel).where(LemmaMatrixModel.id == conn_id)).first()
-	if not conn:
+	conn = session.exec(select(LemmaMatrixModel).where(cast(Any, LemmaMatrixModel.id == conn_id))).first()
+	if conn is None:
 		raise HTTPException(status_code=404, detail="Connection not found")
-
+	
+	conn_model = cast(LemmaMatrixModel, conn)
 	update_data = payload.model_dump(exclude_unset=True)
-	for key, value in update_data.items():
-		setattr(conn, key, value)
+	
+	if "word1" in update_data and update_data["word1"]:
+		conn_model.vocab1_id = _get_or_create_vocab_id(session, str(update_data["word1"]))
+	if "word2" in update_data and update_data["word2"]:
+		conn_model.vocab2_id = _get_or_create_vocab_id(session, str(update_data["word2"]))
+	if "weight" in update_data and update_data["weight"] is not None:
+		conn_model.weight = _validate_weight(update_data["weight"])
 
-	session.add(conn)
+	session.add(conn_model)
 	session.commit()
-	session.refresh(conn)
-
-	return conn
+	
+	v1 = aliased(VocabularyModel)
+	v2 = aliased(VocabularyModel)
+	statement = (
+		select(
+			LemmaMatrixModel.id,
+			cast(Any, v1.word).label("word1"),
+			cast(Any, v2.word).label("word2"),
+			LemmaMatrixModel.weight
+		)
+		.join(cast(Any, v1), onclause=cast(Any, LemmaMatrixModel.vocab1_id == v1.id))
+		.join(cast(Any, v2), onclause=cast(Any, LemmaMatrixModel.vocab2_id == v2.id))
+		.where(cast(Any, LemmaMatrixModel.id == conn_id))
+	)
+	r = session.exec(statement).first()
+	if r is None:
+		raise HTTPException(status_code=404, detail="Connection not found")
+	r_tuple = cast(tuple, r)
+	return {
+		"id": int(r_tuple[0]) if r_tuple[0] is not None else 0,
+		"word1": str(r_tuple[1]),
+		"word2": str(r_tuple[2]),
+		"weight": int(r_tuple[3])
+	}
 
 
 @router.delete(
@@ -216,18 +318,18 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 		payload_dict = {}
 		
 		# 1. Match {"text": "<content>"}
-		match1 = re.match(r'^\s*\{\s*"text"\s*:\s*"(.*)"\s*\}\s*$', body_str, re.DOTALL)
+		match1 = re.match(r'^\s*{\s*"text"\s*:\s*"(.*)"\s*}\s*$', body_str, re.DOTALL)
 		if match1:
 			payload_dict["text"] = match1.group(1)
 		else:
 			# 2. Match {"text": "<content>", "min_weight": <digits>}
-			match2 = re.match(r'^\s*\{\s*"text"\s*:\s*"(.*)"\s*,\s*"min_weight"\s*:\s*(\d+)\s*\}\s*$', body_str, re.DOTALL)
+			match2 = re.match(r'^\s*{\s*"text"\s*:\s*"(.*)"\s*,\s*"min_weight"\s*:\s*(\d+)\s*}\s*$', body_str, re.DOTALL)
 			if match2:
 				payload_dict["text"] = match2.group(1)
 				payload_dict["min_weight"] = int(match2.group(2))
 			else:
 				# 3. Match {"min_weight": <digits>, "text": "<content>"}
-				match3 = re.match(r'^\s*\{\s*"min_weight"\s*:\s*(\d+)\s*,\s*"text"\s*:\s*"(.*)"\s*\}\s*$', body_str, re.DOTALL)
+				match3 = re.match(r'^\s*{\s*"min_weight"\s*:\s*(\d+)\s*,\s*"text"\s*:\s*"(.*)"\s*}\s*$', body_str, re.DOTALL)
 				if match3:
 					payload_dict["text"] = match3.group(2)
 					payload_dict["min_weight"] = int(match3.group(1))
@@ -258,11 +360,11 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 		raise HTTPException(status_code=400, detail="Either 'text' or 'texts' must be provided")
 
 	texts_list: list[str] = []
-	if text:
+	if text and isinstance(text, str):
 		texts_list.append(text)
 	if texts:
 		if isinstance(texts, list):
-			texts_list.extend(texts)
+			texts_list.extend([str(t) for t in texts if t is not None])
 		elif isinstance(texts, str):
 			texts_list.append(texts)
 
@@ -339,4 +441,3 @@ async def build_matrix_from_text(request: Request, session: Session = Depends(ge
 async def build_and_upsert(request: Request, session: Session = Depends(get_lemma_matrix_session)):
 	"""Alias endpoint: build co-occurrence pairs from text(s) and upsert into the DB."""
 	return await _parse_and_build(request, session)
-
