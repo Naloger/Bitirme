@@ -259,3 +259,110 @@ def test_leiden_seed_reproducibility(in_memory_session):
     assert communities_1 == communities_2
     logger.info("[CHECK] Consistent community structures obtained using seed.")
     logger.info("[PASS] test_leiden_seed_reproducibility")
+
+
+def test_leiden_with_pagerank(in_memory_session):
+    logger.info("Starting [test_leiden_with_pagerank]")
+    
+    # We define two distinct star-like clusters where one node is clearly the hub.
+    # Hub 1 (fruit): "apple" is connected to banana, orange, lemon.
+    # Hub 2 (vehicles): "car" is connected to truck, bus, bicycle.
+    test_edges = [
+        # Fruit cluster (apple is central hub)
+        ("apple", "banana", 5.0),
+        ("apple", "orange", 5.0),
+        ("apple", "lemon", 5.0),
+        ("banana", "orange", 1.0), # weak internal connection
+        # Vehicle cluster (car is central hub)
+        ("car", "truck", 6.0),
+        ("car", "bus", 6.0),
+        ("car", "bicycle", 6.0),
+        ("truck", "bus", 1.2), # weak internal connection
+    ]
+    
+    logger.info("Step 1: Inserting mock edge data into PPMILemmaMatrixModel.")
+    for idx, (w1, w2, weight) in enumerate(test_edges):
+        v1_id = _get_or_create_vocab_id(in_memory_session, w1)
+        v2_id = _get_or_create_vocab_id(in_memory_session, w2)
+        record = PPMILemmaMatrixModel(id=idx + 1, vocab1_id=v1_id, vocab2_id=v2_id, weight=weight)
+        in_memory_session.add(record)
+        
+    in_memory_session.commit()
+    
+    logger.info("Step 2: Run detect_communities_leiden to get the word groupings.")
+    communities = detect_communities_leiden(in_memory_session, seed=42)
+    logger.info("Detected communities: %s", communities)
+    
+    # We expect 2 communities: one with the fruits, one with the vehicles.
+    assert len(communities) == 2
+    
+    # Step 3: Compute PageRank on subgraphs for each community to find local centroids
+    import igraph as ig
+    from sqlalchemy.orm import aliased
+    from typing import Any, cast
+    
+    # Load all positive edges from the db to build our local subgraphs
+    v1_alias = aliased(VocabularyModel)
+    v2_alias = aliased(VocabularyModel)
+    db_edges = in_memory_session.exec(
+        select(
+            cast(Any, v1_alias.word),
+            cast(Any, v2_alias.word),
+            PPMILemmaMatrixModel.weight
+        )
+        .join(cast(Any, v1_alias), onclause=cast(Any, PPMILemmaMatrixModel.vocab1_id == v1_alias.id))
+        .join(cast(Any, v2_alias), onclause=cast(Any, PPMILemmaMatrixModel.vocab2_id == v2_alias.id))
+    ).all()
+    
+    # Build list of (word1, word2, weight)
+    all_edges = [(w1, w2, float(wt)) for w1, w2, wt in db_edges]
+    
+    leaders = {}
+    
+    logger.info("Step 4: For each community, construct its subgraph and calculate local PageRank scores.")
+    for comm_id, words in communities.items():
+        logger.info(f"Processing Community {comm_id}: {words}")
+        word_set = set(words)
+        
+        # Filter edges where both nodes are in the community
+        comm_edges = [(w1, w2, wt) for w1, w2, wt in all_edges if w1 in word_set and w2 in word_set]
+        
+        # Create map from word to local vertex index
+        local_words = list(sorted(words))
+        local_word_to_idx = {w: i for i, w in enumerate(local_words)}
+        
+        # Construct igraph Graph for the community
+        igraph_edges = [(local_word_to_idx[w1], local_word_to_idx[w2]) for w1, w2, wt in comm_edges]
+        igraph_weights = [wt for w1, w2, wt in comm_edges]
+        
+        g_comm = ig.Graph(len(local_words), igraph_edges, directed=False)
+        g_comm.vs["name"] = local_words
+        g_comm.es["weight"] = igraph_weights
+        
+        # Calculate PageRank specifying weights
+        scores = g_comm.pagerank(weights="weight")
+        
+        # Zip word and score, then sort in descending order
+        word_scores = list(zip(local_words, scores))
+        word_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        logger.info(f"PageRank scores for Community {comm_id}: {word_scores}")
+        
+        leader = word_scores[0][0]
+        leaders[comm_id] = {
+            "leader": leader,
+            "leader_score": word_scores[0][1],
+            "scores": dict(word_scores)
+        }
+        
+    logger.info(f"Identified leaders: {leaders}")
+    
+    # Step 5: Assert that "apple" is the leader of the fruit community and "car" is the leader of the vehicle community.
+    fruit_comm_id = [cid for cid, words in communities.items() if "apple" in words][0]
+    assert leaders[fruit_comm_id]["leader"] == "apple", f"Expected 'apple' to be the leader of fruit community, got '{leaders[fruit_comm_id]['leader']}'"
+    
+    vehicle_comm_id = [cid for cid, words in communities.items() if "car" in words][0]
+    assert leaders[vehicle_comm_id]["leader"] == "car", f"Expected 'car' to be the leader of vehicle community, got '{leaders[vehicle_comm_id]['leader']}'"
+    
+    logger.info("[CHECK] Correct leaders identified using local PageRank on subgraphs.")
+    logger.info("[PASS] test_leiden_with_pagerank")
