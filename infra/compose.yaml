@@ -7,7 +7,7 @@ services:
       - "7687:7687" # Bolt connection
       - "3000:3000" # Memgraph Lab Web Client
     volumes:
-      - ./data/memgraph:/var/lib/memgraph
+      - memgraph-data:/var/lib/memgraph
     environment:
       - MEMGRAPH_EXTRA_ARGUMENTS=--log-level=WARNING
     restart: always
@@ -44,3 +44,6 @@ services:
     volumes:
       - ./data/kafka:/var/lib/kafka/data
     restart: always
+
+volumes:
+  memgraph-data:

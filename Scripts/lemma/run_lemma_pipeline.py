@@ -16,9 +16,9 @@ from pathlib import Path
 # Add backend directory to Python path if running script directly
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from Scripts.build_hierarchy import build_taxonomy_hierarchy
-from Scripts.build_ppmi_table import rebuild_ppmi_table
-from Scripts.visualize_hierarchy import visualize_database_hierarchy
+from Scripts.lemma.build_hierarchy import build_taxonomy_hierarchy
+from Scripts.lemma.build_ppmi_table import rebuild_ppmi_table
+from Scripts.lemma.visualize_hierarchy import visualize_database_hierarchy
 from Libs.Config.config import BUILD_HIERARCHY_MAX_LEVELS, BUILD_PPMI_THRESHOLD
 
 

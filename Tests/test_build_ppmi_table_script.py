@@ -8,7 +8,7 @@ from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 	PPMILemmaMatrixModel,
 	VocabularyModel,
 )
-from Scripts.build_ppmi_table import rebuild_ppmi_table
+from Scripts.lemma.build_ppmi_table import rebuild_ppmi_table
 
 
 def _get_or_create_vocab_id(session: Session, word: str) -> int:

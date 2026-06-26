@@ -9,7 +9,7 @@ from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 	ConceptsModel,
 	ConceptConnectionsModel,
 )
-from Scripts.build_hierarchy import build_taxonomy_hierarchy
+from Scripts.lemma.build_hierarchy import build_taxonomy_hierarchy
 
 
 def _get_or_create_vocab_id(session: Session, word: str) -> int:

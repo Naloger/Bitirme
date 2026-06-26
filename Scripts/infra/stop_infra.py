@@ -21,7 +21,7 @@ if sys.stderr.encoding != 'utf-8':
 		pass
 
 # Add backend directory to Python path if running script directly
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
 
@@ -60,7 +60,7 @@ def main() -> None:
 		"-e",
 		"sh",
 		"-c",
-		f"cd {wsl_infra_dir} && podman-compose down"
+		f"cd {wsl_infra_dir} && podman-compose --in-pod false down"
 	]
 	
 	res = run_command(compose_cmd)
