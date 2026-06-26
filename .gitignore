@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local databases
+data/*.db
+
+# Container databases and persistence data
+infra/data/kafka
+infra/data/typesense
+infra/data/memgraph
+infra/images/*.tar
+*.vhdx

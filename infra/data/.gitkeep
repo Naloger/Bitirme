@@ -1,0 +1,6 @@
+# Data for images , configured in compose.yaml
+
+# Folders include
+# - kafka
+# - memgraph
+# - typesense
