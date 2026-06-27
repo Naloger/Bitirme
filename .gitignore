@@ -12,6 +12,6 @@ data/*.db
 # Container databases and persistence data
 infra/data/kafka
 infra/data/typesense
-infra/data/memgraph
+infra/data/postgres
 infra/images/*.tar
 *.vhdx

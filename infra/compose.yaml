@@ -1,15 +1,16 @@
 services:
-  # Memgraph: Graph Caching & Relationship Memory
-  memgraph:
-    image: memgraph/memgraph-platform:latest
-    container_name: memgraph-local
+  # Apache AGE: Graph Database extension for PostgreSQL
+  age:
+    image: apache/age:latest
+    container_name: age-local
     ports:
-      - "7687:7687" # Bolt connection
-      - "3000:3000" # Memgraph Lab Web Client
-    volumes:
-      - memgraph-data:/var/lib/memgraph
+      - "5435:5432"
     environment:
-      - MEMGRAPH_EXTRA_ARGUMENTS=--log-level=WARNING
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local_rag_secret_key_123
+      POSTGRES_DB: memory_db
+    volumes:
+      - age-data:/var/lib/postgresql
     restart: always
 
   # Typesense: High-Performance Vector & Text Search
@@ -46,4 +47,5 @@ services:
     restart: always
 
 volumes:
-  memgraph-data:
+  age-data:
+

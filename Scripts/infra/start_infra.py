@@ -118,7 +118,14 @@ def configure_wsl_limits() -> None:
 
 
 def main() -> None:
+	# Check if container stack is already running and healthy to avoid wiping NAT rules
+	check_running = run_command(["wsl", "-d", "alpine-rag", "-u", "root", "podman", "ps", "--filter", "name=age-local", "--format", "{{.Status}}"])
+	if "Up" in check_running.stdout:
+		print("✅ Alpine WSL Podman stack is already running and healthy!")
+		return
+
 	print("🏔️ Starting Alpine WSL Podman stack...")
+
 
 	# 0. Configure memory limits on host if not already set
 	configure_wsl_limits()
@@ -148,7 +155,7 @@ def main() -> None:
 	run_command(["wsl", "-d", "alpine-rag", "-u", "root", "-e", "sh", "-c", "iptables -t nat -F && iptables -t nat -X"])
 
 	# 2. Boot up podman-compose up -d
-	print("🐳 Bringing up podman-compose services (Memgraph, Typesense, Kafka)...")
+	print("🐳 Bringing up podman-compose services (Apache AGE, Typesense, Kafka)...")
 	wsl_infra_dir = to_wsl_path(PROJECT_ROOT / "infra")
 	compose_cmd = [
 		"wsl",
@@ -178,22 +185,32 @@ def main() -> None:
 	else:
 		print("⚠️ Failed to check container status.")
 
-	# 4. Launch a background keep-alive session inside WSL to prevent idle shutdown
-	print("\n📌 Starting background keep-alive session inside WSL...")
+	# 4. Launch a background keep-alive session on Windows host to prevent WSL idle shutdown
+	print("\n📌 Starting background keep-alive session on host...")
 	try:
-		# Run a detached sleep process inside WSL using nohup to keep WSL awake.
-		# We check if a 'sleep infinity' process is already running to avoid leaking
-		# multiple sleep processes on repeated start_infra.py runs.
-		res = run_command([
-			"wsl", "-d", "alpine-rag", "-u", "root", "-e", "sh", "-c",
-			"pgrep -f 'sleep infinity' >/dev/null || nohup sleep infinity >/dev/null 2>&1 &"
-		])
-		if res.returncode == 0:
-			print("   Keep-alive session started. WSL will remain active until you run stop_infra.py.")
+		# Check if keep-alive session is already running
+		check_keep_alive = run_command(["wsl", "-d", "alpine-rag", "-u", "root", "pgrep", "-f", "sleep infinity"])
+		if check_keep_alive.returncode == 0 and check_keep_alive.stdout.strip():
+			print("   Keep-alive session is already running. Skipping duplicate launch.")
 		else:
-			print(f"⚠️ Warning: Failed to start keep-alive session: {res.stderr.strip()}")
+			if sys.platform == "win32":
+				# Use PowerShell Start-Process to launch a fully detached wsl process with a hidden window.
+				# This survives the termination of the parent python script and console.
+				subprocess.run(
+					["powershell", "-Command", "Start-Process wsl -ArgumentList '-d alpine-rag -u root sleep infinity' -WindowStyle Hidden"],
+					creationflags=subprocess.CREATE_NO_WINDOW,
+					stdout=subprocess.DEVNULL,
+					stderr=subprocess.DEVNULL
+				)
+			else:
+				subprocess.Popen(
+					["wsl", "-d", "alpine-rag", "-u", "root", "sleep", "infinity"],
+					stdout=subprocess.DEVNULL,
+					stderr=subprocess.DEVNULL
+				)
+			print("   Keep-alive session started. WSL will remain active until you run stop_infra.py.")
 	except Exception as e:
-		print(f"⚠️ Warning: Could not start keep-alive session: {e}")
+		print(f"⚠️ Warning: Could not start/verify keep-alive session: {e}")
 		
 	print("\n✅ System successfully started and ready!")
 

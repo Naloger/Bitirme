@@ -106,7 +106,7 @@ If you need to install container images offline:
 1. Place the saved `.tar` images into `infra/images/` on Windows.
 2. In the Alpine shell, load them into Podman:
    ```bash
-   podman load -i /mnt/c/CalismaAlani/CodingPython/Bitirme/backend/infra/images/memgraph.tar
+   podman load -i /mnt/c/CalismaAlani/CodingPython/Bitirme/backend/infra/images/postgres.tar
    podman load -i /mnt/c/CalismaAlani/CodingPython/Bitirme/backend/infra/images/typesense.tar
    podman load -i /mnt/c/CalismaAlani/CodingPython/Bitirme/backend/infra/images/kafka.tar
    ```
