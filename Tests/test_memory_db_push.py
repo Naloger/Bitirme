@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 import pytest
 
+from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.rdf_quadstore import RDFQuadstore
 
 def safe_print(text: str):
@@ -47,8 +48,8 @@ def test_rdf_quadstore_pushes_and_queries():
     """
     Test RDF quadstore operations (insert, query, delete) on the main memory_db.
     """
-    # 1. Initialize RDFQuadstore using the main memory_db and graph rdf_quadstore_graph
-    store = RDFQuadstore(db_name="memory_db", graph_name="rdf_quadstore_graph")
+    # 1. Initialize RDFQuadstore using configuration-defined names
+    store = RDFQuadstore(db_name=AGE_MEMORY_DB, graph_name=AGE_RDF_GRAPH)
     store.clear()
 
     # Define some RDF terms

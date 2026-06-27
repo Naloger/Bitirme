@@ -2,9 +2,6 @@
     "database_page": {
         "path": "../../../backend/data/pages.db"
     },
-    "database_lemma": {
-        "path": "../../../backend/data/lemmas.db"
-    },
     "database_lemma_matrix" : {
         "path": "../../../backend/data/lemma_matrix.db"
     },
@@ -21,5 +18,16 @@
     },
     "visualize_hierarchy": {
         "force_ascii": false
+    },
+    "apache_age": {
+        "host": "127.0.0.1",
+        "port": 5435,
+        "user": "postgres",
+        "password": "local_rag_secret_key_123",
+        "default_db": "postgres",
+        "keyword_db": "keyword_db",
+        "memory_db": "memory_db",
+        "keyword_graph": "keyword_graph",
+        "rdf_quadstore_graph": "rdf_quadstore_graph"
     }
 }

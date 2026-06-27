@@ -2,58 +2,27 @@
 """Script to clean/reset the memory/RDF quadstore graph database context in Apache AGE."""
 
 import sys
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pathlib import Path
 
-# Configure stdout to use UTF-8 to support Windows console output
-if sys.stdout.encoding != 'utf-8':
-    reconfigure_stdout = getattr(sys.stdout, 'reconfigure', None)
-    if reconfigure_stdout:
-        try:
-            reconfigure_stdout(encoding='utf-8')
-        except Exception:
-            pass
+# Add backend directory to Python path if running script directly
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
-PG_HOST = "127.0.0.1"
-PG_PORT = "5435"
-PG_DB = "memory_db"
-PG_USER = "postgres"
-PG_PASSWORD = "local_rag_secret_key_123"
-GRAPH_NAME = "rdf_quadstore_graph"
+from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
+from Scripts.infra.age.age_helpers import get_age_connection, drop_age_graph, create_age_graph
 
 
 def main():
-    print(f"🧹 Resetting database '{PG_DB}' (graph: '{GRAPH_NAME}')...")
+    print(f"🧹 Resetting database '{AGE_MEMORY_DB}' (graph: '{AGE_RDF_GRAPH}')...")
     try:
-        conn = psycopg2.connect(
-            host=PG_HOST,
-            port=PG_PORT,
-            database=PG_DB,
-            user=PG_USER,
-            password=PG_PASSWORD
-        )
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        with conn.cursor() as cursor:
-            # Load age and set path
-            cursor.execute("LOAD 'age';")
-            cursor.execute("SET search_path = ag_catalog, '$user', public;")
-            
-            # Drop graph
-            print(f"   🗑️ Dropping graph '{GRAPH_NAME}'...")
-            try:
-                cursor.execute(f"SELECT drop_graph('{GRAPH_NAME}', true);")
-            except Exception as e:
-                print(f"   ℹ️ Note dropping graph: {e}")
-                
-            # Re-create graph
-            print(f"   🛠️ Recreating graph '{GRAPH_NAME}'...")
-            cursor.execute(f"SELECT create_graph('{GRAPH_NAME}');")
-            
-            print(f"✅ Database '{PG_DB}' cleaned and reset successfully.")
+        conn = get_age_connection(AGE_MEMORY_DB)
+        drop_age_graph(conn, AGE_RDF_GRAPH)
+        create_age_graph(conn, AGE_RDF_GRAPH)
         conn.close()
+        print(f"✅ Database '{AGE_MEMORY_DB}' cleaned and reset successfully.")
     except Exception as e:
-        print(f"❌ Error resetting database '{PG_DB}': {e}")
+        print(f"❌ Error resetting database '{AGE_MEMORY_DB}': {e}")
         sys.exit(1)
 
 

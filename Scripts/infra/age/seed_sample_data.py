@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
+from Libs.Config.config import AGE_KEYWORD_DB, AGE_KEYWORD_GRAPH, AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.age_helpers import (
     get_age_connection,
     create_age_graph,
@@ -20,12 +21,12 @@ from Scripts.infra.age.rdf_quadstore import RDFQuadstore
 
 
 def seed_keyword_graph() -> None:
-    print("🌱 Seeding keyword_db / keyword_graph with sample NLP & Deep Learning words...")
-    conn = get_age_connection("keyword_db")
+    print(f"🌱 Seeding {AGE_KEYWORD_DB} / {AGE_KEYWORD_GRAPH} with sample NLP & Deep Learning words...")
+    conn = get_age_connection(AGE_KEYWORD_DB)
     try:
         # Reset the graph
-        drop_age_graph(conn, "keyword_graph")
-        create_age_graph(conn, "keyword_graph")
+        drop_age_graph(conn, AGE_KEYWORD_GRAPH)
+        create_age_graph(conn, AGE_KEYWORD_GRAPH)
 
         with conn.cursor() as cur:
             # 1. Define sample keywords (nodes)
@@ -79,7 +80,7 @@ def seed_keyword_graph() -> None:
             # 4. Insert CO_OCCUR_WITH edges
             execute_cypher_param(
                 cur=cur,
-                graph_name="keyword_graph",
+                graph_name=AGE_KEYWORD_GRAPH,
                 cypher_query=(
                     "UNWIND $batch AS edge "
                     "MATCH (a:Keyword {sqlite_id: edge.v1}) "
@@ -94,8 +95,8 @@ def seed_keyword_graph() -> None:
 
 
 def seed_rdf_quadstore() -> None:
-    print("🌱 Seeding memory_db / rdf_quadstore_graph with sample Semantic Web data...")
-    store = RDFQuadstore(db_name="memory_db", graph_name="rdf_quadstore_graph")
+    print(f"🌱 Seeding {AGE_MEMORY_DB} / {AGE_RDF_GRAPH} with sample Semantic Web data...")
+    store = RDFQuadstore(db_name=AGE_MEMORY_DB, graph_name=AGE_RDF_GRAPH)
     store.clear()
 
     # Subjects

@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 import pytest
 
+from Libs.Config.config import AGE_KEYWORD_DB, AGE_KEYWORD_GRAPH
 from Scripts.infra.age.age_helpers import get_age_connection, parse_agtype
 from Scripts.infra.age.transpile_keyword import transpile_ppmi_to_age
 
@@ -98,17 +99,17 @@ def test_keyword_db_transpilation_push():
         # 2. Run the transpiler onto the main keyword_db / keyword_graph
         transpile_ppmi_to_age(
             sqlite_db_path=str(tmp_path),
-            pg_db_name="keyword_db",
-            graph_name="keyword_graph"
+            pg_db_name=AGE_KEYWORD_DB,
+            graph_name=AGE_KEYWORD_GRAPH
         )
 
         # 3. Connect to AGE and assert nodes/edges are created properly
-        conn = get_age_connection("keyword_db")
+        conn = get_age_connection(AGE_KEYWORD_DB)
         try:
             with conn.cursor() as cur:
                 # Query node count
-                cur.execute("""
-                    SELECT * FROM cypher('keyword_graph', $$
+                cur.execute(f"""
+                    SELECT * FROM cypher('{AGE_KEYWORD_GRAPH}', $$
                         MATCH (k:Keyword)
                         RETURN count(k)
                     $$) as (cnt agtype);
@@ -119,8 +120,8 @@ def test_keyword_db_transpilation_push():
                 assert int(node_count) == 4
 
                 # Query relationships and their weights
-                cur.execute("""
-                    SELECT * FROM cypher('keyword_graph', $$
+                cur.execute(f"""
+                    SELECT * FROM cypher('{AGE_KEYWORD_GRAPH}', $$
                         MATCH (a:Keyword)-[r:CO_OCCUR_WITH]->(b:Keyword)
                         RETURN a.word, b.word, r.weight
                     $$) as (w1 agtype, w2 agtype, wt agtype);

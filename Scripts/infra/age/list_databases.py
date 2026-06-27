@@ -1,20 +1,16 @@
+# -*- coding: utf-8 -*-
+"""Script to list available user databases in the PostgreSQL container."""
+
 import sys
+from pathlib import Path
+
+# Add project root to python path if needed
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
 import psycopg2
-
-# Configure stdout to use UTF-8 to support Windows console output
-if sys.stdout.encoding != 'utf-8':
-    reconfigure_stdout = getattr(sys.stdout, 'reconfigure', None)
-    if reconfigure_stdout:
-        try:
-            reconfigure_stdout(encoding='utf-8')
-        except Exception:
-            pass
-
-PG_HOST = "127.0.0.1"
-PG_PORT = "5435"
-PG_DB = "postgres"  # Standard default database for bootstrap connection
-PG_USER = "postgres"
-PG_PASSWORD = "local_rag_secret_key_123"
+from Scripts.infra.age.age_helpers import PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, DEFAULT_DB
 
 
 def main():
@@ -23,7 +19,7 @@ def main():
         conn = psycopg2.connect(
             host=PG_HOST,
             port=PG_PORT,
-            database=PG_DB,
+            database=DEFAULT_DB,
             user=PG_USER,
             password=PG_PASSWORD
         )
@@ -48,6 +44,8 @@ def main():
         conn.close()
     except Exception as e:
         print(f"\n❌ Error listing databases: {e}")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

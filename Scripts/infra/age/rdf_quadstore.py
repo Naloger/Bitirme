@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
+from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.age_helpers import (
     ensure_database_exists,
     get_age_connection,
@@ -26,7 +27,7 @@ class RDFQuadstore:
     Quads are represented as: (Subject:RDFResource) -[r:RDF_EDGE {predicate, context}]-> (Object:RDFResource|RDFLiteral)
     """
 
-    def __init__(self, db_name: str = "memory_db", graph_name: str = "rdf_quadstore_graph"):
+    def __init__(self, db_name: str = AGE_MEMORY_DB, graph_name: str = AGE_RDF_GRAPH):
         self.db_name = db_name
         self.graph_name = graph_name
         # Ensure database and graph are ready

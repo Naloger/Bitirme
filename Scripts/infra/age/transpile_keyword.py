@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH
+from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, AGE_KEYWORD_DB, AGE_KEYWORD_GRAPH
 from Scripts.infra.age.age_helpers import (
     ensure_database_exists,
     get_age_connection,
@@ -21,7 +21,7 @@ from Scripts.infra.age.age_helpers import (
 )
 
 
-def transpile_ppmi_to_age(sqlite_db_path: str, pg_db_name: str = "keyword_db", graph_name: str = "keyword_graph") -> None:
+def transpile_ppmi_to_age(sqlite_db_path: str, pg_db_name: str = AGE_KEYWORD_DB, graph_name: str = AGE_KEYWORD_GRAPH) -> None:
     """
     Read vocabulary and ppmi_lemma_matrix from SQLite database and transpile
     them to a node-weight-node keyword graph in Apache AGE.
@@ -62,19 +62,24 @@ def transpile_ppmi_to_age(sqlite_db_path: str, pg_db_name: str = "keyword_db", g
     # 3. Connect to AGE and reset the graph
     pg_conn = get_age_connection(pg_db_name)
     try:
+        # DDL operations must run in autocommit mode
+        pg_conn.autocommit = True
         drop_age_graph(pg_conn, graph_name)
         create_age_graph(pg_conn, graph_name)
         
+        # Turn OFF autocommit to run all bulk insertions in a single transaction
+        pg_conn.autocommit = False
+        
         # 4. Insert vocabulary nodes in batches
         print(f"[INFO] Inserting {len(vocab_list)} Keyword nodes into graph '{graph_name}'...")
-        batch_size = 500
+        batch_size = 2000
         with pg_conn.cursor() as cur:
             for i in range(0, len(vocab_list), batch_size):
                 batch = vocab_list[i : i + batch_size]
                 execute_cypher_param(
                     cur=cur,
                     graph_name=graph_name,
-                    cypher_query="UNWIND $batch AS item CREATE (:Keyword {word: item.word, sqlite_id: item.id})",
+                    cypher_query="UNWIND $batch AS item CREATE (k:Keyword) SET k.word = item.word, k.sqlite_id = item.id",
                     params_dict={"batch": batch}
                 )
             print("   ✅ Keyword nodes inserted.")
@@ -88,17 +93,24 @@ def transpile_ppmi_to_age(sqlite_db_path: str, pg_db_name: str = "keyword_db", g
                     graph_name=graph_name,
                     cypher_query=(
                         "UNWIND $batch AS edge "
-                        "MATCH (a:Keyword {sqlite_id: edge.v1_id}) "
-                        "MATCH (b:Keyword {sqlite_id: edge.v2_id}) "
+                        "MATCH (a:Keyword) WHERE a.sqlite_id = edge.v1_id "
+                        "MATCH (b:Keyword) WHERE b.sqlite_id = edge.v2_id "
                         "CREATE (a)-[:CO_OCCUR_WITH {weight: edge.weight}]->(b)"
                     ),
                     params_dict={"batch": batch}
                 )
             print("   ✅ CO_OCCUR_WITH edges inserted.")
             
+        # Commit the transaction holding all bulk inserts
+        pg_conn.commit()
         print(f"🎉 Transpilation complete! Database '{pg_db_name}' now holds the keyword graph.")
+    except Exception as e:
+        pg_conn.rollback()
+        print(f"❌ Error during transpilation: {e}")
+        raise
     finally:
         pg_conn.close()
+
 
 
 if __name__ == "__main__":
@@ -110,6 +122,6 @@ if __name__ == "__main__":
         
     transpile_ppmi_to_age(
         sqlite_db_path=str(LEMMA_MATRIX_DATABASE_PATH),
-        pg_db_name="keyword_db",
-        graph_name="keyword_graph"
+        pg_db_name=AGE_KEYWORD_DB,
+        graph_name=AGE_KEYWORD_GRAPH
     )

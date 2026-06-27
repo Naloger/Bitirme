@@ -17,12 +17,14 @@ if sys.stdout.encoding != 'utf-8':
         except Exception:
             pass
 
-# Apache AGE Database connection details
-PG_HOST = "127.0.0.1"
-PG_PORT = "5435"
-PG_USER = "postgres"
-PG_PASSWORD = "local_rag_secret_key_123"
-DEFAULT_DB = "postgres"  # Bootstrap database connection
+from Libs.Config.config import (
+    AGE_HOST as PG_HOST,
+    AGE_PORT as PG_PORT,
+    AGE_USER as PG_USER,
+    AGE_PASSWORD as PG_PASSWORD,
+    AGE_DEFAULT_DB as DEFAULT_DB
+)
+
 
 
 def ensure_database_exists(db_name: str) -> None:
