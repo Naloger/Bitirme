@@ -15,8 +15,8 @@ import json
 import re
 import subprocess
 import sys
-import requests
 
+import requests
 from CTT_Task import TaskTree
 
 
@@ -267,7 +267,7 @@ if __name__ == "__main__":
             parsed = json.loads(sanitized)
         except json.JSONDecodeError:
             # If sanitization still fails, print the sanitized text for debugging
-            print("Model ıktısı JSON olarak parse edilemedi:\n", raw_str, file=sys.stderr)
+            print("Model çıktısı JSON olarak parse edilemedi:\n", raw_str, file=sys.stderr)
             raise
     except json.JSONDecodeError as json_error:
         print("Model çıktısı JSON olarak parse edilemedi:\n", raw_str, file=sys.stderr)
