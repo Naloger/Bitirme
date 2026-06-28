@@ -10,8 +10,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 from Libs.Config.config import (
-    AGE_KEYWORD_DB,
-    AGE_KEYWORD_GRAPH,
     AGE_MEMORY_DB,
     AGE_RDF_GRAPH
 )
@@ -25,13 +23,6 @@ from Scripts.infra.age.age_helpers import (
 def main():
     print("🔌 Starting bootstrapping of Apache AGE databases...")
     try:
-        # 1. Initialize keyword_db & keyword_graph
-        print(f"\n⚙️ Configuring database: '{AGE_KEYWORD_DB}'...")
-        ensure_database_exists(AGE_KEYWORD_DB)
-        conn = get_age_connection(AGE_KEYWORD_DB)
-        create_age_graph(conn, AGE_KEYWORD_GRAPH)
-        conn.close()
-
         # 2. Initialize memory_db & rdf_quadstore_graph
         print(f"\n⚙️ Configuring database: '{AGE_MEMORY_DB}'...")
         ensure_database_exists(AGE_MEMORY_DB)

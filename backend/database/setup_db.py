@@ -20,12 +20,5 @@ def main() -> None:
     except Exception as exc:
         print(f"Initialization failed: {exc}", file=sys.stderr)
         sys.exit(1)
-    # try:
-    #     init_db(db_path=LEMMA_DATABASE_PATH, metadata=LEMMAS_METADATA)
-    #     print("Database schema initialized successfully.")
-    # except Exception as exc:
-    #     print(f"Initialization failed: {exc}", file=sys.stderr)
-    #     sys.exit(1)
-
 if __name__ == "__main__":
     main()

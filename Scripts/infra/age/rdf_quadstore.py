@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 """RDF Quadstore Labeled Property Graph manager for Apache AGE."""
 
-import sys
-from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Add backend directory to Python path if running script directly
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+# PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# if str(PROJECT_ROOT) not in sys.path:
+#     sys.path.append(str(PROJECT_ROOT))
 
 from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.age_helpers import (

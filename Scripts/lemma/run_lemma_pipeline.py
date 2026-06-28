@@ -10,11 +10,8 @@ Executes:
 from __future__ import annotations
 
 import argparse
-import sys
-from pathlib import Path
-
 # Add backend directory to Python path if running script directly
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+# sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from Scripts.lemma.build_hierarchy import build_taxonomy_hierarchy
 from Scripts.lemma.build_ppmi_table import rebuild_ppmi_table

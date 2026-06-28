@@ -217,7 +217,7 @@ def main():
         .header-title h1 {
             font-size: 1.4rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            background: linear-gradient(135deg, #06b6d4, #f59e0b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -249,8 +249,8 @@ def main():
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         select:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25);
         }
         .app-container {
             flex: 1;
@@ -302,7 +302,7 @@ def main():
         .meta-card .num {
             font-size: 1.6rem;
             font-weight: 700;
-            color: #3b82f6;
+            color: #06b6d4;
         }
         .meta-card .label {
             font-size: 0.75rem;
@@ -315,6 +315,14 @@ def main():
             flex: 1;
             overflow-y: auto;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .properties-detail h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 15px;
         }
         .properties-detail p.placeholder {
             color: #64748b;
@@ -328,6 +336,10 @@ def main():
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
+            transition: border-color 0.2s;
+        }
+        .detail-card:hover {
+            border-color: #475569;
         }
         .detail-header {
             display: flex;
@@ -339,16 +351,24 @@ def main():
         }
         .detail-header h3 {
             font-size: 0.95rem;
-            color: #3b82f6;
+            color: #06b6d4;
         }
         .label-badge {
-            background-color: #1e293b;
             border: 1px solid #475569;
-            color: #94a3b8;
             font-size: 0.7rem;
             padding: 2px 6px;
             border-radius: 4px;
             font-weight: bold;
+        }
+        .label-badge-keyword {
+            background-color: rgba(6, 182, 212, 0.15);
+            border-color: #06b6d4;
+            color: #22d3ee;
+        }
+        .label-badge-concept {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-color: #f59e0b;
+            color: #fbbf24;
         }
         .prop-row {
             display: flex;
@@ -386,24 +406,76 @@ def main():
             z-index: 10;
         }
         .btn {
-            background-color: #3b82f6;
-            color: #f1f5f9;
+            background-color: #06b6d4;
+            color: #0f172a;
             border: none;
             border-radius: 4px;
             padding: 6px 12px;
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             transition: background-color 0.2s;
         }
         .btn:hover {
-            background-color: #2563eb;
+            background-color: #22d3ee;
         }
         .btn-secondary {
             background-color: #475569;
+            color: #f1f5f9;
         }
         .btn-secondary:hover {
             background-color: #334155;
+        }
+        .result-item {
+            padding: 10px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .result-item:hover {
+            border-color: #06b6d4;
+            background-color: #1e293b;
+        }
+
+        /* Tabs Styling */
+        .tab-bar {
+            display: flex;
+            background-color: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 14px 10px;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            border-bottom: 2px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .tab-btn:hover {
+            color: #cbd5e1;
+            background-color: rgba(255,255,255,0.02);
+        }
+        .tab-btn.active {
+            color: #06b6d4;
+            border-bottom-color: #06b6d4;
+            background-color: rgba(6, 182, 212, 0.05);
+        }
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow-y: auto;
+            height: calc(100% - 50px);
         }
     </style>
 </head>
@@ -411,7 +483,7 @@ def main():
     <header>
         <div class="header-title">
             <h1>Apache AGE Graph Explorer</h1>
-            <p>Interactive graph database schema visualization</p>
+            <p>Color-Blind Accessible Interactive Graph Exploration</p>
         </div>
         <div class="selector-container">
             <label for="graph-selector">Select Graph:</label>
@@ -430,22 +502,43 @@ def main():
         </div>
 
         <div class="sidebar">
-            <div class="sidebar-section">
-                <h2>📊 Graph Info</h2>
-                <div class="meta-grid">
-                    <div class="meta-card">
-                        <div class="num" id="node-count">0</div>
-                        <div class="label">Nodes</div>
-                    </div>
-                    <div class="meta-card">
-                        <div class="num" id="edge-count">0</div>
-                        <div class="label">Edges</div>
+            <div class="tab-bar">
+                <button class="tab-btn active" id="btn-config" onclick="switchTab('tab-config')">⚙️ Config</button>
+                <button class="tab-btn" id="btn-details" onclick="switchTab('tab-details')">🔍 Details</button>
+                <button class="tab-btn" id="btn-results" onclick="switchTab('tab-results')">🔥 Results</button>
+            </div>
+
+            <!-- Tab 1: Config -->
+            <div id="tab-config" class="tab-content" style="display: flex;">
+                <div class="sidebar-section">
+                    <h2>📊 Graph Info</h2>
+                    <div class="meta-grid">
+                        <div class="meta-card">
+                            <div class="num" id="node-count">0</div>
+                            <div class="label">Nodes</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="num" id="edge-count">0</div>
+                            <div class="label">Edges</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="properties-detail" id="detail-pane">
-                <h2>🔍 Selection Detail</h2>
-                <p class="placeholder">Click on a node or edge to inspect properties</p>
+
+            <!-- Tab 2: Selection Detail -->
+            <div id="tab-details" class="tab-content">
+                <div class="properties-detail" id="detail-pane">
+                    <h2>🔍 Selection Detail</h2>
+                    <p class="placeholder">Click on a node or edge to inspect properties</p>
+                </div>
+            </div>
+
+            <!-- Tab 3: Spreading Results -->
+            <div id="tab-results" class="tab-content">
+                <div class="properties-detail" id="results-pane">
+                    <h2>🔥 Spreading Results</h2>
+                    <p class="placeholder">No activation run yet</p>
+                </div>
             </div>
         </div>
     </div>
@@ -464,14 +557,54 @@ def main():
             selector.appendChild(opt);
         });
 
-        // Color palettes
+        // Color palettes: Color-blind safe scheme (Cyan, Yellow/Amber, Slate)
         const COLORS = {
-            Keyword: { background: "#14b8a6", border: "#0d9488", highlight: { background: "#2dd4bf", border: "#14b8a6" } }, // Teal
-            RDFResource: { background: "#3b82f6", border: "#2563eb", highlight: { background: "#60a5fa", border: "#3b82f6" } }, // Blue
-            RDFLiteral: { background: "#f59e0b", border: "#d97706", highlight: { background: "#fbbf24", border: "#f59e0b" } }, // Amber
-            Concept: { background: "#ec4899", border: "#db2777", highlight: { background: "#f472b6", border: "#ec4899" } }, // Pink
-            default: { background: "#64748b", border: "#475569", highlight: { background: "#94a3b8", border: "#64748b" } } // Slate
+            Keyword: { background: "#06b6d4", border: "#0891b2", highlight: { background: "#22d3ee", border: "#06b6d4" } },
+            Concept: { background: "#f59e0b", border: "#d97706", highlight: { background: "#fbbf24", border: "#f59e0b" } },
+            RDFResource: { background: "#cbd5e1", border: "#94a3b8", highlight: { background: "#e2e8f0", border: "#cbd5e1" } },
+            RDFLiteral: { background: "#64748b", border: "#475569", highlight: { background: "#94a3b8", border: "#64748b" } },
+            default: { background: "#64748b", border: "#475569", highlight: { background: "#94a3b8", border: "#64748b" } }
         };
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-content").forEach(el => {
+                el.style.display = "none";
+            });
+            const target = document.getElementById(tabId);
+            if (target) {
+                target.style.display = "flex";
+            }
+            document.querySelectorAll(".tab-btn").forEach(btn => {
+                btn.classList.remove("active");
+            });
+            const activeBtn = document.getElementById("btn-" + tabId.replace("tab-", ""));
+            if (activeBtn) activeBtn.classList.add("active");
+        }
+
+        function resetResultsPane() {
+            const resultsPane = document.getElementById("results-pane");
+            resultsPane.innerHTML = `
+                <h2>🔥 Spreading Results</h2>
+                <p class="placeholder">No activation run yet</p>
+            `;
+            switchTab("tab-config");
+        }
+
+        function focusOnNode(nodeId) {
+            if (network) {
+                network.selectNodes([nodeId]);
+                network.focus(nodeId, {
+                    scale: 1.2,
+                    animation: { duration: 500, easingFunction: "easeOutQuad" }
+                });
+                const key = selector.value;
+                const nodeObj = rawData[key].nodes.find(n => n.id === nodeId);
+                if (nodeObj) {
+                    showNodeDetails(nodeObj);
+                    switchTab("tab-details");
+                }
+            }
+        }
 
         function shortenUri(uri) {
             if (!uri) return "";
@@ -500,6 +633,7 @@ def main():
             document.getElementById("node-count").innerText = graph.nodes.length;
             document.getElementById("edge-count").innerText = graph.edges.length;
             resetDetailPane();
+            resetResultsPane();
 
             // Transform Nodes
             const visNodes = graph.nodes.map(n => {
@@ -531,8 +665,8 @@ def main():
                     label: displayLabel,
                     title: title,
                     color: palette,
-                    shape: labelType === "RDFLiteral" ? "box" : "dot",
-                    size: labelType === "RDFLiteral" ? 20 : 16,
+                    shape: labelType === "RDFLiteral" ? "box" : (labelType === "Concept" ? "hexagon" : "dot"),
+                    size: labelType === "RDFLiteral" ? 20 : (labelType === "Concept" ? 24 : 16),
                     font: { color: "#f1f5f9", size: 12 },
                     rawData: n
                 };
@@ -624,10 +758,12 @@ def main():
                     const clickedNodeId = params.nodes[0];
                     const nodeData = data.nodes.get(clickedNodeId);
                     showNodeDetails(nodeData.rawData);
+                    switchTab("tab-details");
                 } else if (params.edges.length > 0) {
                     const clickedEdgeId = params.edges[0];
                     const edgeData = data.edges.get(clickedEdgeId);
                     showEdgeDetails(edgeData.rawData);
+                    switchTab("tab-details");
                 } else {
                     resetDetailPane();
                 }
@@ -637,7 +773,8 @@ def main():
         function showNodeDetails(node) {
             const pane = document.getElementById("detail-pane");
             
-            let labelBadges = node.labels.map(l => `<span class="label-badge">${l}</span>`).join(" ");
+            const badgeClass = node.labels[0] === "Concept" ? "label-badge-concept" : "label-badge-keyword";
+            let labelBadges = node.labels.map(l => `<span class="label-badge ${badgeClass}">${l}</span>`).join(" ");
             
             let propsHtml = "";
             Object.keys(node.properties).forEach(k => {
@@ -661,8 +798,159 @@ def main():
                         <span class="prop-val">${node.id}</span>
                     </div>
                     ${propsHtml}
+                    <button class="btn" style="margin-top: 15px; width: 100%; background-color: #8b5cf6; color: #ffffff;" onclick="simulateSpreadingActivation('${node.id}')">
+                        🔥 Spread Activation
+                    </button>
+                    <button class="btn btn-secondary" style="margin-top: 5px; width: 100%;" onclick="loadSelectedGraph()">
+                        Reset Graph
+                    </button>
                 </div>
             `;
+        }
+
+        function simulateSpreadingActivation(seedId) {
+            const decay = 0.8;
+            const threshold = 0.01;
+            const maxSteps = 5;
+            const hierarchyWeight = 1.0;
+            
+            const graphData = rawData[document.getElementById("graph-selector").value];
+            if (!graphData) return;
+
+            // 1. Build Adjacency List
+            let adjacency = {};
+            graphData.edges.forEach(e => {
+                if (!adjacency[e.source]) adjacency[e.source] = [];
+                if (!adjacency[e.target]) adjacency[e.target] = [];
+                
+                let weight = 1.0;
+                if (e.type === "CO_OCCUR_WITH" || e.type === "CONCEPT_CONNECTION") {
+                    weight = parseFloat(e.properties.weight || 1.0);
+                } else if (e.type === "CHILD_OF") {
+                    // Find child's pagerank (source is child)
+                    let childNode = graphData.nodes.find(n => n.id === e.source);
+                    let pr = (childNode && childNode.properties.pagerank) ? parseFloat(childNode.properties.pagerank) : 1.0;
+                    weight = hierarchyWeight * pr;
+                }
+                
+                adjacency[e.source].push({target: e.target, weight: weight});
+                adjacency[e.target].push({target: e.source, weight: weight});
+            });
+
+            // 2. Iterate Spreading
+            let currentActivations = {};
+            currentActivations[seedId] = 1.0;
+
+            for (let step = 0; step < maxSteps; step++) {
+                let nextActivations = {};
+                
+                for (let node in currentActivations) {
+                    let energy = currentActivations[node];
+                    if (energy < threshold) continue;
+                    
+                    // Energy stays at node (decayed)
+                    let currentNext = nextActivations[node] || 0.0;
+                    nextActivations[node] = Math.max(currentNext, energy * decay);
+                    
+                    // Spread to neighbors
+                    let nbs = adjacency[node] || [];
+                    nbs.forEach(nb => {
+                        let scaledWeight = Math.log1p(nb.weight); // log(1 + weight)
+                        let energyTransfer = energy * scaledWeight * decay;
+                        
+                        let currentNbEnergy = nextActivations[nb.target] || 0.0;
+                        let newEnergy = Math.min(1.0, currentNbEnergy + energyTransfer);
+                        nextActivations[nb.target] = newEnergy;
+                    });
+                }
+                currentActivations = nextActivations;
+                currentActivations[seedId] = 1.0; // Seed stays active
+            }
+
+            // 3. Highlight Nodes visually
+            let updateNodes = [];
+            network.body.data.nodes.forEach(node => {
+                let act = currentActivations[node.id] || 0;
+                if (act > threshold) {
+                    let intensity = Math.min(1.0, act);
+                    let isSeed = node.id === seedId;
+                    
+                    // High-contrast shape and border cues
+                    let baseSize = node.rawData.labels[0] === "Concept" ? 24 : 16;
+                    let sizeBoost = baseSize + (intensity * 14);
+                    
+                    let bgColor = isSeed ? "#8b5cf6" : undefined; // Seed is purple
+                    let borderColor = isSeed ? "#ffffff" : "#facc15"; // Activated has gold outline
+                    
+                    updateNodes.push({
+                        id: node.id,
+                        size: sizeBoost,
+                        borderWidth: 3 + (intensity * 5),
+                        color: { border: borderColor, background: bgColor },
+                        title: node.title + "\\n[+] Activation: " + act.toFixed(4)
+                    });
+                }
+            });
+            network.body.data.nodes.update(updateNodes);
+            
+            // Populate tabular Results sidebar
+            let sortedResults = Object.keys(currentActivations)
+                .map(nodeId => {
+                    let nodeObj = graphData.nodes.find(n => n.id === nodeId);
+                    let displayLabel = "";
+                    if (nodeObj) {
+                        displayLabel = nodeObj.properties.word || nodeObj.properties.name || nodeObj.properties.label || nodeId;
+                    } else {
+                        displayLabel = nodeId;
+                    }
+                    return {
+                        id: nodeId,
+                        label: displayLabel,
+                        type: nodeObj ? nodeObj.labels[0] : "Unknown",
+                        activation: currentActivations[nodeId]
+                    };
+                })
+                .filter(res => res.activation > threshold)
+                .sort((a, b) => b.activation - a.activation);
+
+            let resultsPane = document.getElementById("results-pane");
+            let listHtml = sortedResults.map((res, index) => {
+                let badgeClass = res.type === "Keyword" ? "label-badge-keyword" : "label-badge-concept";
+                let isSeed = res.id === seedId;
+                let cardStyle = isSeed 
+                    ? "border-left: 4px solid #8b5cf6; background-color: rgba(139, 92, 246, 0.05);" 
+                    : "border-left: 4px solid #facc15;";
+                
+                return `
+                    <div class="result-item" style="${cardStyle}" onclick="focusOnNode('${res.id}')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #f1f5f9; font-size: 0.9rem;">#${index+1} ${res.label}</strong>
+                            <span class="label-badge ${badgeClass}">${res.type}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 4px; color: #94a3b8;">
+                            <span>Activation: <strong>${res.activation.toFixed(4)}</strong></span>
+                            ${isSeed ? '<span style="color: #c084fc; font-weight: bold;">[SEED]</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            let seedNodeObj = graphData.nodes.find(n => n.id === seedId);
+            let seedLabel = seedNodeObj ? (seedNodeObj.properties.word || seedNodeObj.properties.name || seedNodeObj.properties.label || seedId) : seedId;
+
+            resultsPane.innerHTML = `
+                <h2>🔥 Spreading Results</h2>
+                <div style="margin-bottom: 12px; font-size: 0.8rem; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 8px;">
+                    Seed: <strong style="color: #c084fc;">${seedLabel}</strong> | Active: <strong>${sortedResults.length}</strong>
+                </div>
+                <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+                    ${listHtml}
+                </div>
+            `;
+            
+            // Auto switch to Results tab
+            switchTab("tab-results");
+            alert(`Spreading complete! Activated ${updateNodes.length} nodes.`);
         }
 
         function showEdgeDetails(edge) {

@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import math
-import sys
 from collections import defaultdict
-from pathlib import Path
 
 # Add backend directory to Python path if running script directly
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+# sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from sqlmodel import  select, delete
 from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_PPMI_THRESHOLD

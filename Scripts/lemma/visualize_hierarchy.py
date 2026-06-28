@@ -9,12 +9,10 @@ ASCII fallback for Windows CP1254/non-UTF8 console environments.
 from __future__ import annotations
 
 import argparse
-import sys
 from collections import defaultdict
-from pathlib import Path
 
 # Add backend directory to Python path if running script directly
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+# sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from sqlmodel import select
 

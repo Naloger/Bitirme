@@ -22,6 +22,7 @@ dependencies = [
     "igraph>=1.0.0",
     "leidenalg>=0.12.0",
     "psycopg2-binary>=2.9.9",
+    "mcp>=1.28.1",
 ]
 
 [tool.pytest.ini_options]

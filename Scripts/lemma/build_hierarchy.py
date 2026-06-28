@@ -5,14 +5,11 @@ Subsequent levels are collapsed using the concept_connections of the previous le
 """
 
 from __future__ import annotations
-
-import sys
 from collections import defaultdict
-from pathlib import Path
 from typing import Any, cast
 
 # Add backend directory to Python path if running script directly
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+# sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import igraph as ig
 import leidenalg as la

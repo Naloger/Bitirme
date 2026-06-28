@@ -28,9 +28,7 @@ AGE_PORT = int(_age_config.get("port", 5435))
 AGE_USER = _age_config.get("user", "postgres")
 AGE_PASSWORD = _age_config.get("password", "local_rag_secret_key_123")
 AGE_DEFAULT_DB = _age_config.get("default_db", "postgres")
-AGE_KEYWORD_DB = _age_config.get("keyword_db", "keyword_db")
 AGE_MEMORY_DB = _age_config.get("memory_db", "memory_db")
-AGE_KEYWORD_GRAPH = _age_config.get("keyword_graph", "keyword_graph")
 AGE_RDF_GRAPH = _age_config.get("rdf_quadstore_graph", "rdf_quadstore_graph")
 
 

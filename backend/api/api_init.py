@@ -13,9 +13,6 @@ from backend.database.ORMSchemas.orm_schema_lemma_matrix import LEMMA_MATRIX_MET
 async def lifespan(_app: FastAPI):
     # Executes prior to the first incoming request
     page_engine, page_session = init_db.init_db(db_path=PAGE_DATABASE_PATH, metadata=PAGES_METADATA)
-    # lemma_engine, lemma_session = init_db.init_db(db_path=LEMMA_DATABASE_PATH, metadata=LEMMAS_METADATA)
-    # _app.state.lemma_engine = lemma_engine
-    # _app.state.lemma_session_factory = lemma_session
     lemma_matrix_engine, lemma_matrix_session = init_db.init_db(db_path=LEMMA_MATRIX_DATABASE_PATH, metadata=LEMMA_MATRIX_METADATA)
     _app.state.page_engine = page_engine
     _app.state.page_session_factory = page_session
@@ -55,14 +52,6 @@ def get_lemma_matrix_session():
         "lemma_matrix_engine",
     )
 
-# def get_lemma_session():
-#     yield from _get_session_from_state(
-#         "lemma_session_factory",
-#         LEMMA_DATABASE_PATH,
-#         LEMMAS_METADATA,
-#         "lemma_engine",
-#     )
-#
 
 app = FastAPI(
     title="API",
@@ -80,8 +69,9 @@ app.add_middleware(
 )
 
 # Ensure endpoint decorators are registered with the app
-from backend.api.Endpoints import health_endpoints, page_endpoints, lemma_matrix_endpoints
+from backend.api.Endpoints import health_endpoints, page_endpoints, lemma_matrix_endpoints, spreading_activation_endpoints
 
 app.include_router(health_endpoints.router)
 app.include_router(page_endpoints.router)
 app.include_router(lemma_matrix_endpoints.router, prefix="/api/lemma_matrix")
+app.include_router(spreading_activation_endpoints.router, prefix="/api/lemma_matrix")

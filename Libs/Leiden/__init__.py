@@ -1,1 +1,2 @@
 from .leiden_communities import detect_communities_leiden
+from .leiden_spreading_activation import spreading_activation

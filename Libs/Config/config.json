@@ -2,7 +2,7 @@
     "database_page": {
         "path": "../../../backend/data/pages.db"
     },
-    "database_lemma_matrix" : {
+    "database_lemma_matrix": {
         "path": "../../../backend/data/lemma_matrix.db"
     },
     "start_api": {
@@ -25,9 +25,7 @@
         "user": "postgres",
         "password": "local_rag_secret_key_123",
         "default_db": "postgres",
-        "keyword_db": "keyword_db",
         "memory_db": "memory_db",
-        "keyword_graph": "keyword_graph",
         "rdf_quadstore_graph": "rdf_quadstore_graph"
     }
 }
