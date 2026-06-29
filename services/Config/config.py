@@ -9,7 +9,7 @@ try:
     with open(_config_path, "r", encoding="utf-8") as _f:
         _data = json.load(_f)
 except (FileNotFoundError, json.JSONDecodeError, OSError):
-        _data = {}
+    _data = {}
 
 _llm = _data.get("llm_config", {})
 
