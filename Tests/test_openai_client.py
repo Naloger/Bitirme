@@ -1,7 +1,9 @@
-import openai
 import instructor
-from services.Config import config
+import openai
 from pydantic import BaseModel
+
+from Config import config
+
 
 class SimpleModel(BaseModel):
     name: str

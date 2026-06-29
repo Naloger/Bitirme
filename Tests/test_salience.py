@@ -5,18 +5,18 @@ from unittest.mock import MagicMock, patch
 
 # Ensure project root is in sys.path
 _here = os.path.dirname(os.path.abspath(__file__))
-_root = os.path.abspath(os.path.join(_here, "..", ".."))
+_root = os.path.abspath(os.path.join(_here, "../services", ".."))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
+from services.Agentic.MainAgents.SalienceMode.SalienceGraphBuilder import (
+    build_salience_graph,
+)
 from services.Agentic.MainAgents.SalienceMode.SalienceModels import SalienceState
 from services.Agentic.MainAgents.SalienceMode.SalienceNodes import (
     run_default_subgraph,
     run_executive_subgraph,
     salience_router_node,
-)
-from services.Agentic.MainAgents.SalienceMode.SalienceGraphBuilder import (
-    build_salience_graph,
 )
 
 

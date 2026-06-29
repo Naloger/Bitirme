@@ -4,7 +4,7 @@ import unittest
 
 # Ensure the project root is in the path so we can import services
 _here = os.path.dirname(os.path.abspath(__file__))
-_root = os.path.abspath(os.path.join(_here, "..", ".."))
+_root = os.path.abspath(os.path.join(_here, "../services", ".."))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
@@ -13,8 +13,12 @@ from services.Agentic.MainAgents.ExecutiveControlMode.database import (
     create_task,
     init_db,
 )
-from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlModels import ECNState
-from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlNodes import task_executor
+from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlModels import (
+    ECNState,
+)
+from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlNodes import (
+    task_executor,
+)
 from services.CustomLibs.sandbox import sandbox
 
 

@@ -1,40 +1,41 @@
 from typing import Any
 
-import openai
 import instructor
-from services.Config import config
+import openai
+
+from Config import config
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import (
-    GraphState,
-    Quad,
+    AlignmentAdjustment,
     CollectorInnerResponse,
     CollectorOuterResponse,
-    OrganizerInnerResponse,
-    OrganizerOuterResponse,
-    ReflectorInnerResponse,
-    ReflectorOuterResponse,
+    DetectedExternalConflict,
+    DetectedInternalInconsistency,
+    ExternalCluster,
+    FallbackAction,
+    FinalExternalAction,
+    GraphState,
+    InferredLogicalLink,
     IntegratorInnerResponse,
     IntegratorOuterResponse,
     InternalCommunity,
-    ExternalCluster,
-    InferredLogicalLink,
-    DetectedInternalInconsistency,
-    RemediationProposal,
-    DetectedExternalConflict,
-    AlignmentAdjustment,
     InternalDirective,
+    OrganizerInnerResponse,
+    OrganizerOuterResponse,
+    Quad,
+    ReflectorInnerResponse,
+    ReflectorOuterResponse,
+    RemediationProposal,
     StateUpdateCommand,
-    FinalExternalAction,
-    FallbackAction,
 )
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentPrompts import (
     CollectorNodePromptInner,
     CollectorNodePromptOuter,
+    IntegratorNodePromptInner,
+    IntegratorNodePromptOuter,
     OrganizerNodePromptInner,
     OrganizerNodePromptOuter,
     ReflectorNodePromptInner,
     ReflectorNodePromptOuter,
-    IntegratorNodePromptInner,
-    IntegratorNodePromptOuter,
 )
 
 # Global configuration variable for the active prompt channel
@@ -189,7 +190,10 @@ def collector_node(state: GraphState) -> GraphState:
 
     if channel == "inner_channel":
         # Connect to collector tools as a trigger / progress indicator
-        from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import tool_ingest_internal_stream, tool_write_to_quadstore
+        from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import (
+            tool_ingest_internal_stream,
+            tool_write_to_quadstore,
+        )
         ingested = tool_ingest_internal_stream()
         tool_write_to_quadstore(ingested)
 
@@ -204,7 +208,10 @@ def collector_node(state: GraphState) -> GraphState:
         knowledge_graph = merge_quads(knowledge_graph, proposed)
     elif channel == "outer_channel":
         # Connect to collector tools as a trigger / progress indicator
-        from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import tool_ingest_external_api, tool_write_to_quadstore
+        from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import (
+            tool_ingest_external_api,
+            tool_write_to_quadstore,
+        )
         ingested = tool_ingest_external_api()
         tool_write_to_quadstore(ingested)
 
@@ -232,7 +239,11 @@ def organizer_node(state: GraphState) -> GraphState:
     knowledge_graph = list(state.knowledge_graph)
 
     # Connect to organizer tools as a trigger / progress indicator on the shared store
-    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import tool_run_community_detection, tool_map_ontology, tool_index_quads
+    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import (
+        tool_index_quads,
+        tool_map_ontology,
+        tool_run_community_detection,
+    )
     tool_run_community_detection(knowledge_graph)
     tool_map_ontology(knowledge_graph)
     tool_index_quads(knowledge_graph)
@@ -269,7 +280,11 @@ def reflector_node(state: GraphState) -> GraphState:
     knowledge_graph = list(state.knowledge_graph)
 
     # Connect to reflector tools as a trigger / progress indicator on the shared store
-    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import tool_validate_quads, tool_detect_anomalies, tool_infer_missing_quads
+    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import (
+        tool_detect_anomalies,
+        tool_infer_missing_quads,
+        tool_validate_quads,
+    )
     issues = tool_validate_quads(knowledge_graph)
     tool_detect_anomalies(knowledge_graph)
     tool_infer_missing_quads(knowledge_graph, issues)
@@ -336,7 +351,11 @@ def integrator_node(state: GraphState) -> GraphState:
         ]
 
     # Connect to integrator tools as a trigger / progress indicator on the shared store
-    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import tool_quadstore_traversal, tool_quadstore_impact_analysis, tool_dispatch_action
+    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import (
+        tool_dispatch_action,
+        tool_quadstore_impact_analysis,
+        tool_quadstore_traversal,
+    )
     
     priority_nodes = tool_quadstore_traversal(knowledge_graph)
     tool_quadstore_impact_analysis(priority_nodes, knowledge_graph)

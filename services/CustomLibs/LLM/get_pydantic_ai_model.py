@@ -1,10 +1,13 @@
-from typing import Any
 from functools import lru_cache
+from typing import Any
+
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
-from services.Config import config
+
+from Config import config
+
 
 @lru_cache(maxsize=1)
 def get_pydantic_ai_model() -> Any:

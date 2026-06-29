@@ -4,6 +4,7 @@ from typing import cast
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 
+from Config import config
 from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentModels import (
     GraphExtractionResult,
     Quad,
@@ -12,7 +13,6 @@ from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentModels import (
 from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentPrompts import (
     GRAPHRAG_EXTRACTION_PROMPT,
 )
-from services.Config import config
 
 
 def extract_quads_node(state: QuadAgentState) -> QuadAgentState:

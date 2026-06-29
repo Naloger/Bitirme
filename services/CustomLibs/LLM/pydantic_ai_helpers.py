@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 
-from services.Config import config as cfg
+from Config import config as cfg
 from services.CustomLibs.LLM import get_pydantic_ai_model
 
 

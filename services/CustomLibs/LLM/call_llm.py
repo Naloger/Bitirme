@@ -1,5 +1,7 @@
 import requests
-from services.Config import config
+
+from Config import config
+
 
 def call_llm(prompt: str, system_prompt: str | None = None) -> str:
     """
