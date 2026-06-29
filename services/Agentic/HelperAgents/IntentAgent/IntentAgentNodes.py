@@ -1,13 +1,11 @@
 from typing import cast
 
-from services.Agentic.HelperAgents.IntentAgent.IntentAgentHelpers import (
-    get_agent,
-    get_settings,
-)
 from services.Agentic.HelperAgents.IntentAgent.IntentAgentModels import (
     IntentAgentState,
     IntentResult,
 )
+from services.Agentic.HelperAgents.IntentAgent.IntentAgentPrompts import SYSTEM_PROMPT
+from services.CustomLibs.LLM.pydantic_ai_helpers import get_agent, get_settings
 
 
 def analyze_intent_node(state: IntentAgentState) -> IntentAgentState:
@@ -23,7 +21,7 @@ def analyze_intent_node(state: IntentAgentState) -> IntentAgentState:
     if not x:
         return state.model_copy(update={"error": "No message_text provided"})
 
-    agent = get_agent()
+    agent = get_agent(system_prompt=SYSTEM_PROMPT, output_type=IntentResult)
     settings = get_settings()
     
     prompt = f"X: {x}" + (f"\nK: {k}" if k else "")

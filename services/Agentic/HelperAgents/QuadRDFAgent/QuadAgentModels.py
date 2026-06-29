@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -41,3 +42,11 @@ class Quad(BaseModel):
     predicate: str
     object: str
     graph: str  # The context, document ID, or source chunk ID
+
+
+class QuadAgentState(BaseModel):
+    """The state dictionary for the LangGraph QuadRDFAgent."""
+    input_text: str
+    graph_id: Optional[str] = None
+    extracted_quads: List[Quad] = []
+    error: Optional[str] = None

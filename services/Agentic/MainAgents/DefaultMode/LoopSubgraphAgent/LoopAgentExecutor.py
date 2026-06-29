@@ -8,7 +8,7 @@ _root = os.path.abspath(os.path.join(_here, "..", "..", "..", "..", ".."))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
-from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentStates import (
+from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import (
     LoopState,
 )
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopGraphBuilder import (

@@ -1,4 +1,4 @@
-from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentStates import (
+from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import (
     LoopState,
 )
 

@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
+from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentModels import QuadAgentState
 from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentNodes import extract_quads_node
-from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentStates import QuadAgentState
 
 
 def build_quad_graph():
@@ -12,10 +12,10 @@ def build_quad_graph():
     builder = StateGraph(QuadAgentState)
 
     # Add nodes
-    builder.add_node("extractor", extract_quads_node)
+    builder.add_node("extract_quads_node", extract_quads_node)
 
     # Define edges
-    builder.add_edge(START, "extractor")
-    builder.add_edge("extractor", END)
+    builder.add_edge(START, "extract_quads_node")
+    builder.add_edge("extract_quads_node", END)
 
     return builder.compile()

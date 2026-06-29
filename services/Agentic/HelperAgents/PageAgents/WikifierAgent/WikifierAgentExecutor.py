@@ -1,7 +1,5 @@
 import os
 import sys
-from pathlib import Path
-from typing import List
 
 # Ensure project root is in sys.path before importing local services
 _here = os.path.dirname(os.path.abspath(__file__))
@@ -9,16 +7,19 @@ _root = os.path.abspath(os.path.join(_here, "..", "..", "..", "..", ".."))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
+from pathlib import Path
+from typing import List
+
 from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentModels import (
     Page,
-    WikiPage,
-)
-from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentStates import (
     WikifierAgentState,
+    WikiPage,
 )
 from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierGraphBuilder import (
     build_wikifier_graph,
 )
+
+
 
 
 def _safe_filename(name: str) -> str:
@@ -140,11 +141,11 @@ def main():
         """,
     )
 
-    initial_state: WikifierAgentState = {
-        "page": page,
-        "current_wiki": None,
-        "error": None,
-    }
+    initial_state = WikifierAgentState(
+        page=page,
+        current_wiki=None,
+        error=None,
+    )
 
     graph = build_wikifier_graph()
     print("Executing WikifierAgent LangGraph...")

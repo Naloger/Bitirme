@@ -7,12 +7,10 @@ from langchain_ollama import ChatOllama
 from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentModels import (
     GraphExtractionResult,
     Quad,
+    QuadAgentState,
 )
 from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentPrompts import (
     GRAPHRAG_EXTRACTION_PROMPT,
-)
-from services.Agentic.HelperAgents.QuadRDFAgent.QuadAgentStates import (
-    QuadAgentState,
 )
 from services.Config import config
 
@@ -24,15 +22,13 @@ def extract_quads_node(state: QuadAgentState) -> QuadAgentState:
     """
     print("[QuadRDFAgent] Running extract_quads_node...")
 
-    text = state.get("input_text")
+    text = state.input_text
     if not text:
-        return {**state, "extracted_quads": [], "error": "No input_text provided"}
+        return state.model_copy(update={"extracted_quads": [], "error": "No input_text provided"})
 
-    graph_id = state.get("graph_id") or f"graph_{uuid.uuid4().hex[:8]}"
-
+    graph_id = state.graph_id or f"graph_{uuid.uuid4().hex[:8]}"
     # Ensure ChatOllama base URL does not conflict by stripping /v1
     base_url = (config.BASE_URL or "http://localhost:11434").removesuffix("/v1")
-
     llm = ChatOllama(model=config.MODEL, base_url=base_url, temperature=0.0)
     structured_llm = llm.with_structured_output(GraphExtractionResult)
 
@@ -57,8 +53,8 @@ def extract_quads_node(state: QuadAgentState) -> QuadAgentState:
             for rel in extraction.relationships
         ]
 
-        return {**state, "extracted_quads": quads, "graph_id": graph_id, "error": None}
+        return state.model_copy(update={"extracted_quads": quads, "graph_id": graph_id, "error": None})
 
     except Exception as e:
         print(f"[QuadRDFAgent] Extraction failed: {e}")
-        return {**state, "extracted_quads": [], "graph_id": graph_id, "error": str(e)}
+        return state.model_copy(update={"extracted_quads": [], "graph_id": graph_id, "error": str(e)})

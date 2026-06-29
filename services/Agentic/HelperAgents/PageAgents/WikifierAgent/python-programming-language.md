@@ -1,19 +1,26 @@
 # Python (programming language)
 
-Python is a high-level, general-purpose programming language. Conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands. Programming languages, Object-oriented programming languages.
+Python is a high-level, general-purpose programming language.
+
+Conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands.
+
+Programming languages, Object-oriented programming languages.
 
 ## Sections
 
 #### Python (programming language)
 Python is a high-level, general-purpose programming language.
 
-Conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands.[1]
-
-Programming languages, Object-oriented programming languages.
+Conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands.
 
 ## Categories
 
 `Programming languages`, `Object-oriented programming languages`
+
+## Wikilinks
+
+- Programming languages
+- Object-oriented programming languages
 
 ## External Links
 
@@ -26,4 +33,4 @@ Programming languages, Object-oriented programming languages.
 ---
 
 *Source:* https://example.com/python_history
-*Wikified at:* 2026-06-29 13:43:06
+*Wikified at:* 2026-06-29 15:14:58

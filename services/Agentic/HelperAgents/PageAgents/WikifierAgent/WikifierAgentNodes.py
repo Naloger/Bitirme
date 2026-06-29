@@ -3,15 +3,13 @@ from typing import Optional, cast
 from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentModels import (
     Page,
     WikiExtraction,
+    WikifierAgentState,
     WikiPage,
 )
 from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentPrompts import (
-    get_agent,
-    get_settings,
+    SYSTEM_PROMPT,
 )
-from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentStates import (
-    WikifierAgentState,
-)
+from services.CustomLibs.LLM.pydantic_ai_helpers import get_agent, get_settings
 
 
 def _merge(base: Optional[WikiPage], update: WikiExtraction, page: Page) -> WikiPage:
@@ -28,11 +26,11 @@ def run_pipeline_step(
 ) -> WikifierAgentState:
     """Executes a single extraction step on the page and merges results into state."""
     print(f"[WikifierAgent] Running step: {step_name}...")
-    page = state.get("page")
+    page = state.page
     if not page or not page.raw_content:
-        return {**state, "error": f"No content to parse in step {step_name}"}
+        return state.model_copy(update={"error": f"No content to parse in step {step_name}"})
 
-    agent = get_agent()
+    agent = get_agent(system_prompt=SYSTEM_PROMPT, output_type=WikiExtraction)
     settings = get_settings()
 
     try:
@@ -42,14 +40,14 @@ def run_pipeline_step(
         )
         update = cast(WikiExtraction, response.output)
 
-        merged_wiki = _merge(state.get("current_wiki"), update, page)
-        return {**state, "current_wiki": merged_wiki, "error": None}
+        merged_wiki = _merge(state.current_wiki, update, page)
+        return state.model_copy(update={"current_wiki": merged_wiki, "error": None})
     except Exception as e:
         import traceback
 
         traceback.print_exc()
         print(f"[WikifierAgent] Error in step {step_name}: {e}")
-        return {**state, "error": str(e)}
+        return state.model_copy(update={"error": str(e)})
 
 
 # Define explicit node wrappers for each step in the pipeline

@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Any, List, Dict, Optional
-from pydantic import BaseModel, Field, AliasChoices, model_validator
+from typing import Any, Dict, List, Optional
+
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 
 class Page(BaseModel):
@@ -137,3 +138,10 @@ class WikiExtraction(BaseModel):
 class WikiPage(WikiExtraction):
     page: Page
     wikified_at: datetime = Field(default_factory=datetime.now)
+
+class WikifierAgentState(BaseModel):
+    """The state payload carrying context and progress through the Wikifier pipeline."""
+
+    page: Page
+    current_wiki: Optional[WikiPage]
+    error: Optional[str]

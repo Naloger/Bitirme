@@ -1,5 +1,11 @@
-from langgraph.graph import END, START, StateGraph
+from typing import Any
 
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
+
+from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentModels import (
+    WikifierAgentState,
+)
 from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentNodes import (
     categories_node,
     links_node,
@@ -7,12 +13,9 @@ from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentNodes i
     overview_node,
     sections_node,
 )
-from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentStates import (
-    WikifierAgentState,
-)
 
 
-def build_wikifier_graph() -> StateGraph:
+def build_wikifier_graph() -> CompiledStateGraph[Any, Any, Any, Any]:
     """
     Builds the sequential LangGraph for page wikification.
     Flow: START -> overview -> sections -> categories -> links -> metadata -> END
@@ -29,23 +32,14 @@ def build_wikifier_graph() -> StateGraph:
 
     # Helper for short-circuiting on errors
     def route_after(next_node: str):
-        return lambda state: END if state.get("error") else next_node
+        return lambda state: END if state.error else next_node
 
     # Define flow
     builder.add_edge(START, "overview")
-
-    builder.add_conditional_edges(
-        "overview", route_after("sections"), {"sections": "sections", END: END}
-    )
-    builder.add_conditional_edges(
-        "sections", route_after("categories"), {"categories": "categories", END: END}
-    )
-    builder.add_conditional_edges(
-        "categories", route_after("links"), {"links": "links", END: END}
-    )
-    builder.add_conditional_edges(
-        "links", route_after("metadata"), {"metadata": "metadata", END: END}
-    )
+    builder.add_conditional_edges( "overview", route_after("sections"), {"sections": "sections", END: END})
+    builder.add_conditional_edges( "sections", route_after("categories"), {"categories": "categories", END: END})
+    builder.add_conditional_edges( "categories", route_after("links"), {"links": "links", END: END})
+    builder.add_conditional_edges("links", route_after("metadata"), {"metadata": "metadata", END: END})
     builder.add_edge("metadata", END)
 
     return builder.compile()

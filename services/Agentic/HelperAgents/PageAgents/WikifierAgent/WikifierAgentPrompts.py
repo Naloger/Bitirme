@@ -1,11 +1,3 @@
-from pydantic_ai import Agent
-from pydantic_ai.settings import ModelSettings
-
-from services.Agentic.HelperAgents.PageAgents.WikifierAgent.WikifierAgentModels import (
-    WikiExtraction,
-)
-from services.Config import config as cfg
-
 # Pipeline definition
 STEPS = [
     (
@@ -38,23 +30,3 @@ SYSTEM_PROMPT = (
     "under their corresponding keys inside the root JSON object."
 )
 
-
-from services.CustomLibs.LLM import get_pydantic_ai_model
-
-
-def get_agent() -> Agent:
-    return Agent(
-        get_pydantic_ai_model(),
-        system_prompt=SYSTEM_PROMPT,
-        output_type=WikiExtraction,
-        tool_retries=max(0, int(getattr(cfg, "MAX_LOOPS", 0) or 0)),
-        output_retries=max(0, int(getattr(cfg, "MAX_LOOPS", 0) or 0)),
-    )
-
-
-def get_settings() -> ModelSettings:
-    return ModelSettings(
-        temperature=float(getattr(cfg, "TEMPERATURE", 0.0) or 0.0),
-        max_tokens=int(getattr(cfg, "MAX_TOKENS", 2048) or 2048),
-        timeout=float(getattr(cfg, "TIMEOUT", 60.0) or 60.0),
-    )

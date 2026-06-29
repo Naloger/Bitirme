@@ -3,15 +3,15 @@ from typing import Any
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import (
+    LoopState,
+)
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentNodes import (
     _loop_or_exit,
     node1,
     node2,
     node3,
     node4,
-)
-from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentStates import (
-    LoopState,
 )
 
 
