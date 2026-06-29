@@ -28,9 +28,58 @@ class ListFilesArgs(BaseModel):
     pass
 
 
+class WebSearchArgs(BaseModel):
+    query: str = Field(description="The search query to search the web for.")
+
+
+class FetchWebpageArgs(BaseModel):
+    url: str = Field(description="The URL of the webpage to fetch.")
+
+
+class SearchGrepArgs(BaseModel):
+    query: str = Field(description="The text or regex query to search for within workspace files.")
+    file_pattern: str = Field(default="*", description="Optional glob pattern to filter files (e.g. '*.py').")
+
+
+class DeleteFileArgs(BaseModel):
+    filename: str = Field(description="The path of the file to delete.")
+
+
+class ShowDatetimeArgs(BaseModel):
+    pass
+
+
+class GetEnvArgs(BaseModel):
+    pass
+
+
 class ToolCall(BaseModel):
-    tool: Literal["run_python", "run_shell", "write_file", "read_file", "list_files"]
-    args: Union[RunPythonArgs, RunShellArgs, WriteFileArgs, ReadFileArgs, ListFilesArgs]
+    tool: Literal[
+        "run_python",
+        "run_shell",
+        "write_file",
+        "read_file",
+        "list_files",
+        "web_search",
+        "fetch_webpage",
+        "search_grep",
+        "delete_file",
+        "show_datetime",
+        "get_env"
+    ]
+    args: Union[
+        RunPythonArgs,
+        RunShellArgs,
+        WriteFileArgs,
+        ReadFileArgs,
+        ListFilesArgs,
+        WebSearchArgs,
+        FetchWebpageArgs,
+        SearchGrepArgs,
+        DeleteFileArgs,
+        ShowDatetimeArgs,
+        GetEnvArgs
+    ]
 
 
 
@@ -49,4 +98,5 @@ class ECNState(BaseModel):
     evaluation_status: str  # "step_success", "step_error", "task_failed"
     reasoner_routing: str  # "requires_tool_execution", "task_completed"
     memory: list[str]
+    # graph_memory: list[tuple[str, str,str]]
     iteration: int  # loop counter for max-iteration guard

@@ -1,6 +1,12 @@
 import os
 import sys
 
+# Reconfigure stdout/stderr to use UTF-8 to prevent cp1254 UnicodeEncodeErrors on Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlGraphBuilder import (
     build_ecn_graph,
 )
@@ -23,8 +29,8 @@ def execute_task(task_id: str, task_desc: str) -> dict:
     return result
 
 if __name__ == "__main__":
-    task_id = "task_demo_003"
-    task_desc = "Create a file named hello_world_2.txt."
+    task_id = "task_demo_elden_5"
+    task_desc = "Tell me about most important elden ring characters."
 
     graph = build_ecn_graph()
 
@@ -38,4 +44,5 @@ if __name__ == "__main__":
     print(f"  Iterations: {result['iteration']}")
     print(f"  Routing:    {result['reasoner_routing']}")
     print(f"  Memory:     {result['memory']}")
+    print(f"  Reasoner Output:\n{result['reasoning']}")
 

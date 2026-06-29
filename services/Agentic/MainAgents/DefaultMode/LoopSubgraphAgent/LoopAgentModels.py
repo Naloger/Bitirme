@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, Dict, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
-class LoopState(BaseModel):
-    """Shared state flowing through every node in the subgraph."""
+class GraphState(BaseModel):
+    """Central state object passed between every node."""
+    rdf_graph_memory_recall: Dict[Any, Any] = Field(default_factory=dict)
+    raw_internal: List[Dict[str, Any]] = Field(default_factory=list)
+    raw_external: List[Dict[str, Any]] = Field(default_factory=list)
 
-    data: Any  # arbitrary payload; nodes can transform it freely
-    iteration: int  # counts completed full cycles (Node1→2→3→4)
-    should_stop: bool  # flip to True to exit — the ONLY exit condition

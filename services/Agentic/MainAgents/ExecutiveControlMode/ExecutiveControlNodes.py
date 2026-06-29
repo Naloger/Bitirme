@@ -74,6 +74,7 @@ def task_reasoner(state: ECNState) -> ECNState:
         f"Goal: {state.task}\n"
         f"Iteration: {state.iteration}/{config.MAX_LOOPS}\n"
         f"Context: {state.context}\n"
+        f"Last Execution Result: {state.execution_result.get('output', '')}\n"
         f"Past Memory Logs: {state.memory}"
     )
 
@@ -81,8 +82,10 @@ def task_reasoner(state: ECNState) -> ECNState:
     last_line = llm_response.strip().splitlines()[-1] if llm_response else ""
     print(f"  [Reasoner Output]: {last_line}")
 
+    # Robust routing: Route to task_completed if LLM explicitly finished or if there is no JSON block to execute
+    has_json = "{" in llm_response and "}" in llm_response
     routing = (
-        "task_completed" if "ROUTE: done" in llm_response else "requires_tool_execution"
+        "task_completed" if ("ROUTE: done" in llm_response or not has_json) else "requires_tool_execution"
     )
 
     log_execution_step(
@@ -108,15 +111,56 @@ def task_executor(state: ECNState) -> ECNState:
     print("[TaskExecutor] executing action step in Sandbox...")
 
     reasoning = state.reasoning
-    exec_response = ""
     try:
-        start_idx = reasoning.find("{")
-        end_idx = reasoning.rfind("}")
+        # Locate the JSON block robustly by skipping thoughts/markdown code blocks
+        import re
+        json_part = reasoning
+        if "ROUTE: tool" in reasoning:
+            json_part = reasoning.split("ROUTE: tool")[-1]
+        else:
+            matches = list(re.finditer(r'\{\s*"tool"\s*:', reasoning))
+            if matches:
+                tool_idx = matches[-1].start()
+                json_part = reasoning[tool_idx:]
+            elif "{" in reasoning:
+                last_brace = reasoning.rfind("{")
+                if last_brace != -1:
+                    json_part = reasoning[last_brace:]
+
+        start_idx = json_part.find("{")
+        end_idx = json_part.rfind("}")
 
         if start_idx == -1 or end_idx == -1 or end_idx < start_idx:
             raise ValueError("No JSON block found in response.")
 
-        json_str = reasoning[start_idx : end_idx + 1]
+        json_str = json_part[start_idx : end_idx + 1]
+        
+        # Clean JSON: escape raw newlines, carriage returns, and tabs inside double-quoted string literals
+        in_quotes = False
+        escaped = False
+        cleaned_chars = []
+        for c in json_str:
+            if c == '"' and not escaped:
+                in_quotes = not in_quotes
+            if c == '\\' and not escaped:
+                escaped = True
+            else:
+                escaped = False
+            
+            if c == '\n' and in_quotes:
+                cleaned_chars.append('\\n')
+            elif c == '\r' and in_quotes:
+                cleaned_chars.append('\\r')
+            elif c == '\t' and in_quotes:
+                cleaned_chars.append('\\t')
+            else:
+                cleaned_chars.append(c)
+        json_str = "".join(cleaned_chars)
+        
+        # Clean JSON: remove trailing commas inside arrays and objects
+        import re
+        json_str = re.sub(r",\s*([\]}])", r"\1", json_str)
+        
         raw_tool_call = json.loads(json_str)
 
         # Auto-heal: If the model returned arguments directly without the tool/args envelope
@@ -129,6 +173,12 @@ def task_executor(state: ECNState) -> ECNState:
                 raw_tool_call = {"tool": "run_python", "args": raw_tool_call}
             elif "command" in raw_tool_call:
                 raw_tool_call = {"tool": "run_shell", "args": raw_tool_call}
+            elif "query" in raw_tool_call and "file_pattern" in raw_tool_call:
+                raw_tool_call = {"tool": "search_grep", "args": raw_tool_call}
+            elif "query" in raw_tool_call:
+                raw_tool_call = {"tool": "web_search", "args": raw_tool_call}
+            elif "url" in raw_tool_call:
+                raw_tool_call = {"tool": "fetch_webpage", "args": raw_tool_call}
             elif not raw_tool_call:
                 raw_tool_call = {"tool": "list_files", "args": {}}
 
@@ -146,6 +196,10 @@ def task_executor(state: ECNState) -> ECNState:
             RunPythonArgs,
             RunShellArgs,
             WriteFileArgs,
+            WebSearchArgs,
+            FetchWebpageArgs,
+            SearchGrepArgs,
+            DeleteFileArgs,
         )
 
         if tool_name == "run_python":
@@ -162,6 +216,22 @@ def task_executor(state: ECNState) -> ECNState:
             exec_response = sandbox.read_file(args.filename)
         elif tool_name == "list_files":
             exec_response = sandbox.list_files()
+        elif tool_name == "web_search":
+            assert isinstance(args, WebSearchArgs)
+            exec_response = sandbox.web_search(args.query)
+        elif tool_name == "fetch_webpage":
+            assert isinstance(args, FetchWebpageArgs)
+            exec_response = sandbox.fetch_webpage(args.url)
+        elif tool_name == "search_grep":
+            assert isinstance(args, SearchGrepArgs)
+            exec_response = sandbox.search_grep(args.query, args.file_pattern)
+        elif tool_name == "delete_file":
+            assert isinstance(args, DeleteFileArgs)
+            exec_response = sandbox.delete_file(args.filename)
+        elif tool_name == "show_datetime":
+            exec_response = sandbox.show_datetime()
+        elif tool_name == "get_env":
+            exec_response = sandbox.get_env()
         else:
             exec_response = f"Error: Unknown tool '{tool_name}'"
 
@@ -217,7 +287,7 @@ def task_evaluator(state: ECNState) -> ECNState:
     exec_output = state.execution_result.get("output", "")
     prompt = (
         f"Goal: {state.task}\n"
-        f"Execution Output:\n{exec_output[:1000]}\n\n"
+        f"Execution Output:\n{exec_output[:5000]}\n\n"
         f"Evaluate the execution output against the Goal and determine the verdict as defined in the system prompt.\n"
         f"Respond with exactly one of these on the last line:\n"
         f"VERDICT: SUCCESS\n"

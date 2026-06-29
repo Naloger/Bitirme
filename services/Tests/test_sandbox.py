@@ -58,6 +58,70 @@ class TestSandboxEnvironment(unittest.TestCase):
             "STDERR" in output or "not recognized" in output or "not found" in output
         )
 
+    def test_delete_file_success(self):
+        """Test file deletion in sandbox."""
+        sandbox.write_file("temp_to_delete.txt", "delete me")
+        res = sandbox.delete_file("temp_to_delete.txt")
+        self.assertIn("Successfully deleted", res)
+
+    def test_search_grep_success(self):
+        """Test search_grep function in sandbox."""
+        sandbox.write_file("grep_test.txt", "this is a unique needle in a haystack")
+        res = sandbox.search_grep("unique needle", "grep_test.txt")
+        self.assertIn("grep_test.txt", res)
+        self.assertIn("unique needle", res)
+        sandbox.delete_file("grep_test.txt")
+
+    def test_show_datetime(self):
+        """Test show_datetime function in sandbox."""
+        res = sandbox.show_datetime()
+        self.assertIn("Current Date and Time", res)
+
+    def test_get_env(self):
+        """Test get_env function in sandbox."""
+        res = sandbox.get_env()
+        self.assertIn("OS:", res)
+        self.assertIn("Python Version:", res)
+
+    @unittest.mock.patch('requests.post')
+    def test_web_search_success(self, mock_post):
+        """Test web search command."""
+        mock_response = unittest.mock.MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = """
+        <html>
+        <body>
+        <table>
+        <tr>
+        <td><a rel="nofollow" href="https://example.com/python" class='result-link'>Python Title</a></td>
+        </tr>
+        <tr>
+        <td class='result-snippet'>Python is nice.</td>
+        </tr>
+        </table>
+        </body>
+        </html>
+        """
+        mock_post.return_value = mock_response
+        
+        res = sandbox.web_search("python")
+        self.assertIn("Python Title", res)
+        self.assertIn("https://example.com/python", res)
+        self.assertIn("Python is nice", res)
+
+    @unittest.mock.patch('requests.get')
+    def test_fetch_webpage_success(self, mock_get):
+        """Test fetching a webpage and extracting text."""
+        mock_response = unittest.mock.MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "<html><body><div>Hello World</div><script>var x=1;</script></body></html>"
+        mock_get.return_value = mock_response
+        
+        res = sandbox.fetch_webpage("https://example.com")
+        self.assertIn("Hello World", res)
+        self.assertNotIn("var x=1", res)
+
+
 
 class TestToolParsingErrors(unittest.TestCase):
     def setUp(self):
@@ -106,6 +170,64 @@ class TestToolParsingErrors(unittest.TestCase):
         output = result.execution_result["output"]
         self.assertIn("Tool Execution Error", output)
         self.assertIn("Input should be", output)
+
+    def test_json_parsing_with_whitespace(self):
+        """Test parsing of JSON tool call with newlines and spaces between opening brace and 'tool' key."""
+        reasoning = (
+            "Thought: I want to search for leiden python example.\n"
+            "ROUTE: web_search\n"
+            "```json\n"
+            "{\n"
+            '  "tool": "web_search",\n'
+            '  "args": {\n'
+            '    "query": "python implementation of leiden algorithm example"\n'
+            "  }\n"
+            "}\n"
+            "```"
+        )
+        state = self.base_state.model_copy(update={"reasoning": reasoning})
+        
+        # Patch SandboxEnv.web_search to return a mock response
+        from unittest.mock import patch
+        with patch("services.CustomLibs.sandbox.SandboxEnv.web_search") as mock_search:
+            mock_search.return_value = "Mocked search result"
+            result = task_executor(state)
+            self.assertEqual(result.execution_result["output"], "Mocked search result")
+            mock_search.assert_called_once_with("python implementation of leiden algorithm example")
+
+
+class TestTaskExecutorRouting(unittest.TestCase):
+    def setUp(self):
+        init_db()
+        clear_task_data("test_id")
+        create_task("test_id", "Test routing", "Test output", "ECN Agent")
+        self.base_state = ECNState(
+            task_id="test_id",
+            task="Test routing",
+            context={},
+            reasoning="",
+            execution_result={},
+            evaluation_status="",
+            reasoner_routing="requires_tool_execution",
+            memory=[],
+            iteration=1,
+        )
+
+    def test_route_show_datetime(self):
+        state = self.base_state.model_copy(
+            update={"reasoning": '{"tool": "show_datetime", "args": {}}'}
+        )
+        result = task_executor(state)
+        output = result.execution_result["output"]
+        self.assertIn("Current Date and Time", output)
+
+    def test_route_get_env(self):
+        state = self.base_state.model_copy(
+            update={"reasoning": '{"tool": "get_env", "args": {}}'}
+        )
+        result = task_executor(state)
+        output = result.execution_result["output"]
+        self.assertIn("OS:", output)
 
 
 if __name__ == "__main__":

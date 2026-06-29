@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -174,6 +175,140 @@ main();
             return f"Error: Command timed out after {self.timeout} seconds."
         except (OSError, subprocess.SubprocessError) as e:
             return f"Error executing shell command: {str(e)}"
+
+    def delete_file(self, filename: str) -> str:
+        """Deletes a file from the sandbox."""
+        try:
+            target_path = self._sanitize_path(filename)
+            if not os.path.exists(target_path):
+                return f"Error: File {filename} does not exist."
+            if os.path.isdir(target_path):
+                return f"Error: {filename} is a directory. Cannot delete directory with this tool."
+            os.remove(target_path)
+            return f"Successfully deleted file {filename}"
+        except (OSError, ValueError) as e:
+            return f"Error deleting file: {str(e)}"
+
+    def search_grep(self, query: str, file_pattern: str = "*") -> str:
+        """Searches for a string or regex pattern in the sandbox files."""
+        import fnmatch
+        try:
+            results = []
+            compiled_query = re.compile(query, re.IGNORECASE)
+            
+            for root, _, filenames in os.walk(SANDBOX_DIR):
+                for filename in fnmatch.filter(filenames, file_pattern):
+                    filepath = os.path.join(root, filename)
+                    rel_path = os.path.relpath(filepath, SANDBOX_DIR)
+                    try:
+                        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                            for idx, line in enumerate(f, 1):
+                                if compiled_query.search(line):
+                                    results.append(f"{rel_path}:{idx}: {line.strip()}")
+                    except OSError:
+                        pass
+            if not results:
+                return f"No matches found for '{query}'"
+            return "\n".join(results[:100])
+        except Exception as e:
+            return f"Error executing search_grep: {str(e)}"
+
+    def web_search(self, query: str) -> str:
+        """Performs a web search using DuckDuckGo Lite and returns titles, URLs, and snippets."""
+        try:
+            import requests
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            r = requests.post(
+                "https://lite.duckduckgo.com/lite/",
+                data={"q": query},
+                headers=headers,
+                timeout=10
+            )
+            r.raise_for_status()
+            
+            link_matches = re.findall(
+                r"<a[^>]+href=\"([^\"]+)\"[^>]*class='result-link'[^>]*>(.*?)</a>",
+                r.text,
+                re.DOTALL
+            )
+            snippet_matches = re.findall(
+                r"class='result-snippet'[^>]*>(.*?)</td>",
+                r.text,
+                re.DOTALL
+            )
+            
+            results = []
+            for i in range(min(8, len(link_matches))):
+                url, title = link_matches[i]
+                title = re.sub(r"<[^>]+>", "", title).strip()
+                title = (title.replace('&quot;', '"')
+                             .replace('&#x27;', "'")
+                             .replace('&amp;', '&')
+                             .replace('&gt;', '>')
+                             .replace('&lt;', '<'))
+                snippet = ""
+                if i < len(snippet_matches):
+                    snippet = re.sub(r"<[^>]+>", "", snippet_matches[i]).strip()
+                    snippet = (snippet.replace('&quot;', '"')
+                                      .replace('&#x27;', "'")
+                                      .replace('&amp;', '&')
+                                      .replace('&gt;', '>')
+                                      .replace('&lt;', '<')
+                                      .replace('&nbsp;', ' '))
+                results.append(f"Title: {title}\nURL: {url}\nSnippet: {snippet}\n")
+                
+            if not results:
+                return "No search results found."
+            return "\n".join(results)
+        except Exception as e:
+            return f"Error executing web_search: {str(e)}"
+
+    def fetch_webpage(self, url: str) -> str:
+        """Downloads a webpage and strips HTML tags, returning plain text."""
+        try:
+            import requests
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            r = requests.get(url, headers=headers, timeout=15)
+            r.raise_for_status()
+            
+            # Simple html to text helper
+            html = r.text
+            html = re.sub(r"<(script|style|nav|header|footer|aside|noscript|svg)\b[^>]*>([\s\S]*?)</\1>", "", html, flags=re.IGNORECASE)
+            html = re.sub(r"</?(div|p|h[1-6]|li|tr|br\s*/?)\b[^>]*>", "\n", html, flags=re.IGNORECASE)
+            html = re.sub(r"<[^>]+>", "", html)
+            html = (html.replace('&quot;', '"')
+                        .replace('&#x27;', "'")
+                        .replace('&amp;', '&')
+                        .replace('&gt;', '>')
+                        .replace('&lt;', '<')
+                        .replace('&nbsp;', ' '))
+            lines = [line.strip() for line in html.splitlines()]
+            non_empty = [line for line in lines if line]
+            text = "\n".join(non_empty)
+            
+            if len(text) > 8000:
+                return "[Content truncated to first 8000 characters]\n\n" + text[:8000]
+            return text
+        except Exception as e:
+            return f"Error fetching webpage: {str(e)}"
+
+    def show_datetime(self) -> str:
+        """Returns the current date and time."""
+        import datetime
+        return f"Current Date and Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    def get_env(self) -> str:
+        """Returns sandbox environment info."""
+        import platform
+        return (
+            f"OS: {platform.system()} {platform.release()}\n"
+            f"Python Version: {platform.python_version()}\n"
+            f"Sandbox Workspace Directory: {SANDBOX_DIR}\n"
+        )
 
 
 # Singleton instance

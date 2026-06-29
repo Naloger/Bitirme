@@ -4,14 +4,14 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import (
-    LoopState,
+    GraphState,
 )
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentNodes import (
     _loop_or_exit,
-    node1,
-    node2,
-    node3,
-    node4,
+    collector_node,
+    integrator_node,
+    organizer_node,
+    reflector_node,
 )
 
 
@@ -20,24 +20,25 @@ def build_loop_subgraph() -> CompiledStateGraph[Any, Any, Any, Any]:
     Build and compile the 4-node looping subgraph.
     Cycle: Node1 -> Node2 -> Node3 -> Node4 -> Node1 (-> ... -> END)
     """
-    builder = StateGraph(LoopState)
+    builder = StateGraph(GraphState)
 
-    builder.add_node("Node1", node1)
-    builder.add_node("Node2", node2)
-    builder.add_node("Node3", node3)
-    builder.add_node("Node4", node4)
+    builder.add_node("collector", collector_node)
+    builder.add_node("organizer", organizer_node)
+    builder.add_node("reflector", reflector_node)
+    builder.add_node("integrator", integrator_node)
 
-    builder.add_edge(START, "Node1")
-    builder.add_edge("Node1", "Node2")
-    builder.add_edge("Node2", "Node3")
-    builder.add_edge("Node3", "Node4")
+
+    builder.add_edge(START, "collector")
+    builder.add_edge("collector", "organizer")
+    builder.add_edge("organizer", "reflector")
+    builder.add_edge("reflector", "integrator")
 
     # Node4 is the loop gate
     builder.add_conditional_edges(
-        "Node4",
+        "integrator",
         _loop_or_exit,
         {
-            "loop": "Node1",  # <- back to the top
+            "loop": "collector",  # <- back to the top
             "exit": END,  # <- clean exit
         },
     )
