@@ -1,40 +1,67 @@
-import json
-import re
 import uuid
+import instructor
+import openai
 
-from services.Agentic.MainAgents.SalienceMode.SalienceModels import SalienceState
+from Config import config
+from services.Agentic.MainAgents.SalienceMode.SalienceModels import (
+    SalienceRouterResponse,
+    SalienceState,
+)
 from services.Agentic.MainAgents.SalienceMode.SaliencePrompts import (
     SALIENCE_ROUTER_SYSTEM_PROMPT,
 )
-from services.CustomLibs.LLM.call_llm import call_llm
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentGraphBuilder import (
     build_loop_subgraph,
 )
 
+# Initialize structured instructor client
+client = instructor.from_openai(
+    openai.OpenAI(
+        base_url=config.BASE_URL if config.BASE_URL else "http://localhost:11434/v1",
+        api_key=config.API_KEY if config.API_KEY else "ollama",
+    ),
+    mode=instructor.Mode.JSON,
+)
+
+
+def mock_salience_router(user_input: str) -> SalienceRouterResponse:
+    """Mock fallback for salience router when LLM call fails."""
+    # Simple keyword routing rule for mock
+    if any(k in user_input.lower() for k in ["loop", "transform", "cycle"]):
+        return SalienceRouterResponse(
+            target="DefaultMode",
+            explanation="Mock fallback: Input contains loop/transform keywords, routing to DefaultMode."
+        )
+    return SalienceRouterResponse(
+        target="ExecutiveControlMode",
+        explanation="Mock fallback: Defaulting to ExecutiveControlMode for general tasks."
+    )
+
 
 def salience_router_node(state: SalienceState) -> SalienceState:
-    """Observes the user input and decides which subgraph to route the task to."""
+    """Observes the user input and decides which subgraph to route the task to using structured LLM response."""
     print(f"\n[SalienceRouter] Observing input: '{state.user_input}'...")
 
     prompt = f"Observe and route this input: '{state.user_input}'"
-    response = call_llm(prompt, system_prompt=SALIENCE_ROUTER_SYSTEM_PROMPT)
-
-    target = "ExecutiveControlMode"
-    explanation = "Fallback to ExecutiveControlMode due to parsing error."
+    messages = [
+        {"role": "system", "content": SALIENCE_ROUTER_SYSTEM_PROMPT},
+        {"role": "user", "content": prompt},
+    ]
 
     try:
-        # Extract JSON block robustly
-        matches = list(re.finditer(r"\{", response))
-        if matches:
-            start_idx = matches[-1].start()
-            end_idx = response.rfind("}")
-            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                json_str = response[start_idx : end_idx + 1]
-                data = json.loads(json_str)
-                target = data.get("target", "ExecutiveControlMode")
-                explanation = data.get("explanation", "")
+        response = client.chat.completions.create(
+            model=config.MODEL,
+            messages=messages,
+            response_model=SalienceRouterResponse,
+            temperature=0.0,
+            timeout=config.TIMEOUT,
+        )
     except Exception as e:
-        print(f"  [SalienceRouter] Error parsing JSON response: {e}")
+        print(f"  [LLM Warning] Connection failed, using mock fallback. Error: {e}")
+        response = mock_salience_router(state.user_input)
+
+    target = response.target
+    explanation = response.explanation
 
     print(f"  [Decision] Route to: {target}")
     print(f"  [Explanation] {explanation}")
@@ -66,11 +93,11 @@ def run_executive_subgraph(state: SalienceState) -> SalienceState:
     # Extract results
     result = ""
     ecn_dict = {}
-    if hasattr(ecn_res, "reasoning"):
-        result = ecn_res.reasoning
+    if hasattr(ecn_res, "final_answer"):
+        result = ecn_res.final_answer or ecn_res.reasoning
         ecn_dict = ecn_res.model_dump()
     elif isinstance(ecn_res, dict):
-        result = ecn_res.get("reasoning", "")
+        result = ecn_res.get("final_answer", "") or ecn_res.get("reasoning", "")
         ecn_dict = ecn_res
 
     print(f"  [ExecutiveControlMode] Finished. Output length: {len(result)}")
@@ -91,7 +118,7 @@ def run_default_subgraph(state: SalienceState) -> SalienceState:
     )
 
     loop_graph = build_loop_subgraph()
-    loop_init = GraphState(iteration=0, should_stop=False)
+    loop_init = GraphState(input_text=state.user_input, iteration=0, should_stop=False)
     loop_res = loop_graph.invoke(loop_init)
 
     # Extract results

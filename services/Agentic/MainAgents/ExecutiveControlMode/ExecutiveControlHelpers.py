@@ -32,6 +32,7 @@ def default_initial_state(
         task=task,
         context={},
         reasoning="",
+        final_answer="",
         execution_result={},
         evaluation_status="",
         reasoner_routing="",

@@ -63,7 +63,7 @@ def call_structured_llm(prompt: str, system_prompt: str, response_model: Any, mo
             messages=messages,
             response_model=response_model,
             temperature=config.TEMPERATURE,
-            timeout=5.0,
+            timeout=config.TIMEOUT,
         )
     except Exception as e:
         print(f"  [LLM Warning] Connection failed, using mock fallback. Error: {e}")
@@ -158,22 +158,22 @@ def mock_reflector_outer() -> ReflectorOuterResponse:
 def mock_integrator_inner() -> IntegratorInnerResponse:
     return IntegratorInnerResponse(
         internal_directives=[
-            InternalDirective(priority=1, action="scale_memory", target_component="ram_node", parameters={})
+            InternalDirective(priority=1, action="prune_edge", target_component="warning_subgraph", parameters={})
         ],
         state_update_commands=[
-            StateUpdateCommand(command="gc", payload={})
+            StateUpdateCommand(command="prune", payload={})
         ],
         requires_re_evaluation=False,
-        decision_rationale="System metrics are stable, scaling triggered."
+        decision_rationale="Entity conflict resolved, pruning redundant warning nodes."
     )
 
 
 def mock_integrator_outer() -> IntegratorOuterResponse:
     return IntegratorOuterResponse(
-        final_external_action=FinalExternalAction(action_name="call_auth", mcp_tool_name="http_request", parameters={}, execution_priority=1),
+        final_external_action=FinalExternalAction(action_name="dispatch_alert", mcp_tool_name="graph_sync_tool", parameters={}, execution_priority=1),
         expected_external_outcome="Successful authentication",
-        fallback_action=FallbackAction(action_name="retry_auth", parameters={}),
-        final_decision_rationale="Authenticating against auth endpoint."
+        fallback_action=FallbackAction(action_name="trigger_fallback", parameters={}),
+        final_decision_rationale="Dispatching graph synchronization request for down node."
     )
 
 

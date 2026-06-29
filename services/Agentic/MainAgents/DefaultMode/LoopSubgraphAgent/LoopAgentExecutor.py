@@ -1,4 +1,3 @@
-import io
 import os
 import sys
 
@@ -25,23 +24,14 @@ def main():
 
     # Read from stdin ONLY if explicitly instructed by passing --stdin flag,
     # otherwise default to the rich sample text input to avoid blocking process pipes.
-    input_text = ""
-    if "--stdin" in sys.argv:
-        print("Reading input text from standard input...")
-        input_text = sys.stdin.read().strip()
-
-    if not input_text:
-        # Microsoft GraphRAG-like sample document string payload
-        input_text = (
-            "SystemEvent: CPU_SPIKE\n"
-            "Time: 2026-06-29T18:30:00Z\n"
-            "Details: Worker node worker_node_3 experienced CPU utilization of 94.5%.\n"
-            "This high load triggered warning logs: 'High memory allocation detected on worker_node_3'.\n"
-            "Additionally, the external sensor_endpoint api_node is down at url https://api.example.com/feed."
-        )
-        print("Using default Microsoft GraphRAG alike sample text input:")
-    else:
-        print("Input text read successfully from stdin:")
+    input_text = (
+        "SystemEvent: CPU_SPIKE\n"
+        "Time: 2026-06-29T18:30:00Z\n"
+        "Details: Worker node worker_node_3 experienced CPU utilization of 94.5%.\n"
+        "This high load triggered warning logs: 'High memory allocation detected on worker_node_3'.\n"
+        "Additionally, the external sensor_endpoint api_node is down at url https://api.example.com/feed."
+    )
+    print("Using default Microsoft GraphRAG alike sample text input:")
 
     print("-" * 70)
     print(input_text.strip())

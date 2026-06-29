@@ -15,10 +15,30 @@ from services.Agentic.MainAgents.SalienceMode.SalienceModels import SalienceStat
 
 
 def execute_salience_router(user_input: str) -> SalienceState:
-    """Invokes the Salience Router graph with the given user input."""
+    """Streams the Salience Router graph execution and returns the final state."""
     graph = build_salience_graph()
     initial_state = SalienceState(user_input=user_input)
-    return graph.invoke(initial_state)
+    
+    state_data = initial_state.model_dump()
+    print(f"\n>>> Starting streaming graph execution for: '{user_input}'")
+    
+    for event in graph.stream(initial_state, stream_mode="updates"):
+        for node_name, node_update in event.items():
+            print(f"\n  [Stream] Node '{node_name}' finished. State updates:")
+            for key, val in node_update.items():
+                if val:
+                    # Format output to be clean and human-readable
+                    if isinstance(val, dict):
+                        print(f"    • {key}: dict with keys {list(val.keys())}")
+                    elif isinstance(val, list):
+                        print(f"    • {key}: list with {len(val)} items")
+                    else:
+                        truncated_val = str(val)[:200] + "..." if len(str(val)) > 200 else str(val)
+                        print(f"    • {key}: {truncated_val}")
+            # Accumulate state updates
+            state_data.update(node_update)
+            
+    return SalienceState(**state_data)
 
 
 if __name__ == "__main__":
@@ -33,24 +53,21 @@ if __name__ == "__main__":
         )
 
     print("=============================================================")
-    print("Salience Network Router Demo")
+    print("Salience Network Router")
     print("=============================================================")
 
-    # Demo 1: Executive Control Mode Task (requires tool/reasoning)
-    exec_task = "Show me the current system datetime."
-    print(f"\n--- Testing ECN Task: '{exec_task}' ---")
-    exec_result = execute_salience_router(exec_task)
-    print("\n--- ECN Run Result Summary ---")
-    print(f"Target Subgraph: {exec_result.target_subgraph}")
-    print(f"Explanation: {exec_result.explanation}")
-    print(f"Result: {exec_result.result}")
+    # Default task or command line argument if provided
+    task = "Execute a simple loop cycle data transformation on the value 'Hello World'."
+    if len(sys.argv) > 1:
+        task = sys.argv[1]
 
-    # Demo 2: Default Mode Task (repetition/simple data loop)
-    default_task = "Execute a simple loop cycle data transformation on the value 'Hello World'."
-    print(f"\n\n--- Testing DMN Task: '{default_task}' ---")
-    default_result = execute_salience_router(default_task)
-    print("\n--- DMN Run Result Summary ---")
-    print(f"Target Subgraph: {default_result.target_subgraph}")
-    print(f"Explanation: {default_result.explanation}")
-    print(f"Result: {default_result.result}")
+    print(f"\n[Network Executing] Task: '{task}'")
+    result = execute_salience_router(task)
+
+    print("\n=============================================================")
+    print("FINAL SUMMARY")
+    print("=============================================================")
+    print(f"Target Subgraph: {result.target_subgraph}")
+    print(f"Explanation: {result.explanation}")
+    print(f"Result: {result.result}")
     print("=============================================================")

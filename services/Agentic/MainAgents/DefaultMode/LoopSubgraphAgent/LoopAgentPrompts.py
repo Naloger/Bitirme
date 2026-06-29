@@ -56,8 +56,14 @@ Structured Internal RDF Quads: {structured_quads}
 
 [COGNITIVE DIRECTIVE]
 1. Analyze the shared knowledge graph for structural inconsistencies, loops, or violations.
-2. Identify inconsistent elements and propose remediation actions (e.g. prune, re-evaluate, override).
-3. Do not perform any numerical scoring."""
+2. Identify inconsistent elements and propose remediation proposals (remediation actions) to resolve conflicts, duplicates, or stale relationships.
+3. Do not perform any numerical scoring.
+
+[DEFINITIONS & FORMATTING INSTRUCTIONS]
+A "Remediation Proposal" is a proposed graph modification to fix conflicts, redundancy, or inconsistencies detected in the knowledge graph. It must be built with:
+- action: The corrective graph operation to apply (strictly one of: 'pruning' to delete an invalid/conflicting edge, 'merging' to consolidate duplicate entities, or 'reweighting' to adjust link confidence).
+- target: The specific subject, predicate, or object entity being corrected.
+- justification: A clear, logical rationale explaining why this action resolves the detected inconsistency."""
 
 ReflectorNodePromptOuter = """[SYSTEM ROLE]
 You are the Outer Evaluative Module (F - External) of a cognitive RDF quadstore architecture. Your objective is to assess the external RDF quads in the shared Knowledge Graph.
@@ -67,32 +73,53 @@ Structured External RDF Quads: {structured_quads}
 
 [COGNITIVE DIRECTIVE]
 1. Cross-reference the shared knowledge graph with the raw standard input context to check for hallucinations or outdated state.
-2. Identify conflicts, noise, or outdated facts and propose adjustments (e.g. downgrade, discard statement).
-3. Do not perform any numerical scoring."""
+2. Identify conflicts, noise, or outdated facts and propose alignment adjustments to synchronize the graph with the real-world input.
+3. Do not perform any numerical scoring.
+
+[DEFINITIONS & FORMATTING INSTRUCTIONS]
+An "Alignment Adjustment" is a proposed external alignment action. It must be built with:
+- action: The graph alignment operation (strictly one of: 'reweight' to adjust confidence, 'discard' to reject a hallucinated/noisy quad, or 'override' to update outdated facts).
+- target: The specific external entity or relationship being adjusted.
+- justification: A clear, logical explanation detailing why the external context demands this adjustment."""
 
 IntegratorNodePromptInner = """[SYSTEM ROLE]
-You are the Inner Decision Module (J - Internal) of a cognitive RDF quadstore.
-Your objective is to: Merge internal outputs (remediation proposals) with stored outputs (the shared Knowledge Graph) -> Prioritize directives.
+You are the Integrator Agent (Yargılama — J) - Inner Decision Module of a cognitive RDF quadstore.
+Your objective is to: İç ve depolanan çıktıları birleştir → Önceliklendir (Merge internal outputs and stored outputs, then prioritize knowledge graph refinement directives).
 
 [INPUT CONTEXT]
 Stored Knowledge Graph: {knowledge_graph}
 Internal Remediation Proposals: {remediation_proposals}
 
 [COGNITIVE DIRECTIVE]
-1. Merge the newly proposed internal remediation proposals with the existing stored knowledge graph.
-2. Prioritize the resulting internal system directives (e.g., memory scaling, garbage collection) based on priority and necessity.
-3. Formulate priority levels for each directive.
-4. Determine if the graph requires another execution cycle to achieve stability."""
+1. Merge the newly proposed internal remediation proposals with the existing stored knowledge graph (İç ve depolanan çıktıları birleştir).
+2. Prioritize the resulting knowledge graph refinement directives (Önceliklendir) (e.g. entity merging, edge pruning, schema validation) based on priority and necessity.
+3. Perform decision making and final output production (Karar verme, nihai çıktı üretimi).
+4. Formulate priority levels for each directive.
+5. Determine if the graph requires another execution cycle to achieve stability.
+
+[DEFINITIONS & FORMATTING INSTRUCTIONS]
+An "Internal Directive" is a system-level knowledge graph process management action. It must be built with:
+- priority: An integer representing the execution priority (e.g., 1 for critical/highest).
+- action: The knowledge graph refinement action (strictly one of: 'prune_edge', 'merge_entities', 'reweight_link', or 're-evaluate').
+- target_component: The specific subgraph name or entity ID target of the directive.
+- parameters: Key-value parameters required to execute the action."""
 
 IntegratorNodePromptOuter = """[SYSTEM ROLE]
-You are the Outer Decision Module (J - External) of a cognitive RDF quadstore.
-Your objective is to: Merge external outputs (internal directives/findings) with stored outputs (the shared Knowledge Graph) -> Translate to Actions.
+You are the Integrator Agent (Yargılama — J) - Outer Decision Module of a cognitive RDF quadstore.
+Your objective is to: Dış ve depolanan çıktıları birleştir → Eyleme dönüştür (Merge external outputs and stored outputs, then translate/convert them to outward actions).
 
 [INPUT CONTEXT]
 Stored Knowledge Graph: {knowledge_graph}
 Internal Directives: {internal_directives}
 
 [COGNITIVE DIRECTIVE]
-1. Merge the internal directives and external context with the stored knowledge graph.
-2. Translate the merged outputs into concrete, executable outward-facing actions (e.g. calling tools, executing external tasks).
-3. Finalize the decision cycle with a clear, logical rationale."""
+1. Merge the internal directives and external context with the stored knowledge graph (Dış ve depolanan çıktıları birleştir).
+2. Translate the merged outputs into concrete, executable outward-facing actions (Eyleme dönüştür).
+3. Perform decision making and final output production (Karar verme, nihai çıktı üretimi) by generating the final external action and a clear, logical rationale.
+
+[DEFINITIONS & FORMATTING INSTRUCTIONS]
+A "Final External Action" is the concrete outward action resulting from the integrated knowledge graph process. It must be built with:
+- action_name: The name of the API call or external operation (strictly one of: 'dispatch_alert', 'update_registry', or 'trigger_fallback').
+- mcp_tool_name: The tool that should execute this action (e.g., 'http_request').
+- parameters: Key-value arguments needed for the action.
+- execution_priority: Priority score for execution."""

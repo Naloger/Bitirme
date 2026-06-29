@@ -1,4 +1,4 @@
-from typing import Any, Literal, Union
+from typing import Any, Literal, Union, Optional
 
 from pydantic import BaseModel, Field
 
@@ -82,6 +82,21 @@ class ToolCall(BaseModel):
     ]
 
 
+class ReasonerResponse(BaseModel):
+    """Structured response from the task reasoner."""
+    thought_process: str = Field(description="Step-by-step thinking process, analyzing the goal, active context, and history.")
+    routing: Literal["requires_tool_execution", "task_completed"] = Field(
+        description="Whether the task requires executing a tool, or is fully completed."
+    )
+    tool_call: Optional[ToolCall] = Field(
+        default=None,
+        description="The tool call to execute. Required if routing is 'requires_tool_execution'."
+    )
+    final_answer: Optional[str] = Field(
+        default=None,
+        description="The final answer/result summary. Required if routing is 'task_completed'."
+    )
+
 
 # ---------------------------------------------------------------------------
 # State
@@ -94,6 +109,7 @@ class ECNState(BaseModel):
     task: str
     context: dict[str, Any]
     reasoning: str
+    final_answer: str = ""
     execution_result: dict[str, Any]
     evaluation_status: str  # "step_success", "step_error", "task_failed"
     reasoner_routing: str  # "requires_tool_execution", "task_completed"
