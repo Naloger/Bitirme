@@ -17,26 +17,51 @@ from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels i
 
 
 def main():
-    # Force UTF-8 stdout so Unicode doesn't crash on Windows
-    if hasattr(sys.stdout, "buffer"):
-        sys.stdout = io.TextIOWrapper(
-            sys.stdout.buffer, encoding="utf-8", errors="replace"
+    # Reconfigure stdout/stderr to use UTF-8 and enable line buffering to prevent cp1254 UnicodeEncodeErrors on Windows and ensure immediate output flush
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', line_buffering=True)
+
+    # Read from stdin ONLY if explicitly instructed by passing --stdin flag,
+    # otherwise default to the rich sample text input to avoid blocking process pipes.
+    input_text = ""
+    if "--stdin" in sys.argv:
+        print("Reading input text from standard input...")
+        input_text = sys.stdin.read().strip()
+
+    if not input_text:
+        # Microsoft GraphRAG-like sample document string payload
+        input_text = (
+            "SystemEvent: CPU_SPIKE\n"
+            "Time: 2026-06-29T18:30:00Z\n"
+            "Details: Worker node worker_node_3 experienced CPU utilization of 94.5%.\n"
+            "This high load triggered warning logs: 'High memory allocation detected on worker_node_3'.\n"
+            "Additionally, the external sensor_endpoint api_node is down at url https://api.example.com/feed."
         )
+        print("Using default Microsoft GraphRAG alike sample text input:")
+    else:
+        print("Input text read successfully from stdin:")
+
+    print("-" * 70)
+    print(input_text.strip())
+    print("-" * 70)
 
     graph = build_loop_subgraph()
 
     init_state = GraphState(
+        input_text=input_text,
         raw_internal=[],
         raw_external=[],
-        knowledge_graph={"nodes": [], "edges": [], "communities": [], "index": {}},
-        validation_report={"issues": [], "inferred_edges": [], "confidence_map": {}, "anomalous_nodes": []},
+        knowledge_graph=[],
+        validation_report={"issues": [], "confidence_map": {}, "anomalous_nodes": []},
         decision={"priority_nodes": [], "impact": {}, "actions": [], "working_graph": {}},
         iteration=0,
         should_stop=False,
     )
 
-    print("=" * 60)
-    print("  Cognitive Graph Operating System — starting")
+    print("\n" + "=" * 60)
+    print("  Cognitive Graph Operating System — starting RDF Quadstore parser")
     print("=" * 60)
 
     final_state = graph.invoke(init_state)
@@ -48,15 +73,16 @@ def main():
     print(f"  Total iterations : {final_state['iteration']}")
     print(f"  Actions dispatched: {len(actions)}")
     for a in actions:
-        print(f"    • [{a['type']}] target={a['target']} concept={a['concept']} "
-              f"conf={a['confidence']:.2f} risk={a['risk_score']:.2f}")
+        print(f"    • [{a['type']}] target={a['target']} concept={a['concept']}")
 
-    issues = final_state["validation_report"]["issues"]
-    print(f"  Validation issues : {len(issues)}")
-    inferred = final_state["validation_report"]["inferred_edges"]
-    print(f"  Inferred edges    : {len(inferred)}")
+    quads = final_state["knowledge_graph"]
+    print(f"\n  Final Compiled Quadstore (Total {len(quads)} Atomic Quads):")
+    for q in quads:
+        print(f"    • Subject: {q.subject:<15} | Predicate: {q.predicate:<15} | Object: {q.object:<30} | Graph URI: {q.graph}")
+
+    issues = final_state["validation_report"].get("issues", [])
+    print(f"\n  Validation issues : {len(issues)}")
 
 
 if __name__ == "__main__":
     main()
-
