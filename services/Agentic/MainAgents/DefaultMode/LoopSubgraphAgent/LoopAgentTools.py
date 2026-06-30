@@ -236,13 +236,21 @@ def tool_ingest_external_api(endpoint: str = "llm_input") -> list[dict]:
     ]
 
 
-def tool_write_to_quadstore(quads: list[Quad] | list[dict]) -> bool:
+def tool_write_to_quadstore(
+    quads: list[Quad] | list[dict],
+    overwrite: bool = False,
+    clear_contexts: list[str] | None = None
+) -> bool:
     """Simulate atomic RDF quad creation/insertion into a triplestore/quadstore."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
     ]
-    mcp_res = _invoke_mcp_tool("graph_write_to_quadstore", {"quads": serialized_quads})
+    mcp_res = _invoke_mcp_tool("graph_write_to_quadstore", {
+        "quads": serialized_quads,
+        "overwrite": overwrite,
+        "clear_contexts": clear_contexts
+    })
     if mcp_res is not None:
         return bool(mcp_res.get("success", True) if isinstance(mcp_res, dict) else mcp_res)
 

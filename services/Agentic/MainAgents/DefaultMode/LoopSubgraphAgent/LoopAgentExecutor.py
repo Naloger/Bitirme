@@ -70,6 +70,11 @@ def main():
     for q in quads:
         print(f"    • Subject: {q.subject:<15} | Predicate: {q.predicate:<15} | Object: {q.object:<30} | Graph URI: {q.graph}")
 
+    # Persist final compiled quadstore results to the database
+    from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import tool_write_to_quadstore
+    print("\n  Writing final compiled quads to database...")
+    tool_write_to_quadstore(quads, overwrite=True, clear_contexts=["llm_input"])
+
     issues = final_state["validation_report"].get("issues", [])
     print(f"\n  Validation issues : {len(issues)}")
 

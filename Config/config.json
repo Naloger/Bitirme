@@ -10,13 +10,11 @@
     "timeout": 300.0
   },
   "mcp_config": {
-    "enabled": false,
+    "enabled": true,
     "transport": "stdio",
-    "command": "uv",
+    "command": "C:\\CalismaAlani\\CodingPython\\Bitirme\\backend\\.venv\\Scripts\\python.exe",
     "args": [
-      "run",
-      "python",
-      "C:\\CalismaAlani\\CodingPython\\Bitirme\\backend\\Scripts\\mcp\\age_mcp_server.py"
+      "C:\\CalismaAlani\\CodingPython\\Bitirme\\backend\\MCP\\age_mcp_server.py"
     ],
     "timeout": 15.0
   }

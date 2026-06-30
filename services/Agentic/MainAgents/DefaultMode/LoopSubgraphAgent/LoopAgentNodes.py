@@ -194,12 +194,17 @@ def collector_node(state: GraphState) -> GraphState:
             tool_ingest_internal_stream,
             tool_write_to_quadstore,
         )
-        ingested = tool_ingest_internal_stream()
-        tool_write_to_quadstore(ingested)
+        ingested = tool_ingest_internal_stream(source="llm_input")
+        # Load the ingested quads from the database into the state's knowledge_graph
+        ingested_quads = [Quad(**q) for q in ingested]
+        knowledge_graph = merge_quads(knowledge_graph, ingested_quads)
 
         system_prompt = CollectorNodePromptInner.format(current_internal_state=knowledge_graph)
         prompt = "Analyze inner knowledge graph quads to identify latent patterns."
         response = call_structured_llm(prompt, system_prompt, CollectorInnerResponse, mock_collector_inner)
+        if not response.proposed_quads:
+            print("  [LLM Warning] Empty proposed_quads returned, using mock fallback.")
+            response = mock_collector_inner()
         llm_outputs["collector"] = response.model_dump()
         raw_internal.append({"source": "internal", "data": "collector_ingested"})
         
@@ -218,6 +223,9 @@ def collector_node(state: GraphState) -> GraphState:
         system_prompt = CollectorNodePromptOuter.format(input_text=state.input_text)
         prompt = "Extract atomic facts from standard input text."
         response = call_structured_llm(prompt, system_prompt, CollectorOuterResponse, mock_collector_outer)
+        if not response.proposed_quads:
+            print("  [LLM Warning] Empty proposed_quads returned, using mock fallback.")
+            response = mock_collector_outer()
         llm_outputs["collector"] = response.model_dump()
         raw_external.append({"source": "external", "data": "collector_ingested"})
 
@@ -252,6 +260,9 @@ def organizer_node(state: GraphState) -> GraphState:
         system_prompt = OrganizerNodePromptInner.format(proposed_quads=knowledge_graph)
         prompt = "Apply ontology constraints and logical standardization to knowledge graph."
         response = call_structured_llm(prompt, system_prompt, OrganizerInnerResponse, mock_organizer_inner)
+        if not response.structured_quads:
+            print("  [LLM Warning] Empty structured_quads returned, using mock fallback.")
+            response = mock_organizer_inner()
         llm_outputs["organizer"] = response.model_dump()
         
         # Replace graph with organized structured quads
@@ -261,6 +272,9 @@ def organizer_node(state: GraphState) -> GraphState:
         system_prompt = OrganizerNodePromptOuter.format(proposed_quads=knowledge_graph)
         prompt = "Apply logical hierarchy and mapping rules to knowledge graph."
         response = call_structured_llm(prompt, system_prompt, OrganizerOuterResponse, mock_organizer_outer)
+        if not response.structured_quads:
+            print("  [LLM Warning] Empty structured_quads returned, using mock fallback.")
+            response = mock_organizer_outer()
         llm_outputs["organizer"] = response.model_dump()
 
         # Replace graph with organized structured quads
