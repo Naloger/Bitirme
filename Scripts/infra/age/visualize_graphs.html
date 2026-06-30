@@ -360,7 +360,7 @@
     </div>
 
     <script>
-        const rawData = {"memory_db / rdf_quadstore_graph": {"nodes": [], "edges": []}};
+        const rawData = {"memory_db / rdf_quadstore_graph": {"nodes": [{"id": "844424930131982", "labels": ["RDFResource"], "properties": {"uri": "worker_node_3", "type": "bnode"}}, {"id": "844424930131983", "labels": ["RDFResource"], "properties": {"uri": "94.5%", "type": "bnode"}}, {"id": "844424930131986", "labels": ["RDFResource"], "properties": {"uri": "CPU_spike", "type": "bnode"}}, {"id": "1407374883553284", "labels": ["RDFLiteral"], "properties": {"lang": "", "value": "'High memory allocation detected on worker_node_3'", "datatype": "http://www.w3.org/2001/XMLSchema#string"}}, {"id": "1407374883553285", "labels": ["RDFLiteral"], "properties": {"lang": "", "value": "CPU utilization of 94.5%", "datatype": "http://www.w3.org/2001/XMLSchema#string"}}], "edges": [{"source": "844424930131982", "target": "844424930131983", "type": "RDF_EDGE", "properties": {"context": "lll_input", "predicate": "EXPERIENCED_CPU_UTILIZATION"}}, {"source": "844424930131982", "target": "844424930131986", "type": "RDF_EDGE", "properties": {"context": "llm_input", "predicate": "HAS_STATUS"}}, {"source": "844424930131982", "target": "1407374883553284", "type": "RDF_EDGE", "properties": {"context": "knowledge_graph", "predicate": "GENERATED_WARNING_LOG"}}, {"source": "844424930131982", "target": "1407374883553285", "type": "RDF_EDGE", "properties": {"context": "knowledge_graph", "predicate": "EXPERIENCED"}}]}};
         let network = null;
         let physicsEnabled = true;
 
@@ -504,6 +504,9 @@
                 // Extract RDF predicate
                 if (e.properties && e.properties.predicate) {
                     displayLabel = shortenUri(e.properties.predicate);
+                    if (e.properties.context) {
+                        displayLabel += ` [${shortenUri(e.properties.context)}]`;
+                    }
                     title += `\nPredicate: ${e.properties.predicate}`;
                     if (e.properties.context) title += `\nContext/Graph: ${e.properties.context}`;
                 }
@@ -517,7 +520,7 @@
                     arrows: (e.type === "CO_OCCUR_WITH") ? "" : "to", // Undirected for co-occurrences, directed for RDF/Concepts
                     width: Math.min(Math.max(weight * 1.5, 1), 6),
                     color: { color: "#475569", highlight: "#3b82f6", hover: "#60a5fa" },
-                    font: { color: "#94a3b8", size: 10, strokeWidth: 0, align: "horizontal" },
+                    font: { color: "#94a3b8", size: 10, strokeWidth: 0, align: "top" },
                     rawData: e
                 };
             });
@@ -535,8 +538,8 @@
                 },
                 edges: {
                     smooth: {
-                        type: "continuous",
-                        roundness: 0.5
+                        type: "curvedCW",
+                        roundness: 0.15
                     }
                 },
                 physics: {

@@ -15,7 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 # Import the tool functions from the MCP server
-from Scripts.mcp.age_mcp_server import (
+from MCP.age_mcp_server import (
     get_graph_schema,
     create_node,
     update_node,

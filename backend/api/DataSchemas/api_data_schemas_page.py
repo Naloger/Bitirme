@@ -7,13 +7,13 @@ from sqlmodel import SQLModel, Field
 class StructuredPageCreate(SQLModel):
     unstructured_page_id: int
     # each triplet is expected to be [str, int, str]
-    keywords: List[str] = Field(default_factory=list)
+    triplets: List[str] = Field(default_factory=list)
     structured_at: Optional[float] = None
     transformed_to_graph: bool = False
 
 class StructuredPageUpdate(SQLModel):
     unstructured_page_id: int = None
-    keywords: Optional[List[str]] = None
+    triplets: Optional[List[str]] = None
     structured_at: Optional[float] = None
     transformed_to_graph: Optional[bool] = None
 
@@ -21,7 +21,7 @@ class StructuredPageRead(SQLModel):
     id: str
     creation_timestamp: float
     unstructured_page_id: int
-    keywords: List[str]
+    triplets: List[str]
     structured_at: float
     transformed_to_graph: bool
 

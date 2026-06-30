@@ -228,6 +228,25 @@ class RDFQuadstore:
                 cypher_query += "DELETE r"
                 
                 execute_cypher_param(cur, self.graph_name, cypher_query, params, "as (a agtype)")
+
+                # Clean up orphaned RDFResource and RDFLiteral nodes
+                clean_resources = """
+                MATCH (n:RDFResource)
+                OPTIONAL MATCH (n)-[r:RDF_EDGE]-(m)
+                WITH n, r
+                WHERE r IS NULL
+                DELETE n
+                """
+                execute_cypher_param(cur, self.graph_name, clean_resources, {}, "as (a agtype)")
+
+                clean_literals = """
+                MATCH (n:RDFLiteral)
+                OPTIONAL MATCH (n)-[r:RDF_EDGE]-(m)
+                WITH n, r
+                WHERE r IS NULL
+                DELETE n
+                """
+                execute_cypher_param(cur, self.graph_name, clean_literals, {}, "as (a agtype)")
         finally:
             conn.close()
 

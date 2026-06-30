@@ -688,6 +688,9 @@ def main():
                 // Extract RDF predicate
                 if (e.properties && e.properties.predicate) {
                     displayLabel = shortenUri(e.properties.predicate);
+                    if (e.properties.context) {
+                        displayLabel += ` [${shortenUri(e.properties.context)}]`;
+                    }
                     title += `\\nPredicate: ${e.properties.predicate}`;
                     if (e.properties.context) title += `\\nContext/Graph: ${e.properties.context}`;
                 }
@@ -701,7 +704,7 @@ def main():
                     arrows: (e.type === "CO_OCCUR_WITH") ? "" : "to", // Undirected for co-occurrences, directed for RDF/Concepts
                     width: Math.min(Math.max(weight * 1.5, 1), 6),
                     color: { color: "#475569", highlight: "#3b82f6", hover: "#60a5fa" },
-                    font: { color: "#94a3b8", size: 10, strokeWidth: 0, align: "horizontal" },
+                    font: { color: "#94a3b8", size: 10, strokeWidth: 0, align: "top" },
                     rawData: e
                 };
             });
@@ -719,8 +722,8 @@ def main():
                 },
                 edges: {
                     smooth: {
-                        type: "continuous",
-                        roundness: 0.5
+                        type: "curvedCW",
+                        roundness: 0.15
                     }
                 },
                 physics: {
