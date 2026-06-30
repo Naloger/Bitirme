@@ -1,6 +1,6 @@
 from typing import Any, Literal, Union, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Pydantic Tooling Schemas
@@ -80,6 +80,36 @@ class ToolCall(BaseModel):
         ShowDatetimeArgs,
         GetEnvArgs
     ]
+
+    @model_validator(mode="after")
+    def validate_args_by_tool(self) -> "ToolCall":
+        tool_to_args = {
+            "run_python": RunPythonArgs,
+            "run_shell": RunShellArgs,
+            "write_file": WriteFileArgs,
+            "read_file": ReadFileArgs,
+            "list_files": ListFilesArgs,
+            "web_search": WebSearchArgs,
+            "fetch_webpage": FetchWebpageArgs,
+            "search_grep": SearchGrepArgs,
+            "delete_file": DeleteFileArgs,
+            "show_datetime": ShowDatetimeArgs,
+            "get_env": GetEnvArgs,
+        }
+        expected_class = tool_to_args.get(self.tool)
+        if expected_class and not isinstance(self.args, expected_class):
+            if isinstance(self.args, BaseModel):
+                data = self.args.model_dump()
+            elif isinstance(self.args, dict):
+                data = self.args
+            else:
+                raise ValueError(f"Invalid args type: {type(self.args)}")
+            try:
+                self.args = expected_class(**data)
+            except Exception as e:
+                raise ValueError(f"Validation failed for tool '{self.tool}' arguments: {e}")
+        return self
+
 
 
 class ReasonerResponse(BaseModel):

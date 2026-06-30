@@ -1,7 +1,7 @@
 {
   "llm_config": {
     "provider": "ollama",
-    "model": "granite4.1:3b",
+    "model": "gemma4:e4b",
     "api_key": null,
     "base_url": "http://localhost:11434/v1",
     "temperature": 0.0,

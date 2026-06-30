@@ -1,8 +1,11 @@
-import io
+import json  # Added to format stream chunks securely
 import os
 import sys
+import asyncio
+import contextvars
+from typing import AsyncIterator
 
-# Ensure project root is in sys.path before importing local services
+# Ensure project root is in sys.path
 _here = os.path.dirname(os.path.abspath(__file__))
 _root = os.path.abspath(os.path.join(_here, "..", "..", "..", ".."))
 if _root not in sys.path:
@@ -13,61 +16,121 @@ from services.Agentic.MainAgents.SalienceMode.SalienceGraphBuilder import (
 )
 from services.Agentic.MainAgents.SalienceMode.SalienceModels import SalienceState
 
+# Context-local variable for stdout redirection callback
+stdout_callback_var = contextvars.ContextVar("stdout_callback", default=None)
 
-def execute_salience_router(user_input: str) -> SalienceState:
-    """Streams the Salience Router graph execution and returns the final state."""
-    graph = build_salience_graph()
-    initial_state = SalienceState(user_input=user_input)
-    
-    state_data = initial_state.model_dump()
-    print(f"\n>>> Starting streaming graph execution for: '{user_input}'")
-    
-    for event in graph.stream(initial_state, stream_mode="updates"):
-        for node_name, node_update in event.items():
-            print(f"\n  [Stream] Node '{node_name}' finished. State updates:")
-            for key, val in node_update.items():
-                if val:
-                    # Format output to be clean and human-readable
-                    if isinstance(val, dict):
-                        print(f"    • {key}: dict with keys {list(val.keys())}")
-                    elif isinstance(val, list):
-                        print(f"    • {key}: list with {len(val)} items")
-                    else:
-                        truncated_val = str(val)[:200] + "..." if len(str(val)) > 200 else str(val)
-                        print(f"    • {key}: {truncated_val}")
-            # Accumulate state updates
-            state_data.update(node_update)
-            
-    return SalienceState(**state_data)
+class ContextLocalStdout:
+    def __init__(self, original_stdout):
+        self.original_stdout = original_stdout
 
+    def write(self, data):
+        self.original_stdout.write(data)
+        callback = stdout_callback_var.get()
+        if callback:
+            try:
+                callback(data)
+            except Exception:
+                pass
 
-if __name__ == "__main__":
-    # Force UTF-8 stream output to prevent character encoding crashes in localized consoles (Turkish/cp1254)
-    if hasattr(sys.stdout, "buffer"):
-        sys.stdout = io.TextIOWrapper(
-            sys.stdout.buffer, encoding="utf-8", errors="replace"
-        )
-    if hasattr(sys.stderr, "buffer"):
-        sys.stderr = io.TextIOWrapper(
-            sys.stderr.buffer, encoding="utf-8", errors="replace"
-        )
+    def flush(self):
+        self.original_stdout.flush()
 
-    print("=============================================================")
-    print("Salience Network Router")
-    print("=============================================================")
+    def __getattr__(self, name):
+        return getattr(self.original_stdout, name)
 
-    # Default task or command line argument if provided
-    task = "Execute a simple loop cycle data transformation on the value 'Hello World'."
-    if len(sys.argv) > 1:
-        task = sys.argv[1]
+# Patch stdout and stderr once
+if not isinstance(sys.stdout, ContextLocalStdout):
+    sys.stdout = ContextLocalStdout(sys.stdout)
+if not isinstance(sys.stderr, ContextLocalStdout):
+    sys.stderr = ContextLocalStdout(sys.stderr)
 
-    print(f"\n[Network Executing] Task: '{task}'")
-    result = execute_salience_router(task)
+class LineAccumulator:
+    def __init__(self, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
+        self.buffer = ""
+        self.queue = queue
+        self.loop = loop
 
-    print("\n=============================================================")
-    print("FINAL SUMMARY")
-    print("=============================================================")
-    print(f"Target Subgraph: {result.target_subgraph}")
-    print(f"Explanation: {result.explanation}")
-    print(f"Result: {result.result}")
-    print("=============================================================")
+    def add_data(self, data: str):
+        self.buffer += data
+        while "\n" in self.buffer:
+            line, self.buffer = self.buffer.split("\n", 1)
+            if line.endswith("\r"):
+                line = line[:-1]
+            if line.strip():
+                # Stream log lines thread-safely
+                self.loop.call_soon_threadsafe(
+                    self.queue.put_nowait,
+                    {"type": "log_line", "line": line}
+                )
+
+# 1. Changed to async def and returns an AsyncIterator of strings
+async def execute_salience_router_stream(user_input: str) -> AsyncIterator[str]:
+    """Streams the LangGraph node updates and stdout logs in real-time as JSON strings."""
+    queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+    accum = LineAccumulator(queue, loop)
+
+    def run_graph_sync():
+        token = stdout_callback_var.set(accum.add_data)
+        try:
+            graph = build_salience_graph()
+            initial_state = SalienceState(user_input=user_input)
+            state_data = initial_state.model_dump()
+
+            # Emit initial status
+            loop.call_soon_threadsafe(
+                queue.put_nowait,
+                {"type": "status", "message": f"Starting graph execution for '{user_input}'"}
+            )
+
+            # Iterate the graph execution
+            for event in graph.stream(initial_state, stream_mode="updates"):
+                for node_name, node_update in event.items():
+                    state_data.update(node_update)
+
+                    chunk_payload = {
+                        "type": "node_update",
+                        "node_name": node_name,
+                        "updates": {
+                            k: (
+                                list(v.keys())
+                                if isinstance(v, dict)
+                                else len(v)
+                                if isinstance(v, list)
+                                else str(v)[:200]
+                            )
+                            for k, v in node_update.items()
+                            if v
+                        },
+                    }
+                    loop.call_soon_threadsafe(queue.put_nowait, chunk_payload)
+
+            # Final summary
+            final_state = SalienceState(**state_data)
+            final_payload = {
+                "type": "final_summary",
+                "target_subgraph": final_state.target_subgraph,
+                "explanation": final_state.explanation,
+                "result": final_state.result,
+            }
+            loop.call_soon_threadsafe(queue.put_nowait, final_payload)
+
+        except Exception as e:
+            loop.call_soon_threadsafe(
+                queue.put_nowait,
+                {"type": "error", "message": str(e)}
+            )
+        finally:
+            stdout_callback_var.reset(token)
+            # Signal the end of queue stream
+            loop.call_soon_threadsafe(queue.put_nowait, None)
+
+    # Start the graph execution in a separate worker thread
+    asyncio.create_task(asyncio.to_thread(run_graph_sync))
+
+    # Consume the queue items as they arrive
+    while True:
+        item = await queue.get()
+        if item is None:
+            break
+        yield json.dumps(item) + "\n"

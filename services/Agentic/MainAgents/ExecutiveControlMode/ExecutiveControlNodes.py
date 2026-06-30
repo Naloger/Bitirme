@@ -298,7 +298,7 @@ def task_executor(state: ECNState) -> ECNState:
 
     except ValidationError as e:
         print(f"  [Executor] Pydantic validation failed: {e}")
-        exec_response = f"Tool Execution Error: Invalid arguments for tool. {e}"
+        exec_response = f"Error parsing JSON tool call: Tool Execution Error: Invalid arguments for tool. {e}"
     except Exception as e:
         print(f"  [Executor] Failed to parse/execute tool call: {e}")
         exec_response = f"Error parsing JSON tool call from reasoner: {e}. Output pure JSON wrapped in {{ }} matching the ToolCall schema."
