@@ -6,7 +6,7 @@ Proje; **Backend**, **Frontend** ve **Services** katmanlarından oluşur. Backen
 
 
 <video controls width="100%">
-  <source src="Bitirme.webm" type="video/webm">
+  <source src="[Bitirme.webm](https://github.com/Naloger/Bitirme/blob/602858e6bf911aaad266be79f3c760095b2704db/Bitirme.webm)" type="video/webm">
   Your browser does not support the video tag.
 </video>
 
