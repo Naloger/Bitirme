@@ -5,7 +5,7 @@ Yapay zekâ destekli bilişsel ajanlar, bilgi grafı (Knowledge Graph) ve doğal
 Proje; **Backend**, **Frontend** ve **Services** katmanlarından oluşur. Backend bilgi grafı, NLP ve veri katmanını sağlarken, Services katmanı bilişsel ajan mimarisini ve LLM orkestrasyonunu yürütür. Frontend ise sistemi gerçek zamanlı olarak gözlemleyebileceğiniz sohbet arayüzünü sunar.
 
 <p align="center">
-  <a href="https://github.com/Naloger/Bitirme/raw/main/Bitirme.webm" download>
+  <a href="https://github.com/Naloger/Bitirme/raw/master/Bitirme.webm" download>
     <b>📥 Download the Bitirme Project Video (WebM - 470MB)</b>
   </a>
 </p>
