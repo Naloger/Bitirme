@@ -25,6 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 
+from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.age_helpers import (
     PG_HOST,
     PG_PORT,
@@ -158,21 +159,22 @@ def fetch_graph_data(db_name: str, graph_name: str) -> Dict[str, List[Any]]:
 
 def main():
     print("🔌 Scanning Apache AGE PostgreSQL databases...")
-    databases = get_all_age_databases()
-    
     all_graph_data = {}
-    
-    for db in databases:
-        graphs = get_graphs_in_db(db)
-        if not graphs:
-            continue
-        print(f"📂 Found database '{db}' with graphs: {graphs}")
-        for graph in graphs:
-            key = f"{db} / {graph}"
-            print(f"   📥 Fetching schema nodes and edges for '{key}'...")
-            data = fetch_graph_data(db, graph)
-            all_graph_data[key] = data
-            print(f"      Loaded {len(data['nodes'])} nodes, {len(data['edges'])} edges.")
+
+    # Prefer the configured RDF quadstore graph so legacy sample graphs do not dominate
+    target_db = AGE_MEMORY_DB
+    target_graph = AGE_RDF_GRAPH
+    graphs = get_graphs_in_db(target_db)
+    if target_graph not in graphs:
+        print(f"❌ Target graph '{target_graph}' was not found in database '{target_db}'.")
+        sys.exit(1)
+
+    print(f"📂 Found database '{target_db}' with graphs: {graphs}")
+    key = f"{target_db} / {target_graph}"
+    print(f"   📥 Fetching schema nodes and edges for '{key}'...")
+    data = fetch_graph_data(target_db, target_graph)
+    all_graph_data[key] = data
+    print(f"      Loaded {len(data['nodes'])} nodes, {len(data['edges'])} edges.")
             
     if not all_graph_data:
         print("❌ No Apache AGE graphs found to visualize.")
