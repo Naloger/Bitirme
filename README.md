@@ -4,6 +4,12 @@ Yapay zekâ destekli bilişsel ajanlar, bilgi grafı (Knowledge Graph) ve doğal
 
 Proje; **Backend**, **Frontend** ve **Services** katmanlarından oluşur. Backend bilgi grafı, NLP ve veri katmanını sağlarken, Services katmanı bilişsel ajan mimarisini ve LLM orkestrasyonunu yürütür. Frontend ise sistemi gerçek zamanlı olarak gözlemleyebileceğiniz sohbet arayüzünü sunar.
 
+
+<h3>Project Demonstration</h3>
+<video src="Bitirme.webm" controls width="100%">
+  Your browser does not support the video tag.
+</video>
+
 ---
 
 # Genel Mimari
