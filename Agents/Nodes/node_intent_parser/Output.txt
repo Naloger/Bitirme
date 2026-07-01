@@ -1,7 +1,0 @@
-Actor            : User
-Action           : processed
-Actors Reason    : correct analysis
-Intent           : understood
-Is Trustworthy   : False
-Source           : input_text
-Other Reaction   : agreed
