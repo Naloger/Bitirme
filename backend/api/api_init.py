@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any
 
-from Libs.Config.config import PAGE_DATABASE_PATH,  LEMMA_MATRIX_DATABASE_PATH
+from Config.config import PAGE_DATABASE_PATH,  LEMMA_MATRIX_DATABASE_PATH
 from backend.database import  init_db
 from backend.database.ORMSchemas.orm_schema_pages import PAGES_METADATA
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import LEMMA_MATRIX_METADATA
@@ -18,6 +18,15 @@ async def lifespan(_app: FastAPI):
     _app.state.page_session_factory = page_session
     _app.state.lemma_matrix_engine = lemma_matrix_engine
     _app.state.lemma_matrix_session_factory = lemma_matrix_session
+    
+    # Initialize Typesense collections
+    from backend.api.typesense_client import init_typesense_collections
+    try:
+        await init_typesense_collections()
+    except Exception as e:
+        import sys
+        print(f"WARNING: Typesense startup initialization failed: {e}", file=sys.stderr)
+        
     yield
     # Execute cleanup procedures here (e.g., engine disposal)
 
@@ -69,9 +78,17 @@ app.add_middleware(
 )
 
 # Ensure endpoint decorators are registered with the app
-from backend.api.Endpoints import health_endpoints, page_endpoints, lemma_matrix_endpoints, spreading_activation_endpoints
+from backend.api.Endpoints import (
+    health_endpoints,
+    page_endpoints,
+    lemma_matrix_endpoints,
+    spreading_activation_endpoints,
+    session_endpoints, typesense_admin_endpoints
+)
 
 app.include_router(health_endpoints.router)
 app.include_router(page_endpoints.router)
 app.include_router(lemma_matrix_endpoints.router, prefix="/api/lemma_matrix")
 app.include_router(spreading_activation_endpoints.router, prefix="/api/lemma_matrix")
+app.include_router(session_endpoints.router)
+app.include_router(typesense_admin_endpoints.router)

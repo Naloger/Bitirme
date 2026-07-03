@@ -27,5 +27,17 @@
         "default_db": "postgres",
         "memory_db": "memory_db",
         "rdf_quadstore_graph": "rdf_quadstore_graph"
+    },
+    "typesense": {
+        "host": "127.0.0.1",
+        "port": 8108,
+        "api_key": "local_rag_secret_key_123",
+        "embedding": {
+            "provider": "ollama",
+            "model_name": "all-minilm",
+            "dimensions": 384,
+            "url": "",
+            "ollama_host_url": "http://localhost:11434"
+        }
     }
 }

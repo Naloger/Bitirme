@@ -16,7 +16,7 @@ import leidenalg as la
 from sqlmodel import select, delete
 from sqlalchemy import func
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_HIERARCHY_MAX_LEVELS
+from Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_HIERARCHY_MAX_LEVELS
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 	LEMMA_MATRIX_METADATA,

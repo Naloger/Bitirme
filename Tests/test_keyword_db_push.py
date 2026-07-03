@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 import pytest
 
-from Libs.Config.config import AGE_KEYWORD_DB, AGE_KEYWORD_GRAPH
+from Config.config import AGE_KEYWORD_DB, AGE_KEYWORD_GRAPH
 from Scripts.infra.age.age_helpers import get_age_connection, parse_agtype
 from Scripts.infra.age.transpile_keyword import transpile_ppmi_to_age
 

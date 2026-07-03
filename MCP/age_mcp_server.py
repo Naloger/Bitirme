@@ -30,7 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 
-from Libs.Config.config import (
+from Config.config import (
     AGE_HOST,
     AGE_PORT,
     AGE_USER,

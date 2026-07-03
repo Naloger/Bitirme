@@ -17,7 +17,7 @@ if sys.stdout.encoding != 'utf-8':
         except Exception:
             pass
 
-from Libs.Config.config import (
+from Config.config import (
     AGE_HOST as PG_HOST,
     AGE_PORT as PG_PORT,
     AGE_USER as PG_USER,

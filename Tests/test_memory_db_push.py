@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 import pytest
 
-from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
+from Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.rdf_quadstore import RDFQuadstore
 
 def safe_print(text: str):

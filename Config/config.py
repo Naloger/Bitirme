@@ -31,4 +31,19 @@ AGE_DEFAULT_DB = _age_config.get("default_db", "postgres")
 AGE_MEMORY_DB = _age_config.get("memory_db", "memory_db")
 AGE_RDF_GRAPH = _age_config.get("rdf_quadstore_graph", "rdf_quadstore_graph")
 
+# Typesense configuration settings
+_typesense_config = _config.get("typesense", {})
+TYPESENSE_HOST = _typesense_config.get("host", "127.0.0.1")
+TYPESENSE_PORT = int(_typesense_config.get("port", 8108))
+TYPESENSE_API_KEY = _typesense_config.get("api_key", "local_rag_secret_key_123")
+
+_embedding_config = _typesense_config.get("embedding", {})
+TYPESENSE_EMBEDDING_PROVIDER = _embedding_config.get("provider", "built-in")
+TYPESENSE_EMBEDDING_MODEL = _embedding_config.get("model_name", "ts/all-MiniLM-L6-v2")
+TYPESENSE_EMBEDDING_DIMENSIONS = int(_embedding_config.get("dimensions", 384))
+TYPESENSE_EMBEDDING_URL = _embedding_config.get("url", "")
+OLLAMA_HOST_URL = _embedding_config.get("ollama_host_url", "http://localhost:11434")
+
+
+
 

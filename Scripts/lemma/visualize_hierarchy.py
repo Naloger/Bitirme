@@ -16,7 +16,7 @@ from collections import defaultdict
 
 from sqlmodel import select
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, VISUALIZE_HIERARCHY_FORCE_ASCII
+from Config.config import LEMMA_MATRIX_DATABASE_PATH, VISUALIZE_HIERARCHY_FORCE_ASCII
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
     LEMMA_MATRIX_METADATA,

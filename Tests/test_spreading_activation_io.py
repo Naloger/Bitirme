@@ -19,7 +19,7 @@ from pathlib import Path
 # Add backend directory to Python path if running script directly
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH
+from Config.config import LEMMA_MATRIX_DATABASE_PATH
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import LEMMA_MATRIX_METADATA
 from Libs.Leiden.leiden_spreading_activation import spreading_activation

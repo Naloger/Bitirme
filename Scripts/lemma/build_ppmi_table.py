@@ -9,7 +9,7 @@ from collections import defaultdict
 # sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from sqlmodel import  select, delete
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_PPMI_THRESHOLD
+from Config.config import LEMMA_MATRIX_DATABASE_PATH, BUILD_PPMI_THRESHOLD
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import (
 	LEMMA_MATRIX_METADATA,

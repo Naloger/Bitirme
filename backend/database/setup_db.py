@@ -1,7 +1,7 @@
 # setup_database.py
 import sys
 
-from Libs.Config.config import PAGE_DATABASE_PATH, LEMMA_MATRIX_DATABASE_PATH
+from Config.config import PAGE_DATABASE_PATH, LEMMA_MATRIX_DATABASE_PATH
 from backend.database.init_db import init_db
 from backend.database.ORMSchemas.orm_schema_lemma_matrix import LEMMA_MATRIX_METADATA
 from backend.database.ORMSchemas.orm_schema_pages import PAGES_METADATA

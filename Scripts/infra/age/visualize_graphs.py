@@ -25,7 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 
-from Libs.Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
+from Config.config import AGE_MEMORY_DB, AGE_RDF_GRAPH
 from Scripts.infra.age.age_helpers import (
     PG_HOST,
     PG_PORT,

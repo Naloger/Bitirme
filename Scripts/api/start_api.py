@@ -15,7 +15,7 @@ from pathlib import Path
 # Add backend directory to Python path if running script directly
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
-from Libs.Config.config import START_API_HOST, START_API_PORT, START_API_RELOAD
+from Config.config import START_API_HOST, START_API_PORT, START_API_RELOAD
 
 
 def main(host: str | None = None, port: int | None = None, reload: bool | None = None) -> None:

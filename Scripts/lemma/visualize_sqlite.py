@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from Libs.Config.config import LEMMA_MATRIX_DATABASE_PATH
+from Config.config import LEMMA_MATRIX_DATABASE_PATH
 
 def fetch_sqlite_graph():
     """Extract all nodes and edges from lemma_matrix.db."""
