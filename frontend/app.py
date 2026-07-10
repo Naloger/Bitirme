@@ -10,7 +10,6 @@ Usage:
 
 import httpx
 from fastapi import FastAPI
-from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
