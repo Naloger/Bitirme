@@ -182,6 +182,7 @@ def mock_integrator_outer() -> IntegratorOuterResponse:
 # ===========================================================================
 
 def collector_node(state: GraphState) -> GraphState:
+    channel = state.channel
     print(f"\n[collector_node] Executing channel: {channel}...")
     llm_outputs = dict(state.llm_outputs)
     raw_internal = list(state.raw_internal)
@@ -242,6 +243,7 @@ def collector_node(state: GraphState) -> GraphState:
 
 
 def organizer_node(state: GraphState) -> GraphState:
+    channel = state.channel
     print(f"\n[organizer_node] Executing channel: {channel}...")
     llm_outputs = dict(state.llm_outputs)
     knowledge_graph = list(state.knowledge_graph)
@@ -288,6 +290,7 @@ def organizer_node(state: GraphState) -> GraphState:
 
 
 def reflector_node(state: GraphState) -> GraphState:
+    channel = state.channel
     print(f"\n[reflector_node] Executing channel: {channel}...")
     llm_outputs = dict(state.llm_outputs)
     validation_report = dict(state.validation_report)
@@ -327,6 +330,7 @@ def reflector_node(state: GraphState) -> GraphState:
 
 
 def integrator_node(state: GraphState) -> GraphState:
+    channel = state.channel
     print(f"\n[integrator_node] Executing channel: {channel}...")
     llm_outputs = dict(state.llm_outputs)
     decision = dict(state.decision)

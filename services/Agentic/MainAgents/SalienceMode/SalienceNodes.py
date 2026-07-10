@@ -26,15 +26,20 @@ client = instructor.from_openai(
 
 def mock_salience_router(user_input: str) -> SalienceRouterResponse:
     """Mock fallback for salience router when LLM call fails."""
+    channel = "inner_channel"
+    if any(k in user_input.lower() for k in ["outer", "external"]):
+        channel = "outer_channel"
     # Simple keyword routing rule for mock
     if any(k in user_input.lower() for k in ["loop", "transform", "cycle"]):
         return SalienceRouterResponse(
             target="DefaultMode",
-            explanation="Mock fallback: Input contains loop/transform keywords, routing to DefaultMode."
+            explanation="Mock fallback: Input contains loop/transform keywords, routing to DefaultMode.",
+            channel=channel
         )
     return SalienceRouterResponse(
         target="ExecutiveControlMode",
-        explanation="Mock fallback: Defaulting to ExecutiveControlMode for general tasks."
+        explanation="Mock fallback: Defaulting to ExecutiveControlMode for general tasks.",
+        channel=channel
     )
 
 
@@ -62,14 +67,17 @@ def salience_router_node(state: SalienceState) -> SalienceState:
 
     target = response.target
     explanation = response.explanation
+    channel = response.channel
 
     print(f"  [Decision] Route to: {target}")
     print(f"  [Explanation] {explanation}")
+    print(f"  [Channel] Channel: {channel}")
 
     return state.model_copy(
         update={
             "target_subgraph": target,
             "explanation": explanation,
+            "channel": channel,
         }
     )
 
@@ -118,7 +126,12 @@ def run_default_subgraph(state: SalienceState) -> SalienceState:
     )
 
     loop_graph = build_loop_subgraph()
-    loop_init = GraphState(input_text=state.user_input, iteration=0, should_stop=False)
+    loop_init = GraphState(
+        input_text=state.user_input,
+        iteration=0,
+        should_stop=False,
+        channel=state.channel,
+    )
     loop_res = loop_graph.invoke(loop_init)
 
     # Extract results

@@ -167,3 +167,4 @@ class GraphState(BaseModel):
     validation_report: Dict[str, Any] = Field(default_factory=dict)
     decision: Dict[str, Any] = Field(default_factory=dict)
     input_text: str = ""
+    channel: str = "inner_channel"

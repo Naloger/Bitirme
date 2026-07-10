@@ -37,6 +37,7 @@ dependencies = [
     "openai>=2.36.0",
     "instructor>=1.15.4",
     "mcp>=1.27.1",
+    "contextvars>=2.4",
 ]
 
 [dependency-groups]

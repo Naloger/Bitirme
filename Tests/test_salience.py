@@ -42,12 +42,13 @@ class TestSalienceMode(unittest.TestCase):
     def test_router_decides_default_mode(self, mock_create):
         """Test that router selects DefaultMode based on LLM JSON response."""
         mock_create.return_value = SalienceRouterResponse(
-            target="DefaultMode", explanation="Simple mapping"
+            target="DefaultMode", explanation="Simple mapping", channel="outer_channel"
         )
 
         res = salience_router_node(self.state)
         self.assertEqual(res.target_subgraph, "DefaultMode")
         self.assertEqual(res.explanation, "Simple mapping")
+        self.assertEqual(res.channel, "outer_channel")
 
     @patch("services.Agentic.MainAgents.SalienceMode.SalienceNodes.client.chat.completions.create")
     def test_router_parsing_fallback(self, mock_create):
