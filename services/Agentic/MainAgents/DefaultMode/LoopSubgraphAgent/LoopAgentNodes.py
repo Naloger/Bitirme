@@ -51,8 +51,8 @@ client = instructor.from_openai(
 )
 
 
-def call_structured_llm(prompt: str, system_prompt: str, response_model: Any, mock_factory: Any) -> Any:
-    """Helper to invoke structured LLM or use mock fallback if connection fails."""
+def call_structured_llm(prompt: str, system_prompt: str, response_model: Any) -> Any:
+    """Helper to invoke structured LLM, raising a clear exception if connection fails."""
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt},
@@ -66,8 +66,8 @@ def call_structured_llm(prompt: str, system_prompt: str, response_model: Any, mo
             timeout=config.TIMEOUT,
         )
     except Exception as e:
-        print(f"  [LLM Warning] Connection failed, using mock fallback. Error: {e}")
-        return mock_factory()
+        print(f"\n[CRITICAL LLM ERROR] Structured LLM call failed in Loop Subgraph: {e}")
+        raise RuntimeError(f"Loop Subgraph LLM execution failed: {e}. Fallback is disabled.")
 
 
 def merge_quads(existing_quads: list[Quad], new_quads: list[Quad]) -> list[Quad]:
@@ -183,6 +183,11 @@ def mock_integrator_outer() -> IntegratorOuterResponse:
 
 def collector_node(state: GraphState) -> GraphState:
     channel = state.channel
+    # Safeguard: if we are in inner_channel but have user input_text, escalate to outer_channel to parse/build the graph
+    if channel == "inner_channel" and state.input_text:
+        print(f"  [Safeguard] Active user input detected in inner_channel. Auto-escalating channel to outer_channel to build knowledge graph.")
+        channel = "outer_channel"
+
     print(f"\n[collector_node] Executing channel: {channel}...")
     llm_outputs = dict(state.llm_outputs)
     raw_internal = list(state.raw_internal)
@@ -202,10 +207,9 @@ def collector_node(state: GraphState) -> GraphState:
 
         system_prompt = CollectorNodePromptInner.format(current_internal_state=knowledge_graph)
         prompt = "Analyze inner knowledge graph quads to identify latent patterns."
-        response = call_structured_llm(prompt, system_prompt, CollectorInnerResponse, mock_collector_inner)
+        response = call_structured_llm(prompt, system_prompt, CollectorInnerResponse)
         if not response.proposed_quads:
-            print("  [LLM Warning] Empty proposed_quads returned, using mock fallback.")
-            response = mock_collector_inner()
+            print("  [LLM Warning] Empty proposed_quads returned from inner collector. Continuing with empty set.")
         llm_outputs["collector"] = response.model_dump()
         raw_internal.append({"source": "internal", "data": "collector_ingested"})
         
@@ -221,12 +225,22 @@ def collector_node(state: GraphState) -> GraphState:
         ingested = tool_ingest_external_api()
         tool_write_to_quadstore(ingested)
 
-        system_prompt = CollectorNodePromptOuter.format(input_text=state.input_text)
+        intent_str = ""
+        if state.intent_result:
+            intent_str = (
+                f"\nIntent Analysis Context:\n"
+                f"- Sender Identity: {state.intent_result.sender_identity}\n"
+                f"- Inferences: {state.intent_result.inferences}\n"
+                f"- Recommended Action: {state.intent_result.recommended_action}"
+            )
+        system_prompt = CollectorNodePromptOuter.format(
+            input_text=state.input_text,
+            intent_context=intent_str
+        )
         prompt = "Extract atomic facts from standard input text."
-        response = call_structured_llm(prompt, system_prompt, CollectorOuterResponse, mock_collector_outer)
+        response = call_structured_llm(prompt, system_prompt, CollectorOuterResponse)
         if not response.proposed_quads:
-            print("  [LLM Warning] Empty proposed_quads returned, using mock fallback.")
-            response = mock_collector_outer()
+            print("  [LLM Warning] Empty proposed_quads returned from outer collector. Continuing with empty set.")
         llm_outputs["collector"] = response.model_dump()
         raw_external.append({"source": "external", "data": "collector_ingested"})
 
@@ -238,7 +252,8 @@ def collector_node(state: GraphState) -> GraphState:
         "llm_outputs": llm_outputs,
         "raw_internal": raw_internal,
         "raw_external": raw_external,
-        "knowledge_graph": knowledge_graph
+        "knowledge_graph": knowledge_graph,
+        "channel": channel
     })
 
 
@@ -261,10 +276,9 @@ def organizer_node(state: GraphState) -> GraphState:
     if channel == "inner_channel":
         system_prompt = OrganizerNodePromptInner.format(proposed_quads=knowledge_graph)
         prompt = "Apply ontology constraints and logical standardization to knowledge graph."
-        response = call_structured_llm(prompt, system_prompt, OrganizerInnerResponse, mock_organizer_inner)
+        response = call_structured_llm(prompt, system_prompt, OrganizerInnerResponse)
         if not response.structured_quads:
-            print("  [LLM Warning] Empty structured_quads returned, using mock fallback.")
-            response = mock_organizer_inner()
+            print("  [LLM Warning] Empty structured_quads returned from inner organizer. Continuing with empty set.")
         llm_outputs["organizer"] = response.model_dump()
         
         # Replace graph with organized structured quads
@@ -273,10 +287,9 @@ def organizer_node(state: GraphState) -> GraphState:
     elif channel == "outer_channel":
         system_prompt = OrganizerNodePromptOuter.format(proposed_quads=knowledge_graph)
         prompt = "Apply logical hierarchy and mapping rules to knowledge graph."
-        response = call_structured_llm(prompt, system_prompt, OrganizerOuterResponse, mock_organizer_outer)
+        response = call_structured_llm(prompt, system_prompt, OrganizerOuterResponse)
         if not response.structured_quads:
-            print("  [LLM Warning] Empty structured_quads returned, using mock fallback.")
-            response = mock_organizer_outer()
+            print("  [LLM Warning] Empty structured_quads returned from outer organizer. Continuing with empty set.")
         llm_outputs["organizer"] = response.model_dump()
 
         # Replace graph with organized structured quads
@@ -309,7 +322,7 @@ def reflector_node(state: GraphState) -> GraphState:
     if channel == "inner_channel":
         system_prompt = ReflectorNodePromptInner.format(structured_quads=knowledge_graph)
         prompt = "Check internal consistency and record remediation proposals."
-        response = call_structured_llm(prompt, system_prompt, ReflectorInnerResponse, mock_reflector_inner)
+        response = call_structured_llm(prompt, system_prompt, ReflectorInnerResponse)
         llm_outputs["reflector"] = response.model_dump()
 
         validation_report["issues"] = response.model_dump().get("detected_internal_inconsistencies", [])
@@ -317,7 +330,7 @@ def reflector_node(state: GraphState) -> GraphState:
     elif channel == "outer_channel":
         system_prompt = ReflectorNodePromptOuter.format(structured_quads=knowledge_graph)
         prompt = "Cross-reference external quads with standard LLM input text."
-        response = call_structured_llm(prompt, system_prompt, ReflectorOuterResponse, mock_reflector_outer)
+        response = call_structured_llm(prompt, system_prompt, ReflectorOuterResponse)
         llm_outputs["reflector"] = response.model_dump()
 
         validation_report["issues"] = response.model_dump().get("detected_external_conflicts", [])
@@ -342,7 +355,7 @@ def integrator_node(state: GraphState) -> GraphState:
     if channel == "inner_channel":
         system_prompt = IntegratorNodePromptInner.format(knowledge_graph=knowledge_graph, remediation_proposals=proposals)
         prompt = "Merge proposals with knowledge graph and prioritizedirectives."
-        response = call_structured_llm(prompt, system_prompt, IntegratorInnerResponse, mock_integrator_inner)
+        response = call_structured_llm(prompt, system_prompt, IntegratorInnerResponse)
         llm_outputs["integrator"] = response.model_dump()
 
         decision["actions"] = [
@@ -356,17 +369,20 @@ def integrator_node(state: GraphState) -> GraphState:
     elif channel == "outer_channel":
         system_prompt = IntegratorNodePromptOuter.format(knowledge_graph=knowledge_graph, internal_directives=llm_outputs.get('integrator', {}))
         prompt = "Merge external context with knowledge graph and translate to actions."
-        response = call_structured_llm(prompt, system_prompt, IntegratorOuterResponse, mock_integrator_outer)
+        response = call_structured_llm(prompt, system_prompt, IntegratorOuterResponse)
         llm_outputs["integrator"] = response.model_dump()
 
-        action = response.model_dump().get("final_external_action", {})
-        decision["actions"] = [
-            {
-                "type": action.get("action_name", "action"),
-                "target": action.get("mcp_tool_name", "tool"),
-                "concept": action.get("action_name", "action")
-            }
-        ]
+        action = response.final_external_action
+        if action:
+            decision["actions"] = [
+                {
+                    "type": action.action_name,
+                    "target": action.mcp_tool_name,
+                    "concept": action.action_name
+                }
+            ]
+        else:
+            decision["actions"] = []
 
     # Connect to integrator tools as a trigger / progress indicator on the shared store
     from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentTools import (

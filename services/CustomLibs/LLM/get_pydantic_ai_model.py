@@ -24,4 +24,8 @@ def get_pydantic_ai_model() -> Any:
         return OllamaModel(name, provider=OllamaProvider(base_url=url, api_key=key))
     if provider in ("openai", "deepseek"):
         return OpenAIChatModel(name, provider=OpenAIProvider(base_url=url, api_key=key))
+    if provider == "google":
+        from pydantic_ai.models.gemini import GeminiModel
+        from pydantic_ai.providers.google_gla import GoogleGLAProvider
+        return GeminiModel(name, provider=GoogleGLAProvider(api_key=key))
     return name

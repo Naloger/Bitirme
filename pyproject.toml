@@ -38,6 +38,7 @@ dependencies = [
     "instructor>=1.15.4",
     "mcp>=1.27.1",
     "contextvars>=2.4",
+    "psycopg2-binary>=2.9.12",
 ]
 
 [dependency-groups]

@@ -67,19 +67,7 @@ class ToolCall(BaseModel):
         "show_datetime",
         "get_env"
     ]
-    args: Union[
-        RunPythonArgs,
-        RunShellArgs,
-        WriteFileArgs,
-        ReadFileArgs,
-        ListFilesArgs,
-        WebSearchArgs,
-        FetchWebpageArgs,
-        SearchGrepArgs,
-        DeleteFileArgs,
-        ShowDatetimeArgs,
-        GetEnvArgs
-    ]
+    args: Any
 
     @model_validator(mode="after")
     def validate_args_by_tool(self) -> "ToolCall":
@@ -97,13 +85,13 @@ class ToolCall(BaseModel):
             "get_env": GetEnvArgs,
         }
         expected_class = tool_to_args.get(self.tool)
-        if expected_class and not isinstance(self.args, expected_class):
+        if expected_class:
             if isinstance(self.args, BaseModel):
                 data = self.args.model_dump()
             elif isinstance(self.args, dict):
                 data = self.args
             else:
-                raise ValueError(f"Invalid args type: {type(self.args)}")
+                data = {}
             try:
                 self.args = expected_class(**data)
             except Exception as e:

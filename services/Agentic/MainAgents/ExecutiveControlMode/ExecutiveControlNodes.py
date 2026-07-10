@@ -225,23 +225,29 @@ def task_executor(state: ECNState) -> ECNState:
         raw_tool_call = json.loads(json_str)
 
         # Auto-heal: If the model returned arguments directly without the tool/args envelope
-        if isinstance(raw_tool_call, dict) and "tool" not in raw_tool_call:
-            if "filename" in raw_tool_call and "content" in raw_tool_call:
-                raw_tool_call = {"tool": "write_file", "args": raw_tool_call}
-            elif "filename" in raw_tool_call:
-                raw_tool_call = {"tool": "read_file", "args": raw_tool_call}
-            elif "code" in raw_tool_call:
-                raw_tool_call = {"tool": "run_python", "args": raw_tool_call}
-            elif "command" in raw_tool_call:
-                raw_tool_call = {"tool": "run_shell", "args": raw_tool_call}
-            elif "query" in raw_tool_call and "file_pattern" in raw_tool_call:
-                raw_tool_call = {"tool": "search_grep", "args": raw_tool_call}
-            elif "query" in raw_tool_call:
-                raw_tool_call = {"tool": "web_search", "args": raw_tool_call}
-            elif "url" in raw_tool_call:
-                raw_tool_call = {"tool": "fetch_webpage", "args": raw_tool_call}
-            elif not raw_tool_call:
-                raw_tool_call = {"tool": "list_files", "args": {}}
+        if isinstance(raw_tool_call, dict):
+            if "tool" in raw_tool_call and "args" not in raw_tool_call:
+                # Flat arguments under the same dict: gather them into "args"
+                tool_name = raw_tool_call["tool"]
+                args_dict = {k: v for k, v in raw_tool_call.items() if k != "tool"}
+                raw_tool_call = {"tool": tool_name, "args": args_dict}
+            elif "tool" not in raw_tool_call:
+                if "filename" in raw_tool_call and "content" in raw_tool_call:
+                    raw_tool_call = {"tool": "write_file", "args": raw_tool_call}
+                elif "filename" in raw_tool_call:
+                    raw_tool_call = {"tool": "read_file", "args": raw_tool_call}
+                elif "code" in raw_tool_call:
+                    raw_tool_call = {"tool": "run_python", "args": raw_tool_call}
+                elif "command" in raw_tool_call:
+                    raw_tool_call = {"tool": "run_shell", "args": raw_tool_call}
+                elif "query" in raw_tool_call and "file_pattern" in raw_tool_call:
+                    raw_tool_call = {"tool": "search_grep", "args": raw_tool_call}
+                elif "query" in raw_tool_call:
+                    raw_tool_call = {"tool": "web_search", "args": raw_tool_call}
+                elif "url" in raw_tool_call:
+                    raw_tool_call = {"tool": "fetch_webpage", "args": raw_tool_call}
+                elif not raw_tool_call:
+                    raw_tool_call = {"tool": "list_files", "args": {}}
 
         validated_call = ToolCall(**raw_tool_call)
 
@@ -346,26 +352,40 @@ def task_evaluator(state: ECNState) -> ECNState:
         return state.model_copy(update={"evaluation_status": "task_failed"})
 
     exec_output = state.execution_result.get("output", "")
-    prompt = (
-        f"Goal: {state.task}\n"
-        f"Execution Output:\n{exec_output[:5000]}\n\n"
-        f"Evaluate the execution output against the Goal and determine the verdict as defined in the system prompt.\n"
-        f"Respond with exactly one of these on the last line:\n"
-        f"VERDICT: SUCCESS\n"
-        f"VERDICT: RETRY\n"
-        f"VERDICT: FAILURE"
-    )
+    
+    # Programmatic override for transient connection/network/socket errors
+    is_transient_error = False
+    lower_output = exec_output.lower()
+    if any(term in lower_output for term in ["connectionreseterror", "connection aborted", "connectionreset", "socket error", "10054"]):
+        is_transient_error = True
+    elif "timed out" in lower_output and "seconds" in lower_output:
+        is_transient_error = True
+    elif any(term in lower_output for term in ["handshake failed", "actively refused", "10061"]):
+        is_transient_error = True
 
-    eval_response = call_llm(prompt, system_prompt=EVALUATOR_SYSTEM_PROMPT)
-    last_line = eval_response.strip().splitlines()[-1] if eval_response else ""
-    print(f"  [Evaluator Output]: {last_line}")
-
-    if "VERDICT: FAILURE" in eval_response:
-        status = "task_failed"
-    elif "VERDICT: RETRY" in eval_response:
+    if is_transient_error:
+        print("  [Evaluator] Detected transient network error in tool output. Forcing VERDICT: RETRY.")
         status = "step_error"
     else:
-        status = "step_success"
+        prompt = (
+            f"Goal: {state.task}\n"
+            f"Execution Output:\n{exec_output[:5000]}\n\n"
+            f"Evaluate the execution output against the Goal and determine the verdict as defined in the system prompt.\n"
+            f"Respond with exactly one of these on the last line:\n"
+            f"VERDICT: SUCCESS\n"
+            f"VERDICT: RETRY\n"
+            f"VERDICT: FAILURE"
+        )
+        eval_response = call_llm(prompt, system_prompt=EVALUATOR_SYSTEM_PROMPT)
+        last_line = eval_response.strip().splitlines()[-1] if eval_response else ""
+        print(f"  [Evaluator Output]: {last_line}")
+
+        if "VERDICT: FAILURE" in eval_response:
+            status = "task_failed"
+        elif "VERDICT: RETRY" in eval_response:
+            status = "step_error"
+        else:
+            status = "step_success"
 
     log_execution_step(
         task_id=state.task_id,

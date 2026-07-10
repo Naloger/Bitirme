@@ -217,16 +217,28 @@ main();
         """Performs a web search using DuckDuckGo Lite and returns titles, URLs, and snippets."""
         try:
             import requests
+            import time
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
-            r = requests.post(
-                "https://lite.duckduckgo.com/lite/",
-                data={"q": query},
-                headers=headers,
-                timeout=10
-            )
-            r.raise_for_status()
+            r = None
+            last_err = None
+            for attempt in range(3):
+                try:
+                    r = requests.post(
+                        "https://lite.duckduckgo.com/lite/",
+                        data={"q": query},
+                        headers=headers,
+                        timeout=10
+                    )
+                    r.raise_for_status()
+                    break
+                except Exception as e:
+                    last_err = e
+                    if attempt < 2:
+                        time.sleep(1.5 * (attempt + 1))
+            if r is None:
+                raise last_err or RuntimeError("Web search failed after 3 attempts.")
             
             link_matches = re.findall(
                 r"<a[^>]+href=\"([^\"]+)\"[^>]*class='result-link'[^>]*>(.*?)</a>",
@@ -269,11 +281,23 @@ main();
         """Downloads a webpage and strips HTML tags, returning plain text."""
         try:
             import requests
+            import time
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
-            r = requests.get(url, headers=headers, timeout=15)
-            r.raise_for_status()
+            r = None
+            last_err = None
+            for attempt in range(3):
+                try:
+                    r = requests.get(url, headers=headers, timeout=15)
+                    r.raise_for_status()
+                    break
+                except Exception as e:
+                    last_err = e
+                    if attempt < 2:
+                        time.sleep(1.5 * (attempt + 1))
+            if r is None:
+                raise last_err or RuntimeError("Fetch webpage failed after 3 attempts.")
             
             # Simple html to text helper
             html = r.text

@@ -90,11 +90,13 @@ class TestSalienceMode(unittest.TestCase):
         self.assertIn("Completed Loop Subgraph in 4 iterations", res.result)
         self.assertEqual(res.loop_state, {"iteration": 4, "decision": {"actions": [{"type": "log"}]}})
 
+    @patch("services.Agentic.MainAgents.SalienceMode.SalienceGraphBuilder.run_intent_analysis_node")
     @patch("services.Agentic.MainAgents.SalienceMode.SalienceNodes.client.chat.completions.create")
     @patch("services.Agentic.MainAgents.SalienceMode.SalienceGraphBuilder.run_executive_subgraph")
     @patch("services.Agentic.MainAgents.SalienceMode.SalienceGraphBuilder.run_default_subgraph")
-    def test_full_salience_graph_routing_executive(self, mock_run_default, mock_run_exec, mock_create):
+    def test_full_salience_graph_routing_executive(self, mock_run_default, mock_run_exec, mock_create, mock_run_intent):
         """Test full graph execution routing to ExecutiveControlMode."""
+        mock_run_intent.side_effect = lambda state: state
         mock_create.return_value = SalienceRouterResponse(
             target="ExecutiveControlMode", explanation="Requires search"
         )
@@ -107,6 +109,7 @@ class TestSalienceMode(unittest.TestCase):
         self.assertEqual(res["result"], "ECN Mocked output")
         mock_run_exec.assert_called_once()
         mock_run_default.assert_not_called()
+        mock_run_intent.assert_called_once()
 
 
 if __name__ == "__main__":

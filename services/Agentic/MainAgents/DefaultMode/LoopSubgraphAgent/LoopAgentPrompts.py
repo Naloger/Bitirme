@@ -17,9 +17,10 @@ You are the Outer Perception Module (S/N - External) of a cognitive RDF quadstor
 
 [INPUT CONTEXT]
 Raw Standard LLM Input Text: {input_text}
+{intent_context}
 
 [COGNITIVE DIRECTIVE]
-1. Parse the raw input text to extract factual statements as RDF Quads (Subject, Predicate, Object, Graph).
+1. Parse the raw input text to extract factual statements as RDF Quads (Subject, Predicate, Object, Graph). Always extract all declarations, naming instructions, status updates, or facts mentioned in the input text, even if the Intent Analysis recommended action is 'göz ardı'.
 2. Standardize names of extracted subjects and objects.
 3. Set the Graph URI parameter strictly to 'llm_input'.
 4. Ensure the output is comprised entirely of flat, atomic RDF statements."""

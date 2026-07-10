@@ -1,6 +1,8 @@
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
+from services.Agentic.HelperAgents.IntentAgent.IntentAgentModels import IntentResult
+
 
 class SalienceRouterResponse(BaseModel):
     """Structured response for Salience Router."""
@@ -19,3 +21,5 @@ class SalienceState(BaseModel):
     channel: str = "inner_channel"
     ecn_state: Optional[Dict[str, Any]] = None
     loop_state: Optional[Dict[str, Any]] = None
+    intent_result: Optional[IntentResult] = None
+

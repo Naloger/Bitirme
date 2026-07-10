@@ -199,6 +199,39 @@ class TestToolParsingErrors(unittest.TestCase):
             self.assertEqual(result.execution_result["output"], "Mocked search result")
             mock_search.assert_called_once_with("python implementation of leiden algorithm example")
 
+    def test_flat_tool_call(self):
+        """Test parsing of a flat tool call format like {"tool": "web_search", "query": "..."}"""
+        reasoning = (
+            "ROUTE: tool\n"
+            "{\n"
+            '  "tool": "web_search",\n'
+            '  "query": "leiden community detection"\n'
+            "}"
+        )
+        state = self.base_state.model_copy(update={"reasoning": reasoning})
+        from unittest.mock import patch
+        with patch("services.CustomLibs.sandbox.SandboxEnv.web_search") as mock_search:
+            mock_search.return_value = "Mocked search result"
+            result = task_executor(state)
+            self.assertEqual(result.execution_result["output"], "Mocked search result")
+            mock_search.assert_called_once_with("leiden community detection")
+
+    def test_flat_arg_tool_call(self):
+        """Test auto-healing of a completely flat argument call like {"query": "..."} without tool key"""
+        reasoning = (
+            "ROUTE: tool\n"
+            "{\n"
+            '  "query": "leiden community detection"\n'
+            "}"
+        )
+        state = self.base_state.model_copy(update={"reasoning": reasoning})
+        from unittest.mock import patch
+        with patch("services.CustomLibs.sandbox.SandboxEnv.web_search") as mock_search:
+            mock_search.return_value = "Mocked search result"
+            result = task_executor(state)
+            self.assertEqual(result.execution_result["output"], "Mocked search result")
+            mock_search.assert_called_once_with("leiden community detection")
+
 
 class TestTaskExecutorRouting(unittest.TestCase):
     def setUp(self):

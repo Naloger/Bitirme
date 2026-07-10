@@ -1,6 +1,9 @@
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
+from services.Agentic.HelperAgents.IntentAgent.IntentAgentModels import IntentResult
+
+
 
 # ===========================================================================
 # Core RDF Quad model
@@ -145,10 +148,11 @@ class FallbackAction(BaseModel):
 
 
 class IntegratorOuterResponse(BaseModel):
-    final_external_action: FinalExternalAction = Field(default_factory=FinalExternalAction)
+    final_external_action: Optional[FinalExternalAction] = None
     expected_external_outcome: str
-    fallback_action: FallbackAction = Field(default_factory=FallbackAction)
+    fallback_action: Optional[FallbackAction] = None
     final_decision_rationale: str
+
 
 
 # ===========================================================================
@@ -168,3 +172,4 @@ class GraphState(BaseModel):
     decision: Dict[str, Any] = Field(default_factory=dict)
     input_text: str = ""
     channel: str = "inner_channel"
+    intent_result: Optional[IntentResult] = None

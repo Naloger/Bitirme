@@ -3,6 +3,7 @@ from typing import cast
 from services.Agentic.HelperAgents.IntentAgent.IntentAgentModels import (
     IntentAgentState,
     IntentResult,
+    IntentAnalysisOutput,
 )
 from services.Agentic.HelperAgents.IntentAgent.IntentAgentPrompts import SYSTEM_PROMPT
 from services.CustomLibs.LLM.pydantic_ai_helpers import get_agent, get_settings
@@ -21,22 +22,22 @@ def analyze_intent_node(state: IntentAgentState) -> IntentAgentState:
     if not x:
         return state.model_copy(update={"error": "No message_text provided"})
 
-    agent = get_agent(system_prompt=SYSTEM_PROMPT, output_type=IntentResult)
+    agent = get_agent(system_prompt=SYSTEM_PROMPT, output_type=IntentAnalysisOutput)
     settings = get_settings()
     
-    prompt = f"X: {x}" + (f"\nK: {k}" if k else "")
+    prompt = f"Ham Mesaj (message_text): {x}" + (f"\nBağlam Bilgisi (context_info): {k}" if k else "")
     
     try:
         response = agent.run_sync(prompt, model_settings=settings)
-        partial = cast(IntentResult, response.output)
+        partial = cast(IntentAnalysisOutput, response.output)
         
         # Build complete output model matching state signature
         full_result = IntentResult(
-            X=x,
-            K=k,
-            Y=partial.Y,
-            Z=partial.Z,
-            T=partial.T
+            message_text=x,
+            context_info=k,
+            sender_identity=partial.sender_identity,
+            inferences=partial.inferences,
+            recommended_action=partial.recommended_action
         )
         
         return state.model_copy(update={"analysis_result": full_result, "error": None})

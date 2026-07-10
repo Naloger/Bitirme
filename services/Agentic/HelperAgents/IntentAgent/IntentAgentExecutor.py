@@ -12,8 +12,8 @@ from services.Agentic.HelperAgents.IntentAgent.IntentAgentHelpers import analyze
 if __name__ == "__main__":
     print("Executing IntentAgent LangGraph...")
     result = analyze(
-        x="Sistemdeki veritabanı yedeği alınamadı, disk kapasitesi %99 dolu! Acil destek gerekiyor!",
-        k="Mesaj 'DB-Monitor-Bot' cron job'ından Slack üzerinden geldi. Sistem yöneticisi tatilde.",
+        message_text="Sistemdeki veritabanı yedeği alınamadı, disk kapasitesi %99 dolu! Acil destek gerekiyor!",
+        context_info="Mesaj 'DB-Monitor-Bot' cron job'ından Slack üzerinden geldi. Sistem yöneticisi tatilde.",
     )
     print("\n--- Analysis Finished ---")
     for field, val in result.model_dump().items():

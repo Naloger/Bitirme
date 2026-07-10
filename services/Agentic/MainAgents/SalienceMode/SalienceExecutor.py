@@ -88,20 +88,25 @@ async def execute_salience_router_stream(user_input: str) -> AsyncIterator[str]:
                 for node_name, node_update in event.items():
                     state_data.update(node_update)
 
-                    chunk_payload = {
-                        "type": "node_update",
-                        "node_name": node_name,
-                        "updates": {
-                            k: (
+                    updates_dict = {}
+                    for k, v in node_update.items():
+                        if not v:
+                            continue
+                        if k == "intent_result":
+                            updates_dict[k] = v.model_dump() if hasattr(v, "model_dump") else v
+                        else:
+                            updates_dict[k] = (
                                 list(v.keys())
                                 if isinstance(v, dict)
                                 else len(v)
                                 if isinstance(v, list)
                                 else str(v)[:200]
                             )
-                            for k, v in node_update.items()
-                            if v
-                        },
+
+                    chunk_payload = {
+                        "type": "node_update",
+                        "node_name": node_name,
+                        "updates": updates_dict,
                     }
                     loop.call_soon_threadsafe(queue.put_nowait, chunk_payload)
 
