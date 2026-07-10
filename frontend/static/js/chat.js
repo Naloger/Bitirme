@@ -33,6 +33,40 @@
     let abortController = null;
     let isStreaming      = false;
 
+    // ── LocalStorage Persistence ────────────────────────────────
+    const STORAGE_KEY_CONVS = "salience_conversations";
+    const STORAGE_KEY_ACTIVE = "salience_active_conv_id";
+
+    function saveToLocalStorage() {
+        try {
+            localStorage.setItem(STORAGE_KEY_CONVS, JSON.stringify(conversations));
+            localStorage.setItem(STORAGE_KEY_ACTIVE, activeConvId || "");
+        } catch (e) {
+            console.error("Failed to save to localStorage:", e);
+        }
+    }
+
+    function loadFromLocalStorage() {
+        try {
+            const storedConvs = localStorage.getItem(STORAGE_KEY_CONVS);
+            const storedActive = localStorage.getItem(STORAGE_KEY_ACTIVE);
+            if (storedConvs) {
+                conversations = JSON.parse(storedConvs);
+            }
+            if (storedActive && conversations.some(c => c.id === storedActive)) {
+                activeConvId = storedActive;
+            } else if (conversations.length > 0) {
+                activeConvId = conversations[0].id;
+            } else {
+                activeConvId = null;
+            }
+        } catch (e) {
+            console.error("Failed to load from localStorage:", e);
+            conversations = [];
+            activeConvId = null;
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────────
     const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -50,6 +84,7 @@
         renderConvList();
         clearMessages();
         $chatTitle.textContent = conv.title;
+        saveToLocalStorage();
         return conv;
     }
 
@@ -68,21 +103,55 @@
             else                  replayAssistantMessage(m);
         });
         renderConvList();
+        saveToLocalStorage();
     }
 
     function renderConvList() {
         $convList.innerHTML = conversations.map(c => `
             <div class="conv-item ${c.id === activeConvId ? "active" : ""}" data-id="${c.id}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                </svg>
-                <span>${esc(c.title)}</span>
+                <div class="conv-item-left">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                    <span>${esc(c.title)}</span>
+                </div>
+                <button class="btn-delete-conv" data-id="${c.id}" title="Delete conversation">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
             </div>
         `).join("");
 
         $convList.querySelectorAll(".conv-item").forEach(el => {
-            el.addEventListener("click", () => switchConversation(el.dataset.id));
+            el.addEventListener("click", (e) => {
+                if (e.target.closest(".btn-delete-conv")) return;
+                switchConversation(el.dataset.id);
+            });
         });
+
+        $convList.querySelectorAll(".btn-delete-conv").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                deleteConversation(btn.dataset.id);
+            });
+        });
+    }
+
+    function deleteConversation(id) {
+        conversations = conversations.filter(c => c.id !== id);
+        if (activeConvId === id) {
+            if (conversations.length > 0) {
+                activeConvId = conversations[0].id;
+                switchConversation(activeConvId);
+            } else {
+                createConversation();
+            }
+        } else {
+            renderConvList();
+        }
+        saveToLocalStorage();
     }
 
     // ── Message Rendering ──────────────────────────────────────
@@ -161,7 +230,7 @@
                 scrollToBottom();
             },
             showResult(text) {
-                resultContainer.innerHTML = formatMarkdownBold(text);
+                resultContainer.innerHTML = formatMarkdown(text);
                 resultContainer.classList.remove("hidden");
                 scrollToBottom();
             },
@@ -178,7 +247,7 @@
         const row = document.createElement("div");
         row.className = "message-row assistant";
         let eventsHtml = msg.events.map(e => renderEventHTML(e)).join("");
-        let resultHtml = msg.result ? `<div class="result-text">${formatMarkdownBold(msg.result)}</div>` : "";
+        let resultHtml = msg.result ? `<div class="result-text">${formatMarkdown(msg.result)}</div>` : "";
 
         row.innerHTML = `
             <div class="msg-avatar">S</div>
@@ -193,23 +262,35 @@
         $messages.appendChild(row);
     }
 
-    // ── Markdown Bold & Italic Parser ──────────────────────────
-    function formatMarkdownBold(text) {
+    // ── Markdown Parser ────────────────────────────────────────
+    function formatMarkdown(text) {
         if (!text) return "";
         let html = esc(text);
-        // Replace **bold** and __bold__ with <strong>bold</strong>
+
+        // 1. Parse code blocks: ```lang code ```
+        html = html.replace(/```(\w*)([\s\S]*?)```/g, (match, lang, code) => {
+            const langClass = lang ? ` class="language-${lang}"` : "";
+            return `<pre class="code-block"><code${langClass}>${code.trim()}</code></pre>`;
+        });
+
+        // 2. Parse inline code: `code`
+        html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+        // 3. Replace **bold** and __bold__ with <strong>bold</strong>
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
         html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
-        // Replace *italic* and _italic_ with <em>italic</em>
+
+        // 4. Replace *italic* and _italic_ with <em>italic</em>
         html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
         html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+
         return html;
     }
 
     // ── Log Line Highlighter ──────────────────────────────────
     function formatLogLine(line) {
         // Parse markdown bold in log lines if any
-        let html = formatMarkdownBold(line);
+        let html = formatMarkdown(line);
 
         // Highlight tags like [SalienceRouter], [Decision], [Explanation], [collector_node], etc.
         html = html.replace(/\[([^\]]+)\]/g, (match, tag) => {
@@ -263,20 +344,41 @@
         if (evt.type === "node_update") {
             const rowsHtml = Object.entries(evt.updates || {}).map(([k, v]) => {
                 let valHtml = "";
-                if (Array.isArray(v)) {
-                    valHtml = v.map(item => `<span class="value-chip">${esc(item)}</span>`).join("");
+                if (k === "intent_result" && typeof v === "object" && v !== null) {
+                    valHtml = `
+                        <div class="intent-card">
+                            <div class="intent-card-row">
+                                <span class="intent-card-label">👤 Sender Identity</span>
+                                <span class="intent-card-text">${esc(v.sender_identity || "Undetermined")}</span>
+                            </div>
+                            <div class="intent-card-row">
+                                <span class="intent-card-label">💡 Inferences</span>
+                                <span class="intent-card-text">${esc(v.inferences || "None")}</span>
+                            </div>
+                            <div class="intent-card-row">
+                                <span class="intent-card-label">⚙ Recommended Action</span>
+                                <span class="intent-card-text font-bold text-accent">${esc(v.recommended_action || "None")}</span>
+                            </div>
+                        </div>
+                    `;
+                } else if (Array.isArray(v)) {
+                    valHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px 6px;">` + 
+                              v.map(item => `<span class="value-chip">${esc(item)}</span>`).join("") + 
+                              `</div>`;
                 } else if (typeof v === "object" && v !== null) {
                     valHtml = `<code class="value-code">${esc(JSON.stringify(v))}</code>`;
                 } else {
                     // Try parsing stringified arrays
                     let parsed = null;
                     if (typeof v === "string" && v.startsWith("[") && v.endsWith("]")) {
-                        try { parsed = JSON.parse(v); } catch {}
+                        try { parsed = JSON.parse(v.replace(/'/g, '"')); } catch {}
                     }
                     if (Array.isArray(parsed)) {
-                        valHtml = parsed.map(item => `<span class="value-chip">${esc(item)}</span>`).join("");
+                        valHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px 6px;">` + 
+                                  parsed.map(item => `<span class="value-chip">${esc(item)}</span>`).join("") + 
+                                  `</div>`;
                     } else {
-                        valHtml = formatMarkdownBold(String(v));
+                        valHtml = formatMarkdown(String(v));
                     }
                 }
                 return `
@@ -449,6 +551,7 @@
         const conv = getActiveConv();
         if (conv) conv.messages = [];
         clearMessages();
+        saveToLocalStorage();
     });
 
     $btnSidebar.addEventListener("click", () => {
@@ -464,6 +567,12 @@
     });
 
     // ── Init ───────────────────────────────────────────────────
-    createConversation();
+    loadFromLocalStorage();
+    if (conversations.length === 0) {
+        createConversation();
+    } else {
+        renderConvList();
+        switchConversation(activeConvId);
+    }
     $input.focus();
 })();

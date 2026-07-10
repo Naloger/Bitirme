@@ -210,7 +210,7 @@ body {
 .conv-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
     padding: 10px 12px;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -218,13 +218,47 @@ body {
     font-size: 0.87rem;
     transition: all var(--transition-fast);
     margin-bottom: 2px;
+    overflow: hidden;
+}
+
+.conv-item:hover { background: var(--glass-hover); color: var(--text-primary); }
+.conv-item.active { background: hsla(255, 70%, 60%, 0.12); color: var(--accent-400); }
+
+.conv-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.conv-item-left span {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.conv-item:hover { background: var(--glass-hover); color: var(--text-primary); }
-.conv-item.active { background: hsla(255, 70%, 60%, 0.12); color: var(--accent-400); }
+.btn-delete-conv {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    display: none;
+    padding: 2px;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.conv-item:hover .btn-delete-conv {
+    display: flex;
+    align-items: center;
+}
+
+.btn-delete-conv:hover {
+    color: var(--error);
+    background: hsla(0, 72%, 62%, 0.12);
+}
 
 .conv-item svg {
     flex-shrink: 0;
@@ -803,3 +837,74 @@ body {
     color: var(--info);
     font-size: 0.72rem;
 }
+
+/* Premium Code block and inline code styling */
+.code-block {
+    background: hsl(230, 22%, 5%) !important;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin: 10px 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: hsl(200, 80%, 75%);
+    line-height: 1.5;
+}
+
+.code-block code {
+    font-family: inherit;
+    color: inherit;
+    white-space: pre;
+}
+
+.inline-code {
+    background: hsla(230, 20%, 20%, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent-400);
+}
+
+/* Intent Analysis Card styling */
+.intent-card {
+    background: hsla(255, 70%, 60%, 0.05);
+    border: 1px solid hsla(255, 70%, 60%, 0.15);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.intent-card-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.intent-card-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent-400);
+}
+
+.intent-card-text {
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+.intent-card-text.font-bold {
+    font-weight: 700;
+}
+
+.text-accent {
+    color: var(--accent-400);
+}
+
