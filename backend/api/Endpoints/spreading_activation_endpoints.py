@@ -75,6 +75,14 @@ class SpreadingActivationResponse(BaseModel):
     seed_words: List[str]
     activated_count: int
     results: List[ActivatedWord]
+    seed_results: List[ActivatedWord] = Field(
+        default=[],
+        description="The activated seed words themselves.",
+    )
+    spreaded_results: List[ActivatedWord] = Field(
+        default=[],
+        description="The activated words discovered via spreading (excluding seeds).",
+    )
 
 
 # ── Endpoint ──────────────────────────────────────────────────────────────
@@ -115,8 +123,27 @@ def run_spreading_activation(
 
     results = [ActivatedWord(word=w, score=s) for w, s in scores.items()]
 
+    # Separate seeds from spreaded results using Lemmatizer pipeline
+    from Libs.Lemmatizer.lemma_matrix import LemmaMatrixBuilder
+    builder = LemmaMatrixBuilder()
+
+    normalized_seeds = set()
+    for w in payload.seed_words:
+        normalized_seeds.update(builder.tokenize(w))
+
+    seed_results = []
+    spreaded_results = []
+
+    for item in results:
+        if item.word in normalized_seeds:
+            seed_results.append(item)
+        else:
+            spreaded_results.append(item)
+
     return SpreadingActivationResponse(
         seed_words=payload.seed_words,
         activated_count=len(results),
         results=results,
+        seed_results=seed_results,
+        spreaded_results=spreaded_results,
     )

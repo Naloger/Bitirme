@@ -74,16 +74,23 @@ def spreading_activation(
     for v in vocab_records:
         if v.id is not None and v.word:
             word_to_id[v.word] = v.id
+            word_to_id[v.word.lower().strip()] = v.id
             id_to_word[v.id] = v.word
 
-    # 2. Resolve seed words → vocab IDs
+    # 2. Resolve seed words → vocab IDs using Lemmatizer pipeline
+    from Libs.Lemmatizer.lemma_matrix import LemmaMatrixBuilder
+    builder = LemmaMatrixBuilder()
+
     seed_ids: Set[int] = set()
     for word in seed_words:
-        normalized = word.lower().strip()
-        vid = word_to_id.get(normalized)
-        if vid is not None:
-            seed_ids.add(vid)
-        else:
+        tokens = builder.tokenize(word)
+        found = False
+        for token in tokens:
+            vid = word_to_id.get(token)
+            if vid is not None:
+                seed_ids.add(vid)
+                found = True
+        if not found:
             logger.warning("Seed word '%s' not found in vocabulary. Skipping.", word)
 
     if not seed_ids:

@@ -1,9 +1,9 @@
 {
     "database_page": {
-        "path": "../../../backend/data/pages.db"
+        "path": "../data/pages.db"
     },
     "database_lemma_matrix": {
-        "path": "../../../backend/data/lemma_matrix.db"
+        "path": "../data/lemma_matrix.db"
     },
     "start_api": {
         "host": "127.0.0.1",

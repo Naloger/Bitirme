@@ -449,6 +449,12 @@ def test_overwrite_and_clear_endpoints():
 	assert len(conns_empty) == 0
 
 
-
-
-
+def test_build_upsert_endpoint_empty_vocabulary():
+	"""Verify that the /api/lemma_matrix/build_upsert endpoint handles text that resolves to an empty vocabulary gracefully without 500 error."""
+	client = TestClient(app)
+	# All-punctuation text or text in an unsupported language that yields no valid lemmas after gibberish filtering
+	text = "!!! ??? !!!"
+	resp = client.post("/api/lemma_matrix/build_and_upsert", json={"text": text})
+	assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.json()}"
+	body = resp.json()
+	assert "No co-occurrence pairs found" in body.get("message", "")

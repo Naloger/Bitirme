@@ -114,6 +114,9 @@ class LemmaMatrixBuilder:
         Uses a sliding window approach to calculate co-occurrence. If window_size is None,
         uses the instance default (self.window_size).
         """
+        if not texts:
+            raise ValueError("texts list cannot be empty")
+
         if window_size is None:
             window_size = getattr(self, "window_size", 1)
 
@@ -122,6 +125,16 @@ class LemmaMatrixBuilder:
 
         # Use CountVectorizer to build vocabulary and get feature names
         vectorizer = CountVectorizer(analyzer=lambda x: x, lowercase=False)
+
+        # Check if we have any tokens at all across all texts
+        if not any(tokenized_texts):
+            import scipy.sparse as sp
+            import numpy as np
+            vectorizer.vocabulary_ = {}
+            vectorizer.stop_words_ = set()
+            vectorizer.get_feature_names_out = lambda: np.array([], dtype=object)
+            return vectorizer, sp.csr_matrix((0, 0), dtype=int)
+
         vectorizer.fit(tokenized_texts)
         vocab = vectorizer.vocabulary_
         vocab_size = len(vocab)
