@@ -7,6 +7,7 @@ Allows an LLM agent to interact with the Apache AGE 'memory_db' quadstore graph
 
 import sys
 import json
+import random
 import re
 import threading
 from pathlib import Path
@@ -340,8 +341,12 @@ def graph_write_to_quadstore(
         return json.dumps({"status": "error", "success": False, "message": str(e)})
 
 @mcp.tool()
-def graph_ingest_internal_stream(source: str) -> str:
-    """Ingest and return internal quads matching the given source graph context from the quadstore."""
+def graph_ingest_internal_stream(source: str, sample_size: Optional[int] = None) -> str:
+    """
+    Ingest and return internal quads matching the given source graph context from the quadstore.
+    If sample_size is provided and positive, return a random sample of that many quads
+    instead of the full set (useful for limiting context window usage).
+    """
     try:
         from Scripts.infra.age.rdf_quadstore import RDFQuadstore
         store = RDFQuadstore(AGE_MEMORY_DB, AGE_RDF_GRAPH)
@@ -354,34 +359,35 @@ def graph_ingest_internal_stream(source: str) -> str:
                 "object": q["object"]["value"],
                 "graph": q["context"]
             })
+        # Random sampling: if sample_size is set and we have more quads than that, pick a random subset
+        if sample_size and sample_size > 0 and len(flattened) > sample_size:
+            flattened = random.sample(flattened, sample_size)
         return json.dumps(flattened, indent=2)
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
 
 @mcp.tool()
-def graph_ingest_external_api(endpoint: str) -> str:
+def graph_ingest_external_api(endpoint: str, sample_size: Optional[int] = None) -> str:
     """Ingest external statements from the given endpoint."""
     try:
         from Scripts.infra.age.rdf_quadstore import RDFQuadstore
         store = RDFQuadstore(AGE_MEMORY_DB, AGE_RDF_GRAPH)
         quads = store.query_quads(context=endpoint)
-        if quads:
-            flattened = []
-            for q in quads:
-                flattened.append({
-                    "subject": q["subject"]["value"],
-                    "predicate": q["predicate"],
-                    "object": q["object"]["value"],
-                    "graph": q["context"]
-                })
-            return json.dumps(flattened, indent=2)
-        else:
-            mock_data = [
-                {"subject": "worker_node_3", "predicate": "HAS_STATUS", "object": "CPU_spike", "graph": endpoint},
-                {"subject": "worker_node_3", "predicate": "HAS_METRIC", "object": "94.5%", "graph": endpoint},
-                {"subject": "api_node", "predicate": "HAS_STATUS", "object": "offline", "graph": endpoint}
-            ]
-            return json.dumps(mock_data, indent=2)
+        flattened = []
+        for q in quads:
+            flattened.append({
+                "subject": q["subject"]["value"],
+                "predicate": q["predicate"],
+                "object": q["object"]["value"],
+                "graph": q["context"]
+            })
+        if sample_size and sample_size > 0 and len(flattened) > sample_size:
+            flattened = random.sample(flattened, sample_size)
+            
+        if not flattened:
+            import warnings
+            warnings.warn(f"No external quads found for endpoint '{endpoint}'. Returning empty list.", UserWarning)
+        return json.dumps(flattened, indent=2)
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
 
@@ -389,17 +395,33 @@ def graph_ingest_external_api(endpoint: str) -> str:
 def graph_run_community_detection(quads: List[Dict[str, Any]]) -> str:
     """Group subjects into communities/clusters based on their quad connections."""
     try:
-        subjects = list({q["subject"] for q in quads if q.get("subject")})
-        communities = {}
-        for s in subjects:
-            prefix = s.split("_")[0] if "_" in s else s[:4]
-            if prefix not in communities:
-                communities[prefix] = []
-            communities[prefix].append(s)
-            
+        from collections import defaultdict
+        adj = defaultdict(set)
+        for q in quads:
+            subj, obj = q.get("subject"), q.get("object")
+            if subj and obj:
+                adj[subj].add(obj)
+                adj[obj].add(subj)
+        
+        visited = set()
+        communities = []
+        for node in adj.keys():
+            if node not in visited:
+                queue = [node]
+                community = {node}
+                visited.add(node)
+                while queue:
+                    curr = queue.pop(0)
+                    for neighbor in adj[curr]:
+                        if neighbor not in visited:
+                            visited.add(neighbor)
+                            community.add(neighbor)
+                            queue.append(neighbor)
+                communities.append(list(community))
+                
         result = [
-            {"community_id": cid, "members": members}
-            for cid, members in communities.items()
+            {"community_id": f"cluster_{i}", "members": members}
+            for i, members in enumerate(communities)
         ]
         return json.dumps(result, indent=2)
     except Exception as e:
@@ -411,12 +433,22 @@ def graph_map_ontology(quads: List[Dict[str, Any]], ontology: str = "default") -
     try:
         mapped = []
         for q in quads:
+            pred = str(q.get("predicate", "")).upper()
+            if pred in ["IS_A", "TYPE", "INSTANCE_OF"]:
+                concept = "Class/Type"
+            elif pred in ["HAS_PROPERTY", "STATUS", "HAS_ATTRIBUTE", "IS_NAMED", "HAS_NAME"]:
+                concept = "Attribute"
+            elif pred in ["DEPENDS_ON", "LOGICALLY_LINKED_TO", "AFFECTED_BY"]:
+                concept = "Dependency"
+            else:
+                concept = "Relationship"
+                
             mapped.append({
                 "subject": q["subject"],
                 "predicate": q["predicate"],
                 "object": q["object"],
                 "graph": q.get("graph", "default"),
-                "mapped_concept": "rdf_concept"
+                "mapped_concept": concept
             })
         return json.dumps(mapped, indent=2)
     except Exception as e:
@@ -440,8 +472,9 @@ def graph_validate_quads(quads: List[Dict[str, Any]]) -> str:
     try:
         issues = []
         for q in quads:
-            if hash(q["subject"]) % 10 == 0:
-                issues.append({"type": "conflict_quad", "quad": f"({q['subject']}, {q['predicate']}, {q['object']})"})
+            obj = str(q.get("object", "")).strip().lower()
+            if not obj or obj in ["none", "null", "n/a", "unknown"]:
+                issues.append({"type": "invalid_value", "quad": f"({q.get('subject')}, {q.get('predicate')}, {q.get('object')})"})
         return json.dumps(issues, indent=2)
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
@@ -452,8 +485,8 @@ def graph_detect_anomalies(quads: List[Dict[str, Any]]) -> str:
     try:
         anomalies = []
         for q in quads:
-            val = str(q.get("object", "")).lower()
-            if "spike" in val or "offline" in val or "94.5%" in val or "down" in val:
+            val = str(q.get("object", "")).strip().lower()
+            if val in ["error", "failure", "crash", "exception", "timeout", "offline", "down", "critical"]:
                 anomalies.append(q["subject"])
         return json.dumps(list(set(anomalies)), indent=2)
     except Exception as e:
@@ -464,15 +497,17 @@ def graph_infer_missing_quads(quads: List[Dict[str, Any]], issues: List[Dict[str
     """Infer logical additions to the quadstore."""
     try:
         inferred = []
-        issue_keys = {iss.get("quad") for iss in issues}
-        for q in quads:
-            key = f"({q['subject']}, {q['predicate']}, {q['object']})"
-            if key not in issue_keys and hash(q["subject"]) % 3 == 0:
+        # Simple logical inference
+        depends_on = {q["subject"]: q["object"] for q in quads if q.get("predicate") == "DEPENDS_ON"}
+        status_down = {q["subject"] for q in quads if q.get("predicate") == "STATUS" and str(q.get("object")).lower() in ["down", "offline", "error", "critical"]}
+        
+        for subj, obj in depends_on.items():
+            if obj in status_down:
                 inferred.append({
-                    "subject": q["object"],
-                    "predicate": "LOGICALLY_LINKED_TO",
-                    "object": q["subject"],
-                    "graph": f"inferred_{q.get('graph', 'default')}"
+                    "subject": subj,
+                    "predicate": "AFFECTED_BY",
+                    "object": obj,
+                    "graph": "inferred_knowledge"
                 })
         return json.dumps(inferred, indent=2)
     except Exception as e:
@@ -482,9 +517,14 @@ def graph_infer_missing_quads(quads: List[Dict[str, Any]], issues: List[Dict[str
 def graph_quadstore_traversal(quads: List[Dict[str, Any]], top_n: int = 3) -> str:
     """Perform SPARQL-like traversal and return top central subjects."""
     try:
-        subjects = list({q["subject"] for q in quads if q.get("subject")})
-        sorted_subs = sorted(subjects, key=lambda s: len(s), reverse=True)
-        result = [{"id": s} for s in sorted_subs[:top_n]]
+        from collections import defaultdict
+        degree = defaultdict(int)
+        for q in quads:
+            if q.get("subject"): degree[q["subject"]] += 1
+            if q.get("object"): degree[q["object"]] += 1
+            
+        sorted_subs = sorted(degree.keys(), key=lambda k: degree[k], reverse=True)
+        result = [{"id": s, "degree": degree[s]} for s in sorted_subs[:top_n]]
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
@@ -493,8 +533,22 @@ def graph_quadstore_traversal(quads: List[Dict[str, Any]], top_n: int = 3) -> st
 def graph_quadstore_impact_analysis(priority_nodes: List[Dict[str, Any]], quads: List[Dict[str, Any]]) -> str:
     """Analyze the impact propagation from priority nodes."""
     try:
+        from collections import defaultdict
+        adj = defaultdict(list)
+        for q in quads:
+            if q.get("subject") and q.get("object"):
+                adj[q["subject"]].append(q["object"])
+                
         priority_ids = {n["id"] for n in priority_nodes if "id" in n}
-        affected = {q["object"] for q in quads if q.get("subject") in priority_ids}
+        affected = set()
+        queue = list(priority_ids)
+        while queue:
+            curr = queue.pop(0)
+            for neighbor in adj[curr]:
+                if neighbor not in affected and neighbor not in priority_ids:
+                    affected.add(neighbor)
+                    queue.append(neighbor)
+                    
         return json.dumps({"affected_entities": list(affected)}, indent=2)
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
