@@ -112,16 +112,19 @@ async def direct_insert_sample_data(session_id: str):
     except Exception as e:
         print(f"  - Error importing Short-Term memories: {e}")
 
-async def direct_fetch_data(session_id: str) -> Dict[str, List[Dict[str, Any]]]:
+async def direct_fetch_data(session_id: str, fetch_all: bool = False) -> Dict[str, List[Dict[str, Any]]]:
     data = {}
     for coll in ["session_ego", "session_working_memory", "session_short_term_memory"]:
         try:
-            res = await typesense_client.search_collection(coll, {
+            search_params = {
                 "q": "*",
-                "filter_by": f"session_id:={session_id}",
                 "sort_by": "timestamp:asc",
-                "per_page": 100
-            })
+                "per_page": 250
+            }
+            if not fetch_all:
+                search_params["filter_by"] = f"session_id:={session_id}"
+                
+            res = await typesense_client.search_collection(coll, search_params)
             data[coll] = [hit["document"] for hit in res.get("hits", [])]
         except Exception as e:
             print(f"[Warning] Error fetching from '{coll}': {e}")
@@ -205,16 +208,17 @@ def api_fetch_data(session_id: str) -> Dict[str, List[Dict[str, Any]]]:
 
 # --- Formatting & Output ---
 
-def print_quads(title: str, quads: List[Dict[str, Any]]):
-    print("\n" + "=" * 120)
+def print_quads(title: str, quads: List[Dict[str, Any]], show_session: bool = False):
+    print("\n" + "=" * 140)
     print(f"{title} ({len(quads)} Triples)")
-    print("=" * 120)
+    print("=" * 140)
     if not quads:
         print("  (Empty)")
         return
         
-    print(f"{'SUBJECT':<18} | {'PREDICATE':<15} | {'OBJECT':<18} | {'CONTEXT':<18} | {'EMBEDDING (FIRST 3 + DIM)'}")
-    print("-" * 120)
+    session_header = f"{'SESSION ID':<20} | " if show_session else ""
+    print(f"{session_header}{'SUBJECT':<18} | {'PREDICATE':<15} | {'OBJECT':<18} | {'CONTEXT':<18} | {'EMBEDDING (FIRST 3 + DIM)'}")
+    print("-" * 140)
     for q in quads:
         sub = q.get("subject", "")
         pred = q.get("predicate", "")
@@ -224,9 +228,11 @@ def print_quads(title: str, quads: List[Dict[str, Any]]):
         emb_str = "None"
         if isinstance(emb, list) and len(emb) > 0:
             emb_str = f"[{', '.join(f'{x:.4f}' for x in emb[:3])}, ...] ({len(emb)} dim)"
-        print(f"{sub:<18} | {pred:<15} | {obj:<18} | {ctx:<18} | {emb_str}")
+            
+        sess_str = f"{q.get('session_id', ''):<20} | " if show_session else ""
+        print(f"{sess_str}{sub:<18} | {pred:<15} | {obj:<18} | {ctx:<18} | {emb_str}")
 
-def print_transcript(title: str, memories: List[Dict[str, Any]]):
+def print_transcript(title: str, memories: List[Dict[str, Any]], show_session: bool = False):
     print("\n" + "=" * 120)
     print(f"{title} ({len(memories)} Turns)")
     print("=" * 120)
@@ -238,12 +244,15 @@ def print_transcript(title: str, memories: List[Dict[str, Any]]):
         role = m.get("role", "unknown").upper()
         content = m.get("content", "")
         key = m.get("key", "")
+        sess_id = m.get("session_id", "")
         emb = m.get("embedding")
         emb_str = "None"
         if isinstance(emb, list) and len(emb) > 0:
             emb_str = f"[{', '.join(f'{x:.4f}' for x in emb[:3])}, ...] ({len(emb)} dim)"
         
         prefix = f"[{role}]"
+        if show_session:
+            prefix = f"[{sess_id}] {prefix}"
         key_str = f" ({key})" if key else ""
         print(f"{prefix}{key_str}: {content}")
         print(f"  +- Vector Embedding: {emb_str}")
@@ -258,8 +267,8 @@ async def main():
     parser.add_argument(
         "--session-id",
         type=str,
-        default="test-session-123",
-        help="The session identifier to use/visualize (default: test-session-123)"
+        default=None,
+        help="The session identifier to use/visualize (if not provided, visualizes all sessions)"
     )
     parser.add_argument(
         "--insert",
@@ -276,13 +285,24 @@ async def main():
         action="store_true",
         help="Connect directly to Typesense, bypassing the FastAPI server"
     )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Visualize full memory across all sessions (default behavior)"
+    )
     
     args = parser.parse_args()
     session_id = args.session_id
+    fetch_all = args.all or (session_id is None)
+    
+    # target_session_id is used when clearing or inserting data
+    target_session_id = session_id or "test-session-123"
     
     # 1. Determine connection method
-    use_api = not args.direct
-    if use_api:
+    use_api = not args.direct and not fetch_all
+    if fetch_all:
+        print("[Info] Visualizing full memory across all sessions. Direct mode will be used.")
+    else:
         # Check if API server is reachable
         try:
             res = httpx.get(f"{API_URL}/health", timeout=2.0)
@@ -303,28 +323,28 @@ async def main():
     # 2. Perform Clear Action
     if args.clear:
         if use_api:
-            api_clear_session(session_id)
+            api_clear_session(target_session_id)
         else:
-            await direct_clear_session(session_id)
+            await direct_clear_session(target_session_id)
             
     # 3. Perform Insert Action
     if args.insert:
         if use_api:
-            api_insert_sample_data(session_id)
+            api_insert_sample_data(target_session_id)
         else:
-            await direct_insert_sample_data(session_id)
+            await direct_insert_sample_data(target_session_id)
             
     # 4. Fetch and Visualize
-    print(f"\nRetrieving segmented session memory for '{session_id}'...")
+    print(f"\nRetrieving segmented session memory...")
     if use_api:
         data = api_fetch_data(session_id)
     else:
-        data = await direct_fetch_data(session_id)
+        data = await direct_fetch_data(session_id, fetch_all=fetch_all)
         
     # Visualize segments
-    print_quads("PERSISTENT FACT SEGMENT (EGO)", data.get("session_ego", []))
-    print_quads("CURRENT WORKING CONTEXT (WORKING MEMORY)", data.get("session_working_memory", []))
-    print_transcript("CONVERSATION TRANSCRIPT (SHORT-TERM MEMORY)", data.get("session_short_term_memory", []))
+    print_quads("PERSISTENT FACT SEGMENT (EGO)", data.get("session_ego", []), show_session=fetch_all)
+    print_quads("CURRENT WORKING CONTEXT (WORKING MEMORY)", data.get("session_working_memory", []), show_session=fetch_all)
+    print_transcript("CONVERSATION TRANSCRIPT (SHORT-TERM MEMORY)", data.get("session_short_term_memory", []), show_session=fetch_all)
     print("\n" + "=" * 80)
 
 if __name__ == "__main__":

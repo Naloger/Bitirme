@@ -77,13 +77,13 @@ app.add_middleware(
     allow_headers=["*"],  # type: ignore
 )
 
-# Ensure endpoint decorators are registered with the app
 from backend.api.Endpoints import (
     health_endpoints,
     page_endpoints,
     lemma_matrix_endpoints,
     spreading_activation_endpoints,
-    session_endpoints, typesense_admin_endpoints
+    session_endpoints, typesense_admin_endpoints,
+    workflow_endpoints
 )
 
 app.include_router(health_endpoints.router)
@@ -92,3 +92,4 @@ app.include_router(lemma_matrix_endpoints.router, prefix="/api/lemma_matrix")
 app.include_router(spreading_activation_endpoints.router, prefix="/api/lemma_matrix")
 app.include_router(session_endpoints.router)
 app.include_router(typesense_admin_endpoints.router)
+app.include_router(workflow_endpoints.router)
