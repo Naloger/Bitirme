@@ -100,101 +100,6 @@ def merge_quads(existing_quads: list[Quad], new_quads: list[Quad]) -> list[Quad]
 
 
 # ===========================================================================
-# Structured RDF Mock Response Factories (No Scores)
-# ===========================================================================
-
-def mock_collector_inner() -> CollectorInnerResponse:
-    return CollectorInnerResponse(
-        internal_patterns=["Recall pattern identified"],
-        internal_anomalies=["Inconsistent statement link"],
-        proposed_quads=[
-            Quad(subject="worker_node_3", predicate="HAS_METRIC", object="cpu_utilization", graph="knowledge_graph"),
-            Quad(subject="cpu_utilization", predicate="HAS_VALUE", object="94.5", graph="knowledge_graph"),
-            Quad(subject="worker_node_3", predicate="TRIGGERED", object="WARNING_log", graph="knowledge_graph"),
-            Quad(subject="WARNING_log", predicate="HAS_MESSAGE", object="High memory allocation detected on worker_node_3", graph="knowledge_graph")
-        ]
-    )
-
-
-def mock_collector_outer() -> CollectorOuterResponse:
-    return CollectorOuterResponse(
-        external_entities=["api_node", "https://api.example.com/feed"],
-        environmental_shifts=["External service down"],
-        proposed_quads=[
-            Quad(subject="api_node", predicate="STATUS", object="down", graph="llm_input"),
-            Quad(subject="api_node", predicate="LOCATED_AT", object="https://api.example.com/feed", graph="llm_input")
-        ]
-    )
-
-
-def mock_organizer_inner() -> OrganizerInnerResponse:
-    return OrganizerInnerResponse(
-        structured_quads=[
-            Quad(subject="worker_node_3", predicate="HAS_METRIC", object="cpu_utilization", graph="knowledge_graph"),
-            Quad(subject="cpu_utilization", predicate="HAS_VALUE", object="94.5", graph="knowledge_graph"),
-            Quad(subject="worker_node_3", predicate="TRIGGERED", object="WARNING_log", graph="knowledge_graph")
-        ],
-        internal_communities=[InternalCommunity(community_id="sys_resources", member_nodes=["worker_node_3", "cpu_utilization"])],
-        logical_corrections_applied=["Removed redundant memory allocation metadata quads"]
-    )
-
-
-def mock_organizer_outer() -> OrganizerOuterResponse:
-    return OrganizerOuterResponse(
-        structured_quads=[
-            Quad(subject="api_node", predicate="STATUS", object="down", graph="llm_input"),
-            Quad(subject="api_node", predicate="LOCATED_AT", object="https://api.example.com/feed", graph="llm_input")
-        ],
-        external_clusters=[ExternalCluster(cluster_id="network_endpoints", member_nodes=["api_node"])],
-        inferred_logical_links=[InferredLogicalLink(source="api_node", target="worker_node_3", reasoning="External endpoint down affects processing node")]
-    )
-
-
-def mock_reflector_inner() -> ReflectorInnerResponse:
-    return ReflectorInnerResponse(
-        detected_internal_inconsistencies=[
-            DetectedInternalInconsistency(type="circular", affected_elements=["worker_node_3"], severity="low")
-        ],
-        remediation_proposals=[
-            RemediationProposal(action="pruning", target="WARNING_log", justification="log message cleanup")
-        ]
-    )
-
-
-def mock_reflector_outer() -> ReflectorOuterResponse:
-    return ReflectorOuterResponse(
-        detected_external_conflicts=[
-            DetectedExternalConflict(type="noise", affected_elements=["api_node"], context_clash="outdated")
-        ],
-        alignment_adjustments=[
-            AlignmentAdjustment(action="reweight", target="api_node", justification="stale status checks")
-        ]
-    )
-
-
-def mock_integrator_inner() -> IntegratorInnerResponse:
-    return IntegratorInnerResponse(
-        internal_directives=[
-            InternalDirective(priority=1, action="prune_edge", target_component="warning_subgraph", parameters={})
-        ],
-        state_update_commands=[
-            StateUpdateCommand(command="prune", payload={})
-        ],
-        requires_re_evaluation=False,
-        decision_rationale="Entity conflict resolved, pruning redundant warning nodes."
-    )
-
-
-def mock_integrator_outer() -> IntegratorOuterResponse:
-    return IntegratorOuterResponse(
-        final_external_action=FinalExternalAction(action_name="dispatch_alert", mcp_tool_name="graph_sync_tool", parameters={}, execution_priority=1),
-        expected_external_outcome="Successful authentication",
-        fallback_action=FallbackAction(action_name="trigger_fallback", parameters={}),
-        final_decision_rationale="Dispatching graph synchronization request for down node."
-    )
-
-
-# ===========================================================================
 # Graph Node Implementations (RDF Quadstore Architecture - No Scores)
 # ===========================================================================
 
@@ -217,7 +122,7 @@ def collector_node(state: GraphState) -> GraphState:
             tool_ingest_internal_stream,
             tool_write_to_quadstore,
         )
-        ingested = tool_ingest_internal_stream(source="llm_input")
+        ingested = tool_ingest_internal_stream(source="llm_input", sample_size=config.GRAPH_SAMPLE_SIZE)
         # Load the ingested quads from the database into the state's knowledge_graph
         ingested_quads = [Quad(**q) for q in ingested]
         knowledge_graph = merge_quads(knowledge_graph, ingested_quads)
@@ -239,8 +144,11 @@ def collector_node(state: GraphState) -> GraphState:
             tool_ingest_external_api,
             tool_write_to_quadstore,
         )
-        ingested = tool_ingest_external_api()
+        ingested = tool_ingest_external_api(sample_size=config.GRAPH_SAMPLE_SIZE)
         tool_write_to_quadstore(ingested)
+        # Load the ingested external quads into the state's knowledge_graph
+        ingested_quads = [Quad(**q) for q in ingested]
+        knowledge_graph = merge_quads(knowledge_graph, ingested_quads)
 
         intent_str = ""
         if state.intent_result:
@@ -295,23 +203,25 @@ def organizer_node(state: GraphState) -> GraphState:
         prompt = "Apply ontology constraints and logical standardization to knowledge graph."
         response = call_structured_llm(prompt, system_prompt, OrganizerInnerResponse)
         if not response.structured_quads:
-            print("  [LLM Warning] Empty structured_quads returned from inner organizer. Continuing with empty set.")
+            print("  [LLM Warning] Empty structured_quads returned from inner organizer. Falling back to original knowledge graph.")
         llm_outputs["organizer"] = response.model_dump()
         
-        # Replace graph with organized structured quads
+        # Replace graph with organized structured quads, or keep original if empty
         structured = [Quad(**q) for q in response.model_dump().get("structured_quads", [])]
-        knowledge_graph = structured
+        if structured:
+            knowledge_graph = structured
     elif channel == "outer_channel":
         system_prompt = OrganizerNodePromptOuter.format(proposed_quads=knowledge_graph)
         prompt = "Apply logical hierarchy and mapping rules to knowledge graph."
         response = call_structured_llm(prompt, system_prompt, OrganizerOuterResponse)
         if not response.structured_quads:
-            print("  [LLM Warning] Empty structured_quads returned from outer organizer. Continuing with empty set.")
+            print("  [LLM Warning] Empty structured_quads returned from outer organizer. Falling back to original knowledge graph.")
         llm_outputs["organizer"] = response.model_dump()
 
-        # Replace graph with organized structured quads
+        # Replace graph with organized structured quads, or keep original if empty
         structured = [Quad(**q) for q in response.model_dump().get("structured_quads", [])]
-        knowledge_graph = structured
+        if structured:
+            knowledge_graph = structured
 
     return state.model_copy(update={
         "llm_outputs": llm_outputs,
@@ -345,7 +255,10 @@ def reflector_node(state: GraphState) -> GraphState:
         validation_report["issues"] = response.model_dump().get("detected_internal_inconsistencies", [])
         validation_report["proposals"] = response.model_dump().get("remediation_proposals", [])
     elif channel == "outer_channel":
-        system_prompt = ReflectorNodePromptOuter.format(structured_quads=knowledge_graph)
+        system_prompt = ReflectorNodePromptOuter.format(
+            structured_quads=knowledge_graph,
+            input_text=state.input_text
+        )
         prompt = "Cross-reference external quads with standard LLM input text."
         response = call_structured_llm(prompt, system_prompt, ReflectorOuterResponse)
         llm_outputs["reflector"] = response.model_dump()
@@ -384,7 +297,20 @@ def integrator_node(state: GraphState) -> GraphState:
             for d in response.model_dump().get("internal_directives", [])
         ]
     elif channel == "outer_channel":
-        system_prompt = IntegratorNodePromptOuter.format(knowledge_graph=knowledge_graph, internal_directives=llm_outputs.get('integrator', {}))
+        intent_str = ""
+        if state.intent_result:
+            intent_str = (
+                f"\nIntent Analysis Context:\n"
+                f"- Sender Identity: {state.intent_result.sender_identity}\n"
+                f"- Inferences: {state.intent_result.inferences}\n"
+                f"- Recommended Action: {state.intent_result.recommended_action}"
+            )
+        system_prompt = IntegratorNodePromptOuter.format(
+            knowledge_graph=knowledge_graph,
+            internal_directives=proposals,
+            input_text=state.input_text,
+            intent_context=intent_str
+        )
         prompt = "Merge external context with knowledge graph and translate to actions."
         response = call_structured_llm(prompt, system_prompt, IntegratorOuterResponse)
         llm_outputs["integrator"] = response.model_dump()
@@ -413,7 +339,7 @@ def integrator_node(state: GraphState) -> GraphState:
     for action in decision["actions"]:
         tool_dispatch_action(action)
 
-    if iteration >= 3:
+    if iteration >= config.MAX_LOOPS:
         should_stop = True
     return state.model_copy(update={
         "llm_outputs": llm_outputs,

@@ -1,126 +1,145 @@
 # Node prompts for sequential RDF Quadstore Graph Nodes working on a shared datastore
+# Optimized for small language models (2B-4B parameters)
 
-CollectorNodePromptInner = """[SYSTEM ROLE]
-You are the Inner Perception Module (S/N - Internal) of a cognitive RDF quadstore graph architecture. Your objective is to extract new RDF quads by reading and analyzing statements in the shared Knowledge Graph.
+CollectorNodePromptInner = """You extract RDF quads from the existing knowledge graph.
 
-[INPUT CONTEXT]
-Current Recall Knowledge Graph: {current_internal_state}
+## Existing Knowledge Graph
+{current_internal_state}
 
-[COGNITIVE DIRECTIVE]
-1. Analyze the shared knowledge graph for latent patterns or implicit relations.
-2. Formulate preliminary internal RDF quads (Subject, Predicate, Object, Graph) representing these patterns.
-3. Set the Graph URI parameter strictly to 'knowledge_graph'.
-4. Ensure all extracted facts are represented as atomic, flat statements."""
+## Task
+1. Find hidden patterns or implicit relationships in the graph above.
+2. Create new RDF quads: (Subject, Predicate, Object, Graph).
+3. CRITICAL: Quads must be ATOMIC. Subjects and Objects must be extremely SHORT (1-3 words max), specific nouns or entities. Do NOT use full sentences or long phrases as nodes.
+4. Set Graph to 'knowledge_graph' for all quads.
+5. Do NOT repeat quads that already exist."""
 
-CollectorNodePromptOuter = """[SYSTEM ROLE]
-You are the Outer Perception Module (S/N - External) of a cognitive RDF quadstore graph architecture. Your objective is to extract atomic, dense RDF quads from the raw external standard LLM input text.
+CollectorNodePromptOuter = """You extract facts from user input and convert them to RDF quads.
 
-[INPUT CONTEXT]
-Raw Standard LLM Input Text: {input_text}
+## User Input
+{input_text}
 {intent_context}
 
-[COGNITIVE DIRECTIVE]
-1. Parse the raw input text to extract factual statements as RDF Quads (Subject, Predicate, Object, Graph). Always extract all declarations, naming instructions, status updates, or facts mentioned in the input text, even if the Intent Analysis recommended action is 'göz ardı'.
-2. Standardize names of extracted subjects and objects.
-3. Set the Graph URI parameter strictly to 'llm_input'.
-4. Ensure the output is comprised entirely of flat, atomic RDF statements."""
+## Task
+1. Extract ALL facts, declarations, names, status updates from the input text above.
+2. Convert each fact to an RDF quad: (Subject, Predicate, Object, Graph).
+3. CRITICAL: Quads must be ATOMIC. Subjects and Objects must be extremely SHORT (1-3 words max), specific nouns or entities (e.g. 'Database', 'Sol', 'User'). Do NOT use full sentences or long phrases as nodes.
+4. Set Graph to 'llm_input' for all quads.
+5. Use clear, standardized predicate names (e.g., HAS_NAME, IS_A, HAS_STATUS).
+6. Always extract facts even if intent says 'ignore' or 'göz ardı'.
+7. If the input is a simple greeting with no facts, return an empty proposed_quads list.
 
-OrganizerNodePromptInner = """[SYSTEM ROLE]
-You are the Inner Logical Structuring Module (T - Internal) of a cognitive RDF quadstore architecture. Your objective is to apply logical schemas, standardizations, and community clustering to standard internal RDF quads from the shared Knowledge Graph.
+## Examples (For Reference Only)
+User Input: "the red car drives to the big parking garage"
+Correct Output (Atomic): 
+- Quad('car', 'HAS_COLOR', 'red', 'llm_input')
+- Quad('car', 'DRIVES_TO', 'parking_garage', 'llm_input')
+- Quad('parking_garage', 'HAS_SIZE', 'big', 'llm_input')
+Incorrect Output (Too Long): 
+- Quad('the red car', 'DRIVES TO', 'the big parking garage', 'llm_input')"""
 
-[INPUT CONTEXT]
-Proposed Internal RDF Quads: {proposed_quads}
+OrganizerNodePromptInner = """You clean up and organize RDF quads in the knowledge graph.
 
-[COGNITIVE DIRECTIVE]
-1. Standardize entity names in the knowledge graph to resolve duplicates or synonyms.
-2. Resolve contradictory assertions (e.g. if one quad says A STATUS ACTIVE and another says A STATUS DOWN).
-3. Group related subjects into communities (simulating GraphRAG communities).
-4. Output the finalized, logically consistent set of structured internal RDF quads."""
+## Input Quads
+{proposed_quads}
 
-OrganizerNodePromptOuter = """[SYSTEM ROLE]
-You are the Outer Logical Structuring Module (T - External) of a cognitive RDF quadstore architecture. Your objective is to standardize and logically organize external RDF quads in the shared Knowledge Graph.
+## Task
+1. Fix duplicate entities (think carefully: if two subjects or objects refer to the exact same concept, merge them into a single standardized name).
+2. Resolve contradictions (e.g., if A STATUS ACTIVE and A STATUS DOWN, keep the newer one).
+3. Merge semantically identical relationships (think carefully: if two quads express the exact same meaning using different predicates, collapse them into a single standardized quad).
+4. Group related entities together.
+5. Output the cleaned, consistent set of quads.
+6. Keep ALL valid quads - do not remove quads unless they are duplicates or contradictions."""
 
-[INPUT CONTEXT]
-Proposed External RDF Quads: {proposed_quads}
+OrganizerNodePromptOuter = """You clean up and organize external RDF quads.
 
-[COGNITIVE DIRECTIVE]
-1. Validate external entity references in the graph and standardize their naming conventions.
-2. Apply deductive reasoning to infer missing RDF quads (e.g., if A DEPENDS_ON B and B STATUS DOWN, infer A affected_by B).
-3. Cluster external systems/endpoints categories.
-4. Output structured, completed external RDF quads."""
+## Input Quads
+{proposed_quads}
 
-ReflectorNodePromptInner = """[SYSTEM ROLE]
-You are the Inner Evaluative Module (F - Internal) of a cognitive RDF quadstore architecture. Your objective is to assess the internal consistency of structured RDF quads in the shared Knowledge Graph.
+## Task
+1. Standardize entity names (think carefully: fix capitalization, and if two entities mean the same thing, merge them).
+2. Merge semantically identical relationships (think carefully: if two quads express the exact same meaning using different predicates, collapse them into a single standardized quad).
+3. Remove quads with empty or 'N/A' values - these are noise.
+4. Infer missing relationships (e.g., if A DEPENDS_ON B and B STATUS DOWN, add: A AFFECTED_BY B).
+5. Output the cleaned, complete set of quads.
+6. Keep ALL valid quads - do not discard quads that contain real information.
 
-[INPUT CONTEXT]
-Structured Internal RDF Quads: {structured_quads}
+## Examples (For Reference Only)
+Input: 
+- Quad('Dog', 'IS_CALLED', 'Buddy', 'llm_input')
+- Quad('Dog', 'NAME_IS', 'Buddy', 'llm_input')
+- Quad('dog', 'HAS_COLOR', 'brown', 'llm_input')
+Output:
+- Quad('Dog', 'HAS_NAME', 'Buddy', 'llm_input')
+- Quad('Dog', 'HAS_COLOR', 'brown', 'llm_input')"""
 
-[COGNITIVE DIRECTIVE]
-1. Analyze the shared knowledge graph for structural inconsistencies, loops, or violations.
-2. Identify inconsistent elements and propose remediation proposals (remediation actions) to resolve conflicts, duplicates, or stale relationships.
-3. Do not perform any numerical scoring.
+ReflectorNodePromptInner = """You check the knowledge graph for errors and inconsistencies.
 
-[DEFINITIONS & FORMATTING INSTRUCTIONS]
-A "Remediation Proposal" is a proposed graph modification to fix conflicts, redundancy, or inconsistencies detected in the knowledge graph. It must be built with:
-- action: The corrective graph operation to apply (strictly one of: 'pruning' to delete an invalid/conflicting edge, 'merging' to consolidate duplicate entities, or 'reweighting' to adjust link confidence).
-- target: The specific subject, predicate, or object entity being corrected.
-- justification: A clear, logical rationale explaining why this action resolves the detected inconsistency."""
+## Current Quads
+{structured_quads}
 
-ReflectorNodePromptOuter = """[SYSTEM ROLE]
-You are the Outer Evaluative Module (F - External) of a cognitive RDF quadstore architecture. Your objective is to assess the external RDF quads in the shared Knowledge Graph.
+## Task
+1. Find contradictions, circular references, or invalid relationships.
+2. For each problem found, propose a fix using one of these actions:
+   - 'pruning': Delete an invalid or conflicting edge.
+   - 'merging': Combine duplicate entities into one.
+   - 'reweighting': Adjust the confidence of a link.
+3. If no problems are found, return empty lists."""
 
-[INPUT CONTEXT]
-Structured External RDF Quads: {structured_quads}
+ReflectorNodePromptOuter = """You validate external quads against the user's input.
 
-[COGNITIVE DIRECTIVE]
-1. Cross-reference the shared knowledge graph with the raw standard input context to check for hallucinations or outdated state.
-2. Identify conflicts, noise, or outdated facts and propose alignment adjustments to synchronize the graph with the real-world input.
-3. Do not perform any numerical scoring.
+## Current Quads
+{structured_quads}
 
-[DEFINITIONS & FORMATTING INSTRUCTIONS]
-An "Alignment Adjustment" is a proposed external alignment action. It must be built with:
-- action: The graph alignment operation (strictly one of: 'reweight' to adjust confidence, 'discard' to reject a hallucinated/noisy quad, or 'override' to update outdated facts).
-- target: The specific external entity or relationship being adjusted.
-- justification: A clear, logical explanation detailing why the external context demands this adjustment."""
+## User Input
+{input_text}
 
-IntegratorNodePromptInner = """[SYSTEM ROLE]
-You are the Integrator Agent (Yargılama — J) - Inner Decision Module of a cognitive RDF quadstore.
-Your objective is to: İç ve depolanan çıktıları birleştir → Önceliklendir (Merge internal outputs and stored outputs, then prioritize knowledge graph refinement directives).
+## Important Rules
+- Quads from PREVIOUS conversations are valid accumulated knowledge. Do NOT discard them.
+- Only flag quads that directly CONTRADICT the current input.
+- Quads unrelated to the current input should be LEFT ALONE (no action needed).
+- Only use 'discard' for quads that are clearly hallucinated or contain empty/N/A values.
 
-[INPUT CONTEXT]
-Stored Knowledge Graph: {knowledge_graph}
-Internal Remediation Proposals: {remediation_proposals}
+## Task
+1. Check if any quad directly contradicts the user input.
+2. For problems found, propose a fix:
+   - 'reweight': Adjust confidence of a relationship.
+   - 'discard': Remove a hallucinated or empty quad.
+   - 'override': Update an outdated fact.
+3. Do NOT discard quads just because they are unrelated to the current input."""
 
-[COGNITIVE DIRECTIVE]
-1. Merge the newly proposed internal remediation proposals with the existing stored knowledge graph (İç ve depolanan çıktıları birleştir).
-2. Prioritize the resulting knowledge graph refinement directives (Önceliklendir) (e.g. entity merging, edge pruning, schema validation) based on priority and necessity.
-3. Perform decision making and final output production (Karar verme, nihai çıktı üretimi).
-4. Formulate priority levels for each directive.
-5. Determine if the graph requires another execution cycle to achieve stability.
+IntegratorNodePromptInner = """You merge graph changes and decide what to do next.
 
-[DEFINITIONS & FORMATTING INSTRUCTIONS]
-An "Internal Directive" is a system-level knowledge graph process management action. It must be built with:
-- priority: An integer representing the execution priority (e.g., 1 for critical/highest).
-- action: The knowledge graph refinement action (strictly one of: 'prune_edge', 'merge_entities', 'reweight_link', or 're-evaluate').
-- target_component: The specific subgraph name or entity ID target of the directive.
-- parameters: Key-value parameters required to execute the action."""
+## Current Knowledge Graph
+{knowledge_graph}
 
-IntegratorNodePromptOuter = """[SYSTEM ROLE]
-You are the Integrator Agent (Yargılama — J) - Outer Decision Module of a cognitive RDF quadstore.
-Your objective is to: Dış ve depolanan çıktıları birleştir → Eyleme dönüştür (Merge external outputs and stored outputs, then translate/convert them to outward actions).
+## Proposed Fixes
+{remediation_proposals}
 
-[INPUT CONTEXT]
-Stored Knowledge Graph: {knowledge_graph}
-Internal Directives: {internal_directives}
+## Task
+1. Apply the proposed fixes to the knowledge graph.
+2. For each fix, create a directive with:
+   - priority: 1 (highest) to 5 (lowest)
+   - action: 'prune_edge', 'merge_entities', 'reweight_link', or 're-evaluate'
+   - target_component: Which entity or subgraph to modify
+   - parameters: Any extra info needed
+3. Set requires_re_evaluation to true only if major changes were made."""
 
-[COGNITIVE DIRECTIVE]
-1. Merge the internal directives and external context with the stored knowledge graph (Dış ve depolanan çıktıları birleştir).
-2. Translate the merged outputs into concrete, executable outward-facing actions (Eyleme dönüştür).
-3. Perform decision making and final output production (Karar verme, nihai çıktı üretimi) by generating the final external action and a clear, logical rationale.
+IntegratorNodePromptOuter = """You decide what external actions to take based on the knowledge graph.
 
-[DEFINITIONS & FORMATTING INSTRUCTIONS]
-A "Final External Action" is the concrete outward action resulting from the integrated knowledge graph process. It must be built with:
-- action_name: The name of the API call or external operation (strictly one of: 'dispatch_alert', 'update_registry', or 'trigger_fallback').
-- mcp_tool_name: The tool that should execute this action (e.g., 'http_request').
-- parameters: Key-value arguments needed for the action.
-- execution_priority: Priority score for execution."""
+## Current Knowledge Graph
+{knowledge_graph}
+
+## Previous Directives
+{internal_directives}
+
+## User Input
+{input_text}
+{intent_context}
+
+## Task
+1. Look at the knowledge graph and the user input.
+2. Decide if any external action is needed.
+3. If the graph has new or updated information that should be persisted, use 'update_registry' with mcp_tool_name 'graph_write_to_quadstore'.
+4. If there is an alert condition (errors, conflicts), use 'dispatch_alert'.
+5. If no action is needed (e.g., simple greeting with no new facts), set final_external_action to null.
+6. Always provide a clear rationale for your decision."""

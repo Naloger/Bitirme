@@ -1,12 +1,12 @@
 {
   "llm_config": {
     "provider": "ollama",
-    "model": "granite4.1:3b",
+    "model": "gemma4:e2b",
     "api_key": "",
     "base_url": "http://localhost:11434/v1",
     "temperature": 0.0,
     "max_tokens": 16000,
-    "max_loops": 7,
+    "max_loops": 1,
     "timeout": 300.0
   },
   "mcp_config": {
@@ -17,6 +17,8 @@
       "C:\\CalismaAlani\\CodingPython\\Bitirme\\backend\\MCP\\age_mcp_server.py"
     ],
     "timeout": 180.0
+  },
+  "graph_config": {
+    "sample_size": 10
   }
 }
-

@@ -13,6 +13,7 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
 
 _llm = _data.get("llm_config", {})
 _mcp = _data.get("mcp_config", {})
+_graph = _data.get("graph_config", {})
 
 # Expose config values as module-level variables
 PROVIDER = str(_llm.get("provider", ""))
@@ -30,3 +31,6 @@ MCP_TRANSPORT = str(_mcp.get("transport", "stdio"))
 MCP_COMMAND = str(_mcp.get("command", ""))
 MCP_ARGS = list(_mcp.get("args", []))
 MCP_TIMEOUT = float(_mcp.get("timeout", 15.0) or 15.0)
+
+# Graph configuration variables
+GRAPH_SAMPLE_SIZE = int(_graph.get("sample_size", 10) or 10)

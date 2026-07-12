@@ -12,6 +12,7 @@ import subprocess
 import json
 import threading
 import traceback
+import warnings
 from Config import config
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import Quad
 
@@ -171,7 +172,7 @@ class MCPStdioClient:
 def _invoke_mcp_tool(tool_name: str, arguments: dict) -> any:
     """Helper to call an MCP tool. Returns None if MCP is disabled or fails, allowing fallback."""
     if not config.MCP_ENABLED:
-        print(f"    [MCP Client] MCP is disabled. Using local mock/fallback for '{tool_name}'...")
+        warnings.warn(f"MCP is disabled. Local fallback for '{tool_name}' will be used.", UserWarning)
         return None
     
     print(f"\n    [MCP Client] Invoking MCP tool '{tool_name}' with arguments: {json.dumps(arguments, indent=2)}")
@@ -234,30 +235,30 @@ def _invoke_mcp_tool(tool_name: str, arguments: dict) -> any:
 
 # ── Collector tools ──────────────────────────────────────────────────────────
 
-def tool_ingest_internal_stream(source: str = "knowledge_graph") -> list[dict]:
-    """Simulate recalling internal statements from the knowledge graph."""
-    mcp_res = _invoke_mcp_tool("graph_ingest_internal_stream", {"source": source})
+def tool_ingest_internal_stream(source: str = "knowledge_graph", sample_size: int | None = None) -> list[dict]:
+    """Recall internal statements from the knowledge graph, optionally sampling N random quads."""
+    args = {"source": source}
+    if sample_size is not None:
+        args["sample_size"] = sample_size
+    mcp_res = _invoke_mcp_tool("graph_ingest_internal_stream", args)
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] ingest_internal_stream(source={source!r})")
-    return [
-        {"subject": f"stmt_{i}", "predicate": "RECALLED_FROM", "object": "knowledge_graph", "graph": source}
-        for i in range(3)
-    ]
+    warnings.warn(f"MCP tool 'graph_ingest_internal_stream' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
-def tool_ingest_external_api(endpoint: str = "llm_input") -> list[dict]:
-    """Simulate ingesting standard LLM input text."""
-    mcp_res = _invoke_mcp_tool("graph_ingest_external_api", {"endpoint": endpoint})
+def tool_ingest_external_api(endpoint: str = "llm_input", sample_size: int | None = None) -> list[dict]:
+    """Ingest standard LLM input text."""
+    args = {"endpoint": endpoint}
+    if sample_size is not None:
+        args["sample_size"] = sample_size
+    mcp_res = _invoke_mcp_tool("graph_ingest_external_api", args)
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] ingest_external_api(endpoint={endpoint!r})")
-    return [
-        {"subject": f"parsed_{i}", "predicate": "EXTRACTED_FROM", "object": "llm_input", "graph": endpoint}
-        for i in range(3)
-    ]
+    warnings.warn(f"MCP tool 'graph_ingest_external_api' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 def tool_write_to_quadstore(
@@ -265,7 +266,7 @@ def tool_write_to_quadstore(
     overwrite: bool = False,
     clear_contexts: list[str] | None = None
 ) -> bool:
-    """Simulate atomic RDF quad creation/insertion into a triplestore/quadstore."""
+    """Atomic RDF quad creation/insertion into a triplestore/quadstore."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -278,7 +279,7 @@ def tool_write_to_quadstore(
     if mcp_res is not None:
         return bool(mcp_res.get("success", True) if isinstance(mcp_res, dict) else mcp_res)
 
-    print(f"    [tool] write_to_quadstore({len(quads)} quads)")
+    warnings.warn(f"MCP tool 'graph_write_to_quadstore' not available. Writing {len(quads)} quads locally to console only.", UserWarning)
     for q in quads:
         subject = q.subject if hasattr(q, "subject") else q.get("subject")
         predicate = q.predicate if hasattr(q, "predicate") else q.get("predicate")
@@ -291,7 +292,7 @@ def tool_write_to_quadstore(
 # ── Organizer tools ──────────────────────────────────────────────────────────
 
 def tool_run_community_detection(quads: list[Quad] | list[dict]) -> list[dict]:
-    """Simulate community/cluster grouping of subjects from atomic quads."""
+    """Community/cluster grouping of subjects from atomic quads."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -300,15 +301,12 @@ def tool_run_community_detection(quads: list[Quad] | list[dict]) -> list[dict]:
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] run_community_detection(on {len(quads)} quads)")
-    subjects = list({q.subject if hasattr(q, "subject") else q.get("subject") for q in quads if q})
-    community_ids = list({s[0] for s in subjects if s})
-    return [{"community_id": cid, "members": [s for s in subjects if s.startswith(cid)]}
-            for cid in community_ids]
+    warnings.warn(f"MCP tool 'graph_run_community_detection' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 def tool_map_ontology(quads: list[Quad] | list[dict], ontology: str = "default") -> list[dict]:
-    """Simulate OWL/RDF ontology checking — assign concept metadata to quads."""
+    """OWL/RDF ontology checking — assign concept metadata to quads."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -317,22 +315,12 @@ def tool_map_ontology(quads: list[Quad] | list[dict], ontology: str = "default")
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] map_ontology(ontology={ontology!r})")
-    mapped = []
-    for q in quads:
-        subject = q.subject if hasattr(q, "subject") else q.get("subject")
-        predicate = q.predicate if hasattr(q, "predicate") else q.get("predicate")
-        obj = q.object if hasattr(q, "object") else q.get("object")
-        graph = q.graph if hasattr(q, "graph") else q.get("graph")
-        mapped.append({
-            "subject": subject, "predicate": predicate, "object": obj, "graph": graph,
-            "mapped_concept": "rdf_concept"
-        })
-    return mapped
+    warnings.warn(f"MCP tool 'graph_map_ontology' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 def tool_index_quads(quads: list[Quad] | list[dict]) -> dict:
-    """Simulate vector or elasticsearch indexing on atomic RDF statements."""
+    """Vector or elasticsearch indexing on atomic RDF statements."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -341,21 +329,14 @@ def tool_index_quads(quads: list[Quad] | list[dict]) -> dict:
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] index_quads({len(quads)} quads)")
-    indexed = {}
-    for q in quads:
-        subject = q.subject if hasattr(q, "subject") else q.get("subject")
-        predicate = q.predicate if hasattr(q, "predicate") else q.get("predicate")
-        obj = q.object if hasattr(q, "object") else q.get("object")
-        key = f"{subject}-{predicate}-{obj}"
-        indexed[key] = {"concept": "indexed_statement"}
-    return indexed
+    warnings.warn(f"MCP tool 'graph_index_quads' not available. Local fallback returns empty dict.", UserWarning)
+    return {}
 
 
 # ── Reflector tools ──────────────────────────────────────────────────────────
 
 def tool_validate_quads(quads: list[Quad] | list[dict]) -> list[dict]:
-    """Simulate SHACL / constraint-language validation on atomic RDF quads."""
+    """SHACL / constraint-language validation on atomic RDF quads."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -364,19 +345,12 @@ def tool_validate_quads(quads: list[Quad] | list[dict]) -> list[dict]:
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] validate_quads()")
-    issues = []
-    for q in quads:
-        subject = q.subject if hasattr(q, "subject") else q.get("subject")
-        predicate = q.predicate if hasattr(q, "predicate") else q.get("predicate")
-        obj = q.object if hasattr(q, "object") else q.get("object")
-        if random.random() < 0.2:
-            issues.append({"type": "conflict_quad", "quad": f"({subject}, {predicate}, {obj})"})
-    return issues
+    warnings.warn(f"MCP tool 'graph_validate_quads' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 def tool_detect_anomalies(quads: list[Quad] | list[dict]) -> list[str]:
-    """Simulate GNN-based anomaly detection over the RDF quad linkages."""
+    """GNN-based anomaly detection over the RDF quad linkages."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -385,9 +359,8 @@ def tool_detect_anomalies(quads: list[Quad] | list[dict]) -> list[str]:
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] detect_anomalies()")
-    subjects = {q.subject if hasattr(q, "subject") else q.get("subject") for q in quads if q}
-    return [s for s in subjects if len(s) > 10 and random.random() < 0.15]
+    warnings.warn(f"MCP tool 'graph_detect_anomalies' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 def tool_infer_missing_quads(quads: list[Quad] | list[dict], issues: list[dict]) -> list[dict]:
@@ -400,23 +373,8 @@ def tool_infer_missing_quads(quads: list[Quad] | list[dict], issues: list[dict])
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] infer_missing_quads()")
-    inferred = []
-    issue_keys = {iss.get("quad") for iss in issues}
-    for q in quads:
-        subject = q.subject if hasattr(q, "subject") else q.get("subject")
-        predicate = q.predicate if hasattr(q, "predicate") else q.get("predicate")
-        obj = q.object if hasattr(q, "object") else q.get("object")
-        graph = q.graph if hasattr(q, "graph") else q.get("graph")
-        key = f"({subject}, {predicate}, {obj})"
-        if key not in issue_keys and random.random() < 0.3:
-            inferred.append({
-                "subject": obj,
-                "predicate": "LOGICALLY_LINKED_TO",
-                "object": subject,
-                "graph": f"inferred_{graph}"
-            })
-    return inferred
+    warnings.warn(f"MCP tool 'graph_infer_missing_quads' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 # ── Integrator tools ─────────────────────────────────────────────────────────
@@ -431,13 +389,12 @@ def tool_quadstore_traversal(quads: list[Quad] | list[dict], top_n: int = 3) -> 
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] quadstore_traversal(top_n={top_n})")
-    subjects = list({q.subject if hasattr(q, "subject") else q.get("subject") for q in quads if q})
-    return [{"id": s} for s in subjects[:top_n]]
+    warnings.warn(f"MCP tool 'graph_quadstore_traversal' not available. Local fallback returns empty list.", UserWarning)
+    return []
 
 
 def tool_quadstore_impact_analysis(priority_nodes: list[dict], quads: list[Quad] | list[dict]) -> dict:
-    """Simulate impact propagation starting from priority subjects."""
+    """Impact propagation starting from priority subjects."""
     serialized_quads = [
         q.model_dump() if hasattr(q, "model_dump") else q
         for q in quads
@@ -446,17 +403,15 @@ def tool_quadstore_impact_analysis(priority_nodes: list[dict], quads: list[Quad]
     if mcp_res is not None:
         return mcp_res
 
-    print(f"    [tool] tool_quadstore_impact_analysis()")
-    priority_ids = {n["id"] for n in priority_nodes}
-    affected = {q.object if hasattr(q, "object") else q.get("object") for q in quads if (q.subject if hasattr(q, "subject") else q.get("subject")) in priority_ids}
-    return {"affected_entities": list(affected)}
+    warnings.warn(f"MCP tool 'graph_quadstore_impact_analysis' not available. Local fallback returns empty impact set.", UserWarning)
+    return {"affected_entities": []}
 
 
 def tool_dispatch_action(action: dict) -> bool:
-    """Simulate REST/gRPC dispatch of a decision action."""
+    """REST/gRPC dispatch of a decision action."""
     mcp_res = _invoke_mcp_tool("graph_dispatch_action", {"action": action})
     if mcp_res is not None:
         return bool(mcp_res.get("success", True) if isinstance(mcp_res, dict) else mcp_res)
 
-    print(f"    [tool] dispatch_action(type={action.get('type')!r})")
+    warnings.warn(f"MCP tool 'graph_dispatch_action' not available. Action dispatch fallback is disabled.", UserWarning)
     return True
