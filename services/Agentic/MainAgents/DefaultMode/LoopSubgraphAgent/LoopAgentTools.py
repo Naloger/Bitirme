@@ -11,6 +11,7 @@ import requests
 import subprocess
 import json
 import threading
+import traceback
 from Config import config
 from services.Agentic.MainAgents.DefaultMode.LoopSubgraphAgent.LoopAgentModels import Quad
 
@@ -65,8 +66,10 @@ class MCPStdioClient:
                     "clientInfo": {"name": "loop-agent-client", "version": "1.0.0"}
                 }
             }
+            print(f"    [MCP Stdio Handshake] Sending initialization: {json.dumps(init_payload, indent=2)}")
             self._write(init_payload)
             init_response = self._read()
+            print(f"    [MCP Stdio Handshake] Received response: {json.dumps(init_response, indent=2)}")
             if not init_response or "result" not in init_response:
                 raise RuntimeError(f"Handshake failed. Response: {init_response}")
 
@@ -75,12 +78,14 @@ class MCPStdioClient:
                 "jsonrpc": "2.0",
                 "method": "notifications/initialized"
             }
+            print(f"    [MCP Stdio Handshake] Sending initialized notification: {json.dumps(initialized_notification)}")
             self._write(initialized_notification)
             
             self.initialized = True
             return True
         except Exception as e:
             print(f"    [MCP Warning] Failed to start MCP process: {e}")
+            traceback.print_exc()
             self.close()
             return False
 
@@ -107,6 +112,7 @@ class MCPStdioClient:
 
     def call_tool(self, tool_name: str, arguments: dict) -> any:
         if not self.start():
+            print(f"    [MCP Stdio] Could not start MCP stdio client for '{tool_name}'.")
             return None
         
         try:
@@ -119,22 +125,28 @@ class MCPStdioClient:
                     "arguments": arguments
                 }
             }
+            print(f"    [MCP Stdio Request] Sending tool call: {json.dumps(call_payload, indent=2)}")
             self._write(call_payload)
             response = self._read()
+            print(f"    [MCP Stdio Response] Received tool response: {json.dumps(response, indent=2)}")
             if response and "result" in response:
                 content = response["result"].get("content", [])
                 if content and isinstance(content, list):
                     text_block = content[0].get("text", "")
                     try:
-                        return json.loads(text_block)
+                        result_val = json.loads(text_block)
                     except json.JSONDecodeError:
-                        return text_block
-                return content
+                        result_val = text_block
+                else:
+                    result_val = content
+                print(f"    [MCP Stdio] Tool '{tool_name}' call succeeded. Parsed result: {json.dumps(result_val, indent=2)}")
+                return result_val
             elif response and "error" in response:
                 print(f"    [MCP Warning] Server returned error: {response['error']}")
             return None
         except Exception as e:
             print(f"    [MCP Warning] Tool execution failed: {e}")
+            traceback.print_exc()
             return None
 
     def close(self):
@@ -159,7 +171,10 @@ class MCPStdioClient:
 def _invoke_mcp_tool(tool_name: str, arguments: dict) -> any:
     """Helper to call an MCP tool. Returns None if MCP is disabled or fails, allowing fallback."""
     if not config.MCP_ENABLED:
+        print(f"    [MCP Client] MCP is disabled. Using local mock/fallback for '{tool_name}'...")
         return None
+    
+    print(f"\n    [MCP Client] Invoking MCP tool '{tool_name}' with arguments: {json.dumps(arguments, indent=2)}")
     
     if config.MCP_TRANSPORT == "stdio":
         return MCPStdioClient.get_instance().call_tool(tool_name, arguments)
@@ -167,6 +182,7 @@ def _invoke_mcp_tool(tool_name: str, arguments: dict) -> any:
     # SSE / HTTP fallback
     url = f"{config.MCP_SERVER_URL.rstrip('/')}/rpc" if hasattr(config, "MCP_SERVER_URL") else ""
     if not url:
+        print(f"    [MCP Client] No MCP server URL configured. Falling back to local for '{tool_name}'...")
         return None
 
     payload = {
@@ -184,9 +200,12 @@ def _invoke_mcp_tool(tool_name: str, arguments: dict) -> any:
     }
     try:
         print(f"    [MCP Client] Calling {tool_name} on {config.MCP_SERVER_URL} via HTTP...")
+        print(f"    [MCP Client] HTTP Request Payload: {json.dumps(payload, indent=2)}")
         response = requests.post(url, json=payload, headers=headers, timeout=config.MCP_TIMEOUT)
+        print(f"    [MCP Client] HTTP Response Status Code: {response.status_code}")
         response.raise_for_status()
         res_data = response.json()
+        print(f"    [MCP Client] Raw HTTP response content: {json.dumps(res_data, indent=2)}")
         if "error" in res_data:
             print(f"    [MCP Warning] Server returned error: {res_data['error']}")
             return None
@@ -195,12 +214,17 @@ def _invoke_mcp_tool(tool_name: str, arguments: dict) -> any:
         if content and isinstance(content, list):
             text_block = content[0].get("text", "")
             try:
-                return json.loads(text_block)
+                result_val = json.loads(text_block)
             except json.JSONDecodeError:
-                return text_block
-        return content
+                result_val = text_block
+        else:
+            result_val = content
+        
+        print(f"    [MCP Client] Tool '{tool_name}' call succeeded. Parsed result: {json.dumps(result_val, indent=2)}")
+        return result_val
     except Exception as e:
         print(f"    [MCP Warning] SSE/HTTP Connection failed, falling back to local. Error: {e}")
+        traceback.print_exc()
         return None
 
 

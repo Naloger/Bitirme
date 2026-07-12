@@ -1,6 +1,8 @@
 import uuid
 import instructor
 import openai
+import json
+import traceback
 
 from Config import config
 from services.Agentic.MainAgents.SalienceMode.SalienceModels import (
@@ -87,6 +89,12 @@ def salience_router_node(state: SalienceState) -> SalienceState:
         {"role": "user", "content": prompt},
     ]
 
+    print("\n[LLM Execution] Calling Salience Router LLM:")
+    print(f"  Model: {config.MODEL}")
+    print(f"  Temperature: 0.0")
+    print(f"  Timeout: {config.TIMEOUT}")
+    print(f"  Messages: {json.dumps(messages, indent=2)}")
+
     try:
         response = client.chat.completions.create(
             model=config.MODEL,
@@ -95,8 +103,16 @@ def salience_router_node(state: SalienceState) -> SalienceState:
             temperature=0.0,
             timeout=config.TIMEOUT,
         )
+        print("[LLM Response] Success!")
+        if hasattr(response, "model_dump_json"):
+            print(f"  Response: {response.model_dump_json(indent=2)}")
+        elif hasattr(response, "model_dump"):
+            print(f"  Response: {json.dumps(response.model_dump(), indent=2)}")
+        else:
+            print(f"  Response: {response}")
     except Exception as e:
         print(f"  [LLM Warning] Connection failed, using mock fallback. Error: {e}")
+        traceback.print_exc()
         response = mock_salience_router(state.user_input)
 
     target = response.target

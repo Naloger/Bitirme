@@ -1,4 +1,6 @@
 from typing import Any
+import json
+import traceback
 
 import instructor
 import openai
@@ -57,16 +59,31 @@ def call_structured_llm(prompt: str, system_prompt: str, response_model: Any) ->
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt},
     ]
+    print("\n[LLM Execution] Calling Loop Subgraph LLM:")
+    print(f"  Model: {config.MODEL}")
+    print(f"  Temperature: {config.TEMPERATURE}")
+    print(f"  Timeout: {config.TIMEOUT}")
+    print(f"  Messages: {json.dumps(messages, indent=2)}")
+
     try:
-        return client.chat.completions.create(
+        res = client.chat.completions.create(
             model=config.MODEL,
             messages=messages,
             response_model=response_model,
             temperature=config.TEMPERATURE,
             timeout=config.TIMEOUT,
         )
+        print("[LLM Response] Success!")
+        if hasattr(res, "model_dump_json"):
+            print(f"  Response: {res.model_dump_json(indent=2)}")
+        elif hasattr(res, "model_dump"):
+            print(f"  Response: {json.dumps(res.model_dump(), indent=2)}")
+        else:
+            print(f"  Response: {res}")
+        return res
     except Exception as e:
         print(f"\n[CRITICAL LLM ERROR] Structured LLM call failed in Loop Subgraph: {e}")
+        traceback.print_exc()
         raise RuntimeError(f"Loop Subgraph LLM execution failed: {e}. Fallback is disabled.")
 
 

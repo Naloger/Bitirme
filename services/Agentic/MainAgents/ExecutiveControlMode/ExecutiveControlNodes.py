@@ -1,5 +1,6 @@
 import json
 import time
+import traceback
 from typing import Any
 
 from pydantic import ValidationError
@@ -120,6 +121,13 @@ def task_reasoner(state: ECNState) -> ECNState:
 
     from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlModels import ReasonerResponse
 
+    print("\n[LLM Execution] Calling ECN Reasoner LLM:")
+    print(f"  Model: {config.MODEL}")
+    print(f"  Temperature: 0.0")
+    print(f"  Timeout: {config.TIMEOUT}")
+    print(f"  System Prompt Length: {len(REASONER_SYSTEM_PROMPT)}")
+    print(f"  User Prompt:\n{prompt}")
+
     try:
         response = client.chat.completions.create(
             model=config.MODEL,
@@ -131,8 +139,16 @@ def task_reasoner(state: ECNState) -> ECNState:
             temperature=0.0,
             timeout=config.TIMEOUT,
         )
+        print("[LLM Response] Success!")
+        if hasattr(response, "model_dump_json"):
+            print(f"  Response: {response.model_dump_json(indent=2)}")
+        elif hasattr(response, "model_dump"):
+            print(f"  Response: {json.dumps(response.model_dump(), indent=2)}")
+        else:
+            print(f"  Response: {response}")
     except Exception as e:
         print(f"  [LLM Warning] Connection failed, using mock/empty response. Error: {e}")
+        traceback.print_exc()
         response = mock_reasoner_fallback(state)
 
     if response.routing == "requires_tool_execution" and response.tool_call:
@@ -255,7 +271,7 @@ def task_executor(state: ECNState) -> ECNState:
         args = validated_call.args
 
         print(
-            f"  [Executor] Invoking {tool_name} with args: {args.model_dump().keys()}"
+            f"  [Executor] Invoking tool '{tool_name}' with arguments: {json.dumps(args.model_dump(), indent=2)}"
         )
 
         from services.Agentic.MainAgents.ExecutiveControlMode.ExecutiveControlModels import (
@@ -303,13 +319,15 @@ def task_executor(state: ECNState) -> ECNState:
             exec_response = f"Error: Unknown tool '{tool_name}'"
 
     except ValidationError as e:
-        print(f"  [Executor] Pydantic validation failed: {e}")
+        print(f"  [Executor Fail] Pydantic validation failed for tool '{tool_name if 'tool_name' in locals() else 'unknown'}': {e}")
+        traceback.print_exc()
         exec_response = f"Error parsing JSON tool call: Tool Execution Error: Invalid arguments for tool. {e}"
     except Exception as e:
-        print(f"  [Executor] Failed to parse/execute tool call: {e}")
+        print(f"  [Executor Fail] Failed to parse/execute tool call: {e}")
+        traceback.print_exc()
         exec_response = f"Error parsing JSON tool call from reasoner: {e}. Output pure JSON wrapped in {{ }} matching the ToolCall schema."
 
-    print(f"  [Executor Output]: {exec_response[:120]}...")
+    print(f"  [Executor Output]: {exec_response}")
 
     save_context_val(state.task_id, "last_execution_output", exec_response[:500])
     save_context_val(state.task_id, "execution_status", "executed")
@@ -376,9 +394,21 @@ def task_evaluator(state: ECNState) -> ECNState:
             f"VERDICT: RETRY\n"
             f"VERDICT: FAILURE"
         )
-        eval_response = call_llm(prompt, system_prompt=EVALUATOR_SYSTEM_PROMPT)
-        last_line = eval_response.strip().splitlines()[-1] if eval_response else ""
-        print(f"  [Evaluator Output]: {last_line}")
+        print("\n[LLM Execution] Calling Evaluator LLM (non-structured):")
+        print(f"  System Prompt Length: {len(EVALUATOR_SYSTEM_PROMPT)}")
+        print(f"  Prompt:\n{prompt}")
+
+        try:
+            eval_response = call_llm(prompt, system_prompt=EVALUATOR_SYSTEM_PROMPT)
+            print("[LLM Response] Success!")
+            print(f"  Raw Evaluator Response:\n{eval_response}")
+            last_line = eval_response.strip().splitlines()[-1] if eval_response else ""
+            print(f"  [Evaluator Output]: {last_line}")
+        except Exception as e:
+            print(f"  [LLM Warning] Evaluator LLM execution failed: {e}")
+            traceback.print_exc()
+            eval_response = "VERDICT: RETRY"
+            last_line = "VERDICT: RETRY"
 
         if "VERDICT: FAILURE" in eval_response:
             status = "task_failed"
