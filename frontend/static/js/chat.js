@@ -221,12 +221,46 @@
         const typingEl        = row.querySelector(".typing-indicator");
         const timeEl          = row.querySelector(".msg-time");
 
+        let activeLogsAccordion = null;
+        let activeLogsContent = null;
+
         return {
             row,
             eventsContainer,
             resultContainer,
-            appendEvent(html) {
-                eventsContainer.insertAdjacentHTML("beforeend", html);
+            appendEvent(evt) {
+                if (evt.type === "log_line") {
+                    if (!activeLogsAccordion) {
+                        activeLogsAccordion = document.createElement("details");
+                        activeLogsAccordion.className = "logs-accordion";
+                        activeLogsAccordion.open = true;
+                        activeLogsAccordion.innerHTML = `
+                            <summary class="logs-summary">
+                                <div class="mac-dots">
+                                    <span class="mac-dot red"></span>
+                                    <span class="mac-dot yellow"></span>
+                                    <span class="mac-dot green"></span>
+                                </div>
+                                <span class="summary-text">Console Logs</span>
+                                <span class="summary-toggle-icon">▼</span>
+                            </summary>
+                            <div class="logs-content"></div>
+                        `;
+                        eventsContainer.appendChild(activeLogsAccordion);
+                        activeLogsContent = activeLogsAccordion.querySelector(".logs-content");
+                    }
+                    const formatted = formatLogLine(evt.line);
+                    const lineEl = document.createElement("div");
+                    lineEl.className = "stream-event log_line";
+                    lineEl.innerHTML = `<div class="event-body"><span class="log-text-line">${formatted}</span></div>`;
+                    activeLogsContent.appendChild(lineEl);
+                } else {
+                    activeLogsAccordion = null;
+                    activeLogsContent = null;
+
+                    const html = renderEventHTML(evt);
+                    eventsContainer.insertAdjacentHTML("beforeend", html);
+                }
                 scrollToBottom();
             },
             showResult(text) {
@@ -246,20 +280,57 @@
         hideWelcome();
         const row = document.createElement("div");
         row.className = "message-row assistant";
-        let eventsHtml = msg.events.map(e => renderEventHTML(e)).join("");
         let resultHtml = msg.result ? `<div class="result-text">${formatMarkdown(msg.result)}</div>` : "";
 
         row.innerHTML = `
             <div class="msg-avatar">S</div>
             <div class="msg-content">
                 <div class="msg-bubble">
-                    <div class="stream-events">${eventsHtml}</div>
+                    <div class="stream-events"></div>
                     ${resultHtml}
                 </div>
                 <div class="msg-meta"><span>${msg.time}</span></div>
             </div>
         `;
         $messages.appendChild(row);
+
+        const eventsContainer = row.querySelector(".stream-events");
+        let activeLogsAccordion = null;
+        let activeLogsContent = null;
+
+        msg.events.forEach(evt => {
+            if (evt.type === "log_line") {
+                if (!activeLogsAccordion) {
+                    activeLogsAccordion = document.createElement("details");
+                    activeLogsAccordion.className = "logs-accordion";
+                    activeLogsAccordion.open = false; // Start collapsed for loaded history
+                    activeLogsAccordion.innerHTML = `
+                        <summary class="logs-summary">
+                            <div class="mac-dots">
+                                <span class="mac-dot red"></span>
+                                <span class="mac-dot yellow"></span>
+                                <span class="mac-dot green"></span>
+                            </div>
+                            <span class="summary-text">Console Logs</span>
+                            <span class="summary-toggle-icon">▼</span>
+                        </summary>
+                        <div class="logs-content"></div>
+                    `;
+                    eventsContainer.appendChild(activeLogsAccordion);
+                    activeLogsContent = activeLogsAccordion.querySelector(".logs-content");
+                }
+                const formatted = formatLogLine(evt.line);
+                const lineEl = document.createElement("div");
+                lineEl.className = "stream-event log_line";
+                lineEl.innerHTML = `<div class="event-body"><span class="log-text-line">${formatted}</span></div>`;
+                activeLogsContent.appendChild(lineEl);
+            } else {
+                activeLogsAccordion = null;
+                activeLogsContent = null;
+                const html = renderEventHTML(evt);
+                eventsContainer.insertAdjacentHTML("beforeend", html);
+            }
+        });
     }
 
     // ── Markdown Parser ────────────────────────────────────────
@@ -304,16 +375,20 @@
                 cls += " log-tag-decision";
             } else if (lower.includes("warning")) {
                 cls += " log-tag-warning";
-            } else if (lower.includes("error") || lower.includes("failed")) {
+            } else if (lower.includes("error") || lower.includes("fail")) {
                 cls += " log-tag-error";
             } else if (lower.includes("mcp")) {
                 cls += " log-tag-mcp";
+            } else if (lower.includes("llm")) {
+                cls += " log-tag-llm";
+            } else if (lower.includes("local") || lower.includes("fallback")) {
+                cls += " log-tag-local";
             }
             return `<span class="${cls}">[${tag}]</span>`;
         });
 
         // Highlight key transitions like "Route to:", "VERDICT:", "tool=", "reasoning for task:"
-        html = html.replace(/(Route to:|VERDICT:|tool=|reasoning for task:|executing action step|executing channel:|Finished\.)/g, '<span class="log-keyword">$1</span>');
+        html = html.replace(/(Route to:|VERDICT:|tool=|reasoning for task:|executing action step|executing channel:|Finished\.|Model:|Temperature:|Timeout:|Payload:|Response:|Raw HTTP response content:|Parsed result:|Settings:|System Prompt:|User Prompt:|HTTP Request Payload:|HTTP Response Status Code:)/g, '<span class="log-keyword">$1</span>');
 
         // Highlight values
         html = html.replace(/\b(SUCCESS|DefaultMode|ExecutiveControlMode|RETRY|SUCCESS|FAILURE)\b/g, '<span class="log-value">$1</span>');
@@ -471,7 +546,7 @@
                     try { evt = JSON.parse(line); } catch { continue; }
 
                     assistantMsg.events.push(evt);
-                    assistant.appendEvent(renderEventHTML(evt));
+                    assistant.appendEvent(evt);
 
                     // If final_summary, show the result text prominently
                     if (evt.type === "final_summary" && evt.result) {
@@ -485,7 +560,7 @@
             if (err.name !== "AbortError") {
                 const errEvt = { type: "error", message: err.message };
                 assistantMsg.events.push(errEvt);
-                assistant.appendEvent(renderEventHTML(errEvt));
+                assistant.appendEvent(errEvt);
             }
         } finally {
             assistant.setDone();

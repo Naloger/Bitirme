@@ -80,31 +80,33 @@
             <div class="chat-messages" id="chat-messages">
                 <!-- Welcome Screen -->
                 <div class="welcome-screen" id="welcome-screen">
-                    <div class="welcome-icon">
-                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="url(#welcomeGrad)" stroke-width="1.5" opacity="0.6"/>
-                            <circle cx="12" cy="12" r="5" stroke="url(#welcomeGrad)" stroke-width="1.5"/>
-                            <circle cx="12" cy="12" r="1.5" fill="url(#welcomeGrad)"/>
-                            <defs>
-                                <linearGradient id="welcomeGrad" x1="0" y1="0" x2="24" y2="24">
-                                    <stop stop-color="#a78bfa"/>
-                                    <stop offset="1" stop-color="#6366f1"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <h2>Salience Agent</h2>
-                    <p>Ask anything. The Salience Router will determine the best cognitive pathway and stream the results in real-time.</p>
-                    <div class="welcome-suggestions">
-                        <button class="suggestion-chip" data-prompt="Explain how the default mode network works in the brain">
-                            <span class="chip-icon">🧠</span> Default Mode Network
-                        </button>
-                        <button class="suggestion-chip" data-prompt="What is executive control and how does it relate to decision making?">
-                            <span class="chip-icon">⚡</span> Executive Control
-                        </button>
-                        <button class="suggestion-chip" data-prompt="Compare salience network routing to attention mechanisms in transformers">
-                            <span class="chip-icon">🔄</span> Salience vs Attention
-                        </button>
+                    <div class="welcome-card">
+                        <div class="welcome-icon">
+                            <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="url(#welcomeGrad)" stroke-width="1.5" opacity="0.6"/>
+                                <circle cx="12" cy="12" r="5" stroke="url(#welcomeGrad)" stroke-width="1.5"/>
+                                <circle cx="12" cy="12" r="1.5" fill="url(#welcomeGrad)"/>
+                                <defs>
+                                    <linearGradient id="welcomeGrad" x1="0" y1="0" x2="24" y2="24">
+                                        <stop stop-color="#a78bfa"/>
+                                        <stop offset="1" stop-color="#6366f1"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                        <h2>Salience Agent</h2>
+                        <p>Ask anything. The Salience Router will determine the best cognitive pathway and stream the results in real-time.</p>
+                        <div class="welcome-suggestions">
+                            <button class="suggestion-chip" data-prompt="Explain how the default mode network works in the brain">
+                                <span class="chip-icon">🧠</span> Default Mode Network
+                            </button>
+                            <button class="suggestion-chip" data-prompt="What is executive control and how does it relate to decision making?">
+                                <span class="chip-icon">⚡</span> Executive Control
+                            </button>
+                            <button class="suggestion-chip" data-prompt="Compare salience network routing to attention mechanisms in transformers">
+                                <span class="chip-icon">🔄</span> Salience vs Attention
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
