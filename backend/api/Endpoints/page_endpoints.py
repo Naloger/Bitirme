@@ -115,6 +115,8 @@ def create_unstructured_page(
         raw_text=payload.raw_text,
         predicted_output=payload.predicted_output,
         prediction_error=payload.prediction_error,
+        transformed_to_matrix=payload.transformed_to_matrix,
+        lemmatized_words=payload.lemmatized_words,
     )
     session.add(unstructured_page)
     session.commit()

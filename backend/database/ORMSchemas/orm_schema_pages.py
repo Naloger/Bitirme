@@ -48,6 +48,7 @@ class UnstructuredPageModel(PageBase, table=True):
     predicted_output: str = Field(default="", sa_column=Column(Text))
     prediction_error: float = Field(default=0.0)
     transformed_to_matrix: bool = Field(default=False, nullable=False)
+    lemmatized_words: List[str] = Field(default_factory=list, sa_column=Column(SQLITE_JSON))
 
 class WikiPageModel(PageSQLModel, table=True):
     __tablename__ = "wikified_pages"

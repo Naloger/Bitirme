@@ -38,6 +38,14 @@ def _normalize_word(word: str) -> str:
 	return normalized.lower().strip()
 
 
+def _clean_text_to_json_safe(text: str) -> str:
+	"""Clean input text to be JSON-acceptable by escaping/removing double quotes,
+	strip backslashes, and replace newlines/tabs with space.
+	"""
+	cleaned = text.replace('"', '').replace('\\', '').replace('\n', ' ').replace('\r', ' ')
+	return re.sub(r'\s+', ' ', cleaned).strip()
+
+
 def _validate_weight(weight: int | None) -> int:
 	"""Validate and convert weight to a positive integer. Default to 0 if invalid."""
 	if weight is None:
@@ -304,7 +312,7 @@ class TextsPayload(BaseModel):
 		return self
 
 
-async def _parse_and_build(request: Request, session: Session) -> dict:
+async def _parse_and_build(request: Request, session: Session, save_to_db: bool = True) -> dict:
 	body_bytes = await request.body()
 	body_str = body_bytes.decode("utf-8")
 
@@ -361,12 +369,12 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 
 	texts_list: list[str] = []
 	if text and isinstance(text, str):
-		texts_list.append(text)
+		texts_list.append(_clean_text_to_json_safe(text))
 	if texts:
 		if isinstance(texts, list):
-			texts_list.extend([str(t) for t in texts if t is not None])
+			texts_list.extend([_clean_text_to_json_safe(str(t)) for t in texts if t is not None])
 		elif isinstance(texts, str):
-			texts_list.append(texts)
+			texts_list.append(_clean_text_to_json_safe(texts))
 
 	builder = LemmaMatrixBuilder()
 	vectorizer, matrix = builder.build_cooccurrence_matrix(texts_list, window_size=window_size)
@@ -377,12 +385,17 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 		pairs = [p for p in pairs if p["weight"] >= min_weight]
 
 	if not pairs:
-		return {"message": "No co-occurrence pairs found for the provided text(s)."}
+		return {"message": "No co-occurrence pairs found for the provided text(s).", "pairs": []}
 
-	# Upsert using helper (with overwrite option)
-	created, updated = _upsert_pairs(session, pairs, overwrite=overwrite)
-
-	return {"message": f"Successfully built matrix: {len(pairs)} processed ({created} created, {updated} updated)."}
+	if save_to_db:
+		# Upsert using helper (with overwrite option)
+		created, updated = _upsert_pairs(session, pairs, overwrite=overwrite)
+		return {"message": f"Successfully built matrix: {len(pairs)} processed ({created} created, {updated} updated)."}
+	else:
+		return {
+			"message": f"Successfully built matrix (dry run): {len(pairs)} pairs generated.",
+			"pairs": pairs
+		}
 
 
 @router.post(
@@ -410,9 +423,9 @@ async def _parse_and_build(request: Request, session: Session) -> dict:
 )
 async def build_matrix_from_text(request: Request, session: Session = Depends(get_lemma_matrix_session)):
 	"""Accepts a single text or a list of texts, builds a lemmatized co-occurrence matrix,
-	extracts word pairs and stores them into the lemma matrix database.
+	extracts word pairs without storing them into the database.
 	"""
-	return await _parse_and_build(request, session)
+	return await _parse_and_build(request, session, save_to_db=False)
 
 
 @router.post(
@@ -440,4 +453,68 @@ async def build_matrix_from_text(request: Request, session: Session = Depends(ge
 )
 async def build_and_upsert(request: Request, session: Session = Depends(get_lemma_matrix_session)):
 	"""Alias endpoint: build co-occurrence pairs from text(s) and upsert into the DB."""
-	return await _parse_and_build(request, session)
+	return await _parse_and_build(request, session, save_to_db=True)
+
+
+@router.post(
+	"/to_lemma_list",
+	response_model=List[str],
+	tags=["LemmaConnections"],
+	openapi_extra={
+		"requestBody": {
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"text": {
+								"type": "string",
+								"example": "The \"apple\", \"banana\", and \"cherry\" are fruits."
+							}
+						},
+						"required": ["text"]
+					}
+				},
+				"text/plain": {
+					"schema": {
+						"type": "string",
+						"example": "Hello, \"world\", let's test!"
+					}
+				}
+			}
+		}
+	}
+)
+async def to_lemma_list(request: Request):
+	"""Accepts a text input, cleans it to a JSON-acceptable/safe level by escaping or removing double quotes/commas,
+	and returns a list of lemmatized words.
+	"""
+	body_bytes = await request.body()
+	body_str = body_bytes.decode("utf-8").strip()
+
+	text = ""
+	if body_str:
+		# Check if it starts with { (indicating JSON)
+		if body_str.startswith("{") or body_str.startswith("["):
+			try:
+				data = json.loads(body_str)
+				if isinstance(data, dict):
+					text = data.get("text", "")
+				elif isinstance(data, str):
+					text = data
+			except json.JSONDecodeError:
+				# Clean quotes inside malformed JSON object
+				match = re.match(r'^\s*{\s*"text"\s*:\s*"(.*)"\s*}\s*$', body_str, re.DOTALL)
+				if match:
+					text = match.group(1)
+				else:
+					text = body_str
+		else:
+			# Raw string
+			text = body_str
+
+	# Clean the input text to JSON safe level
+	cleaned_text = _clean_text_to_json_safe(text)
+
+	builder = LemmaMatrixBuilder()
+	return builder.tokenize(cleaned_text)

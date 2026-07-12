@@ -30,6 +30,7 @@ class UnstructuredPageCreate(SQLModel):
     predicted_output: str = ""
     prediction_error: float = 0.0
     transformed_to_matrix: bool = False
+    lemmatized_words: List[str] = Field(default_factory=list)
 
 
 class UnstructuredPageUpdate(SQLModel):
@@ -37,6 +38,7 @@ class UnstructuredPageUpdate(SQLModel):
     predicted_output: Optional[str] = None
     prediction_error: Optional[float] = None
     transformed_to_matrix: Optional[bool] = None
+    lemmatized_words: Optional[List[str]] = None
 
 class UnstructuredPageRead(SQLModel):
     id: str
@@ -45,6 +47,7 @@ class UnstructuredPageRead(SQLModel):
     predicted_output: str
     prediction_error: float
     transformed_to_matrix: bool
+    lemmatized_words: List[str]
 
 
 class WikiPageCreate(SQLModel):

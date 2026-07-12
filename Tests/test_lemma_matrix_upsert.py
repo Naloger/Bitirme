@@ -458,3 +458,51 @@ def test_build_upsert_endpoint_empty_vocabulary():
 	assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.json()}"
 	body = resp.json()
 	assert "No co-occurrence pairs found" in body.get("message", "")
+
+
+def test_build_dry_run():
+	"""Verify that the /api/lemma_matrix/build endpoint returns co-occurrence pairs but does NOT save them to the database."""
+	client = TestClient(app)
+	# First clear the connections
+	client.delete("/api/lemma_matrix/connections")
+
+	text = "apple banana cherry"
+	# Call build (dry run)
+	resp = client.post("/api/lemma_matrix/build", json={"text": text, "window_size": 1})
+	assert resp.status_code == 200
+	body = resp.json()
+	assert "pairs" in body
+	assert len(body["pairs"]) > 0
+	
+	# Verify that no connections were actually saved in the DB
+	get_resp = client.get("/api/lemma_matrix/connections")
+	assert get_resp.status_code == 200
+	assert len(get_resp.json()) == 0
+
+
+def test_to_lemma_list():
+	"""Verify that /api/lemma_matrix/to_lemma_list cleans inputs (quotes/commas) and returns a list of lemmas."""
+	client = TestClient(app)
+
+	# Test with unescaped double quotes, commas, and formatting issues
+	payload = {
+		"text": 'The "apple", "banana", and "cherry" are fruits.'
+	}
+	resp = client.post("/api/lemma_matrix/to_lemma_list", json=payload)
+	assert resp.status_code == 200
+	lemmas = resp.json()
+	assert isinstance(lemmas, list)
+	assert "apple" in lemmas
+	assert "banana" in lemmas
+	assert "cherry" in lemmas
+	assert "fruit" in lemmas or "fruits" in lemmas
+
+	# Test with raw string body (not JSON) containing quotes and commas
+	raw_text = 'Hello, "world", let\'s test!'
+	resp = client.post("/api/lemma_matrix/to_lemma_list", content=raw_text)
+	assert resp.status_code == 200
+	lemmas = resp.json()
+	assert isinstance(lemmas, list)
+	assert "hello" in lemmas
+	assert "world" in lemmas or "worlds" in lemmas
+
